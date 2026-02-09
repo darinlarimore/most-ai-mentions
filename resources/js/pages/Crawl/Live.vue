@@ -118,7 +118,7 @@ onUnmounted(() => {
     <Head title="Live Crawl - Most AI Mentions" />
 
     <GuestLayout>
-        <div class="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-4xl px-4 pb-12 sm:px-6 lg:px-8">
             <!-- Header -->
             <div class="mb-8">
                 <Link href="/">
