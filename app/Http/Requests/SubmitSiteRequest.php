@@ -22,8 +22,19 @@ class SubmitSiteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'url' => ['required', 'url', 'unique:sites'],
+            'url' => ['required', 'url'],
             'name' => ['nullable', 'string', 'max:255'],
         ];
+    }
+
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $validator) {
+            $host = parse_url($this->input('url'), PHP_URL_HOST);
+
+            if ($host && \App\Models\Site::where('domain', preg_replace('/^www\./', '', $host))->exists()) {
+                $validator->errors()->add('url', 'This site has already been submitted.');
+            }
+        });
     }
 }

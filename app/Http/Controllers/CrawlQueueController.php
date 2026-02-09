@@ -17,7 +17,9 @@ class CrawlQueueController extends Controller
             'queuedSites' => Site::active()
                 ->readyToCrawl()
                 ->where('status', '!=', 'crawling')
-                ->orderByRaw('last_crawled_at IS NOT NULL, last_crawled_at ASC')
+                ->orderByRaw('submitted_by IS NOT NULL DESC')
+                ->orderByRaw('last_crawled_at IS NULL DESC')
+                ->orderBy('last_crawled_at')
                 ->get(),
             'currentlyCrawling' => Site::where('status', 'crawling')->first(),
         ]);

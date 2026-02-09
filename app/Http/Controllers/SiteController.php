@@ -63,10 +63,15 @@ class SiteController extends Controller
     {
         $validated = $request->validated();
 
+        // Normalize to homepage URL
+        $parsed = parse_url($validated['url']);
+        $host = $parsed['host'] ?? '';
+        $normalizedUrl = ($parsed['scheme'] ?? 'https')."://{$host}";
+
         $site = Site::create([
-            'url' => $validated['url'],
+            'url' => $normalizedUrl,
             'name' => $validated['name'] ?? null,
-            'domain' => parse_url($validated['url'], PHP_URL_HOST),
+            'domain' => $host,
             'submitted_by' => $request->user()?->id,
             'status' => 'queued',
         ]);
