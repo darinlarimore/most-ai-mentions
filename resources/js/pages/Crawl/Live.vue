@@ -21,17 +21,28 @@ interface CrawlStep {
 
 const props = defineProps<{
     currentSite: Site | null;
+    lastCrawledSite: Site | null;
     queuedSites: Site[];
 }>();
 
+const initialSite = props.currentSite ?? props.lastCrawledSite;
+
 const activeSite = ref<{ id: number; url: string; name: string | null; slug: string; screenshot_path?: string | null } | null>(
-    props.currentSite ? { id: props.currentSite.id, url: props.currentSite.url, name: props.currentSite.name, slug: props.currentSite.slug, screenshot_path: props.currentSite.screenshot_path } : null,
+    initialSite ? { id: initialSite.id, url: initialSite.url, name: initialSite.name, slug: initialSite.slug, screenshot_path: initialSite.screenshot_path } : null,
 );
 const queuedSiteList = ref<Site[]>(props.queuedSites ?? []);
-const completedSteps = ref<CrawlStep[]>([]);
+const completedSteps = ref<CrawlStep[]>(
+    props.lastCrawledSite && !props.currentSite
+        ? allStepKeys.map(key => ({ key, ...stepDefinitions[key] }))
+        : [],
+);
 const currentStep = ref<CrawlStep | null>(null);
-const completedResult = ref<{ hype_score: number; ai_mention_count: number } | null>(null);
-const completedTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
+const completedResult = ref<{ hype_score: number; ai_mention_count: number } | null>(
+    props.lastCrawledSite && !props.currentSite
+        ? { hype_score: props.lastCrawledSite.hype_score, ai_mention_count: props.lastCrawledSite.latest_crawl_result?.ai_mention_count ?? 0 }
+        : null,
+);
+const isLive = computed(() => activeSite.value && !completedResult.value);
 
 const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
     fetching: { label: 'Fetching Homepage', icon: Globe },
@@ -91,25 +102,12 @@ onMounted(() => {
         }
 
         completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };
-
-        // Clear after a few seconds
-        if (completedTimeout.value) {
-            clearTimeout(completedTimeout.value);
-        }
-        completedTimeout.value = setTimeout(() => {
-            activeSite.value = null;
-            completedSteps.value = [];
-            completedResult.value = null;
-        }, 8000);
     });
 });
 
 onUnmounted(() => {
     if (echoChannel) {
         window.Echo.leave('crawl-activity');
-    }
-    if (completedTimeout.value) {
-        clearTimeout(completedTimeout.value);
     }
 });
 </script>
@@ -132,7 +130,7 @@ onUnmounted(() => {
                     <Radio class="size-6 text-primary" />
                     <h1 class="text-3xl font-bold">Live Crawl</h1>
                     <span
-                        v-if="activeSite && !completedResult"
+                        v-if="isLive"
                         class="ml-2 inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
                     >
                         <span class="relative flex size-2">
@@ -258,24 +256,6 @@ onUnmounted(() => {
                             </Button>
                         </Link>
                     </div>
-                </CardContent>
-            </Card>
-
-            <!-- No Active Crawl -->
-            <Card v-else class="mb-8">
-                <CardContent class="flex flex-col items-center gap-4 py-12 text-center">
-                    <div class="flex size-16 items-center justify-center rounded-full bg-muted">
-                        <Radio class="size-8 text-muted-foreground" />
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <h2 class="text-lg font-semibold">No Active Crawl</h2>
-                        <p class="max-w-md text-sm text-muted-foreground">
-                            The crawler is idle. Submit a site or check back soon.
-                        </p>
-                    </div>
-                    <Link href="/submit">
-                        <Button>Submit a Site</Button>
-                    </Link>
                 </CardContent>
             </Card>
 

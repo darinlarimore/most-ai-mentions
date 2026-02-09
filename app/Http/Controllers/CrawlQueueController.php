@@ -22,8 +22,15 @@ class CrawlQueueController extends Controller
      */
     public function live(): Response
     {
+        $currentSite = Site::where('status', 'crawling')->first();
+
         return Inertia::render('Crawl/Live', [
-            'currentSite' => Site::where('status', 'crawling')->first(),
+            'currentSite' => $currentSite,
+            'lastCrawledSite' => $currentSite ? null : Site::active()
+                ->with('latestCrawlResult')
+                ->whereNotNull('last_crawled_at')
+                ->orderByDesc('last_crawled_at')
+                ->first(),
             'queuedSites' => Inertia::defer(fn () => Site::active()
                 ->where('status', '!=', 'crawling')
                 ->orderByRaw('submitted_by IS NOT NULL AND last_crawled_at IS NULL DESC')

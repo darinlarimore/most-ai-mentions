@@ -79,6 +79,36 @@ it('uses correct broadcastAs names matching frontend Echo listeners', function (
     expect($completed->broadcastAs())->toBe('CrawlCompleted');
 });
 
+it('shows last crawled site when no active crawl', function () {
+    $site = Site::factory()->create([
+        'status' => 'completed',
+        'last_crawled_at' => now()->subHour(),
+        'hype_score' => 75,
+    ]);
+
+    $this->get('/crawl/live')
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('Crawl/Live')
+            ->where('currentSite', null)
+            ->has('lastCrawledSite')
+            ->where('lastCrawledSite.id', $site->id)
+        );
+});
+
+it('does not include lastCrawledSite when a crawl is active', function () {
+    $crawling = Site::factory()->create(['status' => 'crawling']);
+    Site::factory()->create(['status' => 'completed', 'last_crawled_at' => now()->subHour()]);
+
+    $this->get('/crawl/live')
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('Crawl/Live')
+            ->where('currentSite.id', $crawling->id)
+            ->where('lastCrawledSite', null)
+        );
+});
+
 it('allows null site_name in CrawlStarted', function () {
     $event = new CrawlStarted(1, 'https://example.com', null, 'example-com');
 
