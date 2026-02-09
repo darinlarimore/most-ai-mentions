@@ -1,0 +1,121 @@
+<script setup lang="ts">
+import { Head, Link, router } from '@inertiajs/vue3';
+import GuestLayout from '@/layouts/GuestLayout.vue';
+import type { Site, PaginatedData } from '@/types';
+import SiteCard from '@/components/SiteCard.vue';
+import NewsletterForm from '@/components/NewsletterForm.vue';
+import { Trophy, ArrowRight, Cpu, FlaskConical, Radio, Users } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { computed } from 'vue';
+
+const props = defineProps<{
+    sites: PaginatedData<Site>;
+}>();
+
+const startRank = computed(() => {
+    return (props.sites.current_page - 1) * props.sites.per_page + 1;
+});
+
+const goToPage = (url: string | null) => {
+    if (url) {
+        router.visit(url);
+    }
+};
+</script>
+
+<template>
+    <Head title="Leaderboard - Most AI Mentions" />
+
+    <GuestLayout>
+        <!-- Hero Section -->
+        <section class="border-b bg-gradient-to-b from-background to-muted/30">
+            <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+                <div class="flex flex-col items-center gap-6 text-center">
+                    <div class="flex items-center gap-2 rounded-full border bg-background px-4 py-1.5 text-sm font-medium text-muted-foreground shadow-sm">
+                        <Cpu class="size-4" />
+                        <span>Tracking AI hype in real-time</span>
+                    </div>
+
+                    <h1 class="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+                        Most AI Mentions
+                    </h1>
+                    <p class="max-w-xl text-lg text-muted-foreground">
+                        The definitive ranking of AI hype on the web. We crawl sites, count the buzzwords, and score the spectacle.
+                    </p>
+
+                    <NewsletterForm />
+
+                    <div class="flex flex-wrap items-center justify-center gap-3">
+                        <Link href="/submit">
+                            <Button variant="outline" size="sm">
+                                <FlaskConical class="size-4" />
+                                Submit a Site
+                            </Button>
+                        </Link>
+                        <Link href="/algorithm">
+                            <Button variant="outline" size="sm">
+                                <Cpu class="size-4" />
+                                How it Works
+                            </Button>
+                        </Link>
+                        <Link href="/crawl/live">
+                            <Button variant="outline" size="sm">
+                                <Radio class="size-4" />
+                                Live Crawl
+                            </Button>
+                        </Link>
+                        <Link href="/user-rated">
+                            <Button variant="outline" size="sm">
+                                <Users class="size-4" />
+                                User Rated
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Leaderboard Section -->
+        <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+            <div class="mb-8 flex items-center gap-3">
+                <Trophy class="size-6 text-yellow-500" />
+                <h2 class="text-2xl font-bold">Hype Leaderboard</h2>
+                <span class="ml-auto text-sm text-muted-foreground">
+                    {{ sites.total }} sites ranked
+                </span>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <SiteCard
+                    v-for="(site, index) in sites.data"
+                    :key="site.id"
+                    :site="site"
+                    :rank="startRank + index"
+                />
+            </div>
+
+            <!-- Pagination -->
+            <div v-if="sites.last_page > 1" class="mt-8 flex items-center justify-center gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    :disabled="!sites.prev_page_url"
+                    @click="goToPage(sites.prev_page_url)"
+                >
+                    Previous
+                </Button>
+                <span class="px-4 text-sm text-muted-foreground">
+                    Page {{ sites.current_page }} of {{ sites.last_page }}
+                </span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    :disabled="!sites.next_page_url"
+                    @click="goToPage(sites.next_page_url)"
+                >
+                    Next
+                </Button>
+            </div>
+        </section>
+    </GuestLayout>
+</template>

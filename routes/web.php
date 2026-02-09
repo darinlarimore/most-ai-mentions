@@ -1,0 +1,39 @@
+<?php
+
+use App\Http\Controllers\AlgorithmController;
+use App\Http\Controllers\CrawlQueueController;
+use App\Http\Controllers\DonationController;
+use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\NewsletterController;
+use App\Http\Controllers\RatingController;
+use App\Http\Controllers\SiteController;
+use Illuminate\Support\Facades\Route;
+
+// Public routes
+Route::get('/', [LeaderboardController::class, 'index'])->name('leaderboard');
+Route::get('/user-rated', [LeaderboardController::class, 'userRated'])->name('leaderboard.user-rated');
+Route::get('/sites/{site}', [SiteController::class, 'show'])->name('sites.show');
+Route::get('/sites/{site}/annotated', [SiteController::class, 'annotated'])->name('sites.annotated');
+Route::get('/algorithm', [AlgorithmController::class, 'index'])->name('algorithm');
+Route::get('/crawl/queue', [CrawlQueueController::class, 'index'])->name('crawl.queue');
+Route::get('/crawl/live', [CrawlQueueController::class, 'live'])->name('crawl.live');
+Route::get('/donate', [DonationController::class, 'index'])->name('donate');
+Route::get('/donate/success', [DonationController::class, 'success'])->name('donate.success');
+
+// Newsletter (public)
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
+Route::get('/newsletter/unsubscribe/{token}', [NewsletterController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
+
+// Auth required routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/submit', [SiteController::class, 'create'])->name('sites.create');
+    Route::post('/submit', [SiteController::class, 'store'])->name('sites.store');
+    Route::post('/sites/{site}/rate', [RatingController::class, 'store'])->name('sites.rate');
+    Route::delete('/sites/{site}/rate', [RatingController::class, 'destroy'])->name('sites.rate.destroy');
+    Route::post('/donate/session', [DonationController::class, 'createSession'])->name('donate.session');
+});
+
+// Stripe webhook (no CSRF)
+Route::post('/stripe/webhook', [DonationController::class, 'webhook'])->name('stripe.webhook');
+
+require __DIR__.'/settings.php';
