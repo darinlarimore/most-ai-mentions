@@ -19,7 +19,9 @@ class QueuePause extends Command
         $this->info('Queue processing paused. Run `queue:resume` to resume.');
 
         if ($this->option('kill-chrome')) {
-            Process::run('pkill -f "(chrome|chromium)" || true');
+            Process::run('pkill -x "chrome" || true');
+            Process::run('pkill -x "chromium" || true');
+            Process::run('pkill -x "chromium-browser" || true');
             $this->info('Killed Chrome/Chromium processes.');
         }
 
