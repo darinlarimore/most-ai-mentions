@@ -4,13 +4,28 @@ import GuestLayout from '@/layouts/GuestLayout.vue';
 import type { Site, PaginatedData } from '@/types';
 import SiteCard from '@/components/SiteCard.vue';
 import NewsletterForm from '@/components/NewsletterForm.vue';
-import { Trophy, ArrowRight, Cpu, FlaskConical, Radio, Users } from 'lucide-vue-next';
+import { Trophy, ArrowRight, Cpu, FlaskConical, Radio, Users, Search } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
-import { computed } from 'vue';
+import { Input } from '@/components/ui/input';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     sites: PaginatedData<Site>;
+    search?: string;
 }>();
+
+const searchQuery = ref(props.search || '');
+let debounceTimer: ReturnType<typeof setTimeout>;
+
+watch(searchQuery, (value) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        router.get('/', { search: value || undefined }, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    }, 300);
+});
 
 const startRank = computed(() => {
     return (props.sites.current_page - 1) * props.sites.per_page + 1;
@@ -77,15 +92,31 @@ const goToPage = (url: string | null) => {
 
         <!-- Leaderboard Section -->
         <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-            <div class="mb-8 flex items-center gap-3">
-                <Trophy class="size-6 text-yellow-500" />
-                <h2 class="text-2xl font-bold">Hype Leaderboard</h2>
-                <span class="ml-auto text-sm text-muted-foreground">
-                    {{ sites.total }} sites ranked
-                </span>
+            <div class="mb-8 flex flex-col gap-4">
+                <div class="flex items-center gap-3">
+                    <Trophy class="size-6 text-yellow-500" />
+                    <h2 class="text-2xl font-bold">Hype Leaderboard</h2>
+                    <span class="ml-auto text-sm text-muted-foreground">
+                        {{ sites.total }} sites ranked
+                    </span>
+                </div>
+                <div class="relative">
+                    <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Search sites by name or domain..."
+                        class="pl-10"
+                    />
+                </div>
             </div>
 
-            <div class="flex flex-col gap-3">
+            <div v-if="sites.data.length === 0" class="flex flex-col items-center gap-2 rounded-lg border border-dashed py-12 text-center">
+                <Search class="size-8 text-muted-foreground/40" />
+                <p class="text-sm text-muted-foreground">No sites found matching "{{ searchQuery }}"</p>
+            </div>
+
+            <div v-else class="flex flex-col gap-3">
                 <SiteCard
                     v-for="(site, index) in sites.data"
                     :key="site.id"

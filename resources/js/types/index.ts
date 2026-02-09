@@ -91,7 +91,7 @@ export interface ScoreHistory {
 
 export interface Rating {
     id: number;
-    user_id: number;
+    user_id?: number;
     score: number;
     comment: string | null;
     user?: User;

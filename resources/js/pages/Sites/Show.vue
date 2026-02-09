@@ -12,11 +12,10 @@ import { Label } from '@/components/ui/label';
 import {
     Globe, ExternalLink, ArrowLeft, Star, Clock, MessageSquare, Sparkles, User, Highlighter, ImageIcon,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 
 const props = defineProps<{
     site: Site;
-    canRate: boolean;
 }>();
 
 const ratingForm = useForm({
@@ -25,11 +24,34 @@ const ratingForm = useForm({
 });
 
 const hoveredStar = ref(0);
+const hasRated = ref(false);
+
+function getRatedSites(): number[] {
+    try {
+        return JSON.parse(localStorage.getItem('rated_sites') || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function markAsRated(siteId: number): void {
+    const rated = getRatedSites();
+    if (!rated.includes(siteId)) {
+        rated.push(siteId);
+        localStorage.setItem('rated_sites', JSON.stringify(rated));
+    }
+    hasRated.value = true;
+}
+
+onMounted(() => {
+    hasRated.value = getRatedSites().includes(props.site.id);
+});
 
 const submitRating = () => {
     ratingForm.post(`/sites/${props.site.id}/rate`, {
         preserveScroll: true,
         onSuccess: () => {
+            markAsRated(props.site.id);
             ratingForm.reset();
         },
     });
@@ -270,7 +292,7 @@ const formattedCreatedAt = computed(() => {
                     </Card>
 
                     <!-- Rate This Site -->
-                    <Card v-if="canRate">
+                    <Card v-if="!hasRated">
                         <CardHeader>
                             <CardTitle>Rate This Site</CardTitle>
                             <CardDescription>How hyped is it?</CardDescription>
@@ -322,15 +344,6 @@ const formattedCreatedAt = computed(() => {
                                     {{ ratingForm.errors.score }}
                                 </p>
                             </form>
-                        </CardContent>
-                    </Card>
-
-                    <Card v-else>
-                        <CardContent>
-                            <p class="text-sm text-muted-foreground">
-                                <Link href="/login" class="text-primary hover:underline">Log in</Link>
-                                to rate this site.
-                            </p>
                         </CardContent>
                     </Card>
 

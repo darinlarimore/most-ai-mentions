@@ -10,7 +10,7 @@ use Illuminate\Http\RedirectResponse;
 class RatingController extends Controller
 {
     /**
-     * Create or update the authenticated user's rating for a site.
+     * Create or update a rating for a site, keyed by IP address.
      */
     public function store(RateRequest $request, Site $site): RedirectResponse
     {
@@ -18,10 +18,11 @@ class RatingController extends Controller
 
         Rating::updateOrCreate(
             [
-                'user_id' => $request->user()->id,
+                'ip_address' => $request->ip(),
                 'site_id' => $site->id,
             ],
             [
+                'user_id' => $request->user()?->id,
                 'score' => $validated['score'],
                 'comment' => $validated['comment'] ?? null,
             ],
@@ -29,23 +30,6 @@ class RatingController extends Controller
 
         $site->update([
             'user_rating_avg' => $site->ratings()->avg('score'),
-            'user_rating_count' => $site->ratings()->count(),
-        ]);
-
-        return back();
-    }
-
-    /**
-     * Remove the authenticated user's rating for a site.
-     */
-    public function destroy(Site $site): RedirectResponse
-    {
-        Rating::where('user_id', auth()->id())
-            ->where('site_id', $site->id)
-            ->delete();
-
-        $site->update([
-            'user_rating_avg' => $site->ratings()->avg('score') ?? 0,
             'user_rating_count' => $site->ratings()->count(),
         ]);
 

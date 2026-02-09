@@ -29,11 +29,10 @@ Route::get('/submit', [SiteController::class, 'create'])->name('sites.create');
 Route::post('/submit', [SiteController::class, 'store'])->name('sites.store');
 Route::post('/donate/session', [DonationController::class, 'createSession'])->name('donate.session');
 
-// Rating (requires auth)
-Route::middleware(['auth'])->group(function () {
-    Route::post('/sites/{site}/rate', [RatingController::class, 'store'])->name('sites.rate');
-    Route::delete('/sites/{site}/rate', [RatingController::class, 'destroy'])->name('sites.rate.destroy');
-});
+// Rating (public, rate limited)
+Route::post('/sites/{site}/rate', [RatingController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('sites.rate');
 
 // Stripe webhook (no CSRF)
 Route::post('/stripe/webhook', [DonationController::class, 'webhook'])->name('stripe.webhook');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Site;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -11,14 +12,25 @@ class LeaderboardController extends Controller
     /**
      * Display the main leaderboard ordered by hype score.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $search = $request->string('search')->trim()->value();
+
         $sites = Site::active()
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('domain', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
             ->orderByDesc('hype_score')
-            ->paginate(25);
+            ->paginate(25)
+            ->withQueryString();
 
         return Inertia::render('Leaderboard/Index', [
             'sites' => $sites,
+            'search' => $search,
         ]);
     }
 

@@ -31,19 +31,9 @@ const mobileMenuOpen = ref(false);
                     <Link href="/donate" class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                         Donate
                     </Link>
-                    <template v-if="$page.props.auth?.user">
-                        <Link href="/submit" class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                            Submit Site
-                        </Link>
-                    </template>
-                    <template v-else>
-                        <Link href="/login" class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                            Log in
-                        </Link>
-                        <Link href="/register" class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
-                            Sign up
-                        </Link>
-                    </template>
+                    <Link href="/submit" class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                        Submit Site
+                    </Link>
                 </nav>
 
                 <button
@@ -69,19 +59,9 @@ const mobileMenuOpen = ref(false);
                     <Link href="/donate" class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
                         Donate
                     </Link>
-                    <template v-if="$page.props.auth?.user">
-                        <Link href="/submit" class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
-                            Submit Site
-                        </Link>
-                    </template>
-                    <template v-else>
-                        <Link href="/login" class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
-                            Log in
-                        </Link>
-                        <Link href="/register" class="rounded-md px-3 py-2 text-sm font-medium text-primary hover:bg-accent">
-                            Sign up
-                        </Link>
-                    </template>
+                    <Link href="/submit" class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
+                        Submit Site
+                    </Link>
                 </nav>
             </div>
         </header>

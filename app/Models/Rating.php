@@ -10,6 +10,9 @@ class Rating extends Model
 {
     use HasFactory;
 
+    /** @var list<string> */
+    protected $guarded = [];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

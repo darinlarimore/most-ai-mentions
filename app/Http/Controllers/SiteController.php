@@ -26,7 +26,6 @@ class SiteController extends Controller
 
         return Inertia::render('Sites/Show', [
             'site' => $site,
-            'canRate' => auth()->check() && ! $site->ratings()->where('user_id', auth()->id())->exists(),
         ]);
     }
 

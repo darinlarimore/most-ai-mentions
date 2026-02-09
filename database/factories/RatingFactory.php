@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Site;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,8 +18,8 @@ class RatingFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
             'site_id' => Site::factory(),
+            'ip_address' => fake()->unique()->ipv4(),
             'score' => fake()->numberBetween(1, 5),
             'comment' => fake()->optional()->sentence(),
         ];
