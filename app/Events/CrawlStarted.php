@@ -15,8 +15,14 @@ class CrawlStarted implements ShouldBroadcastNow
     public function __construct(
         public readonly int $site_id,
         public readonly string $site_url,
-        public readonly string $site_name,
+        public readonly ?string $site_name,
+        public readonly string $site_slug,
     ) {}
+
+    public function broadcastAs(): string
+    {
+        return 'CrawlStarted';
+    }
 
     /**
      * @return array<int, Channel>
@@ -37,6 +43,7 @@ class CrawlStarted implements ShouldBroadcastNow
             'site_id' => $this->site_id,
             'site_url' => $this->site_url,
             'site_name' => $this->site_name,
+            'site_slug' => $this->site_slug,
         ];
     }
 }

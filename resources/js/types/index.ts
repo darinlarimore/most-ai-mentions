@@ -18,6 +18,7 @@ export interface Site {
     id: number;
     url: string;
     domain: string;
+    slug: string;
     name: string | null;
     description: string | null;
     category: string | null;

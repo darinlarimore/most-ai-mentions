@@ -36,7 +36,7 @@ const resetZoom = () => {
         <div class="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
                 <div class="flex items-center gap-3">
-                    <Link :href="`/sites/${site.id}`">
+                    <Link :href="`/sites/${site.slug}`">
                         <Button variant="ghost" size="sm">
                             <ArrowLeft class="size-4" />
                             Back to {{ site.name || site.domain }}
@@ -124,7 +124,7 @@ const resetZoom = () => {
                         Submit a re-crawl to generate an annotated view.
                     </p>
                 </div>
-                <Link :href="`/sites/${site.id}`">
+                <Link :href="`/sites/${site.slug}`">
                     <Button variant="outline">Back to Site Details</Button>
                 </Link>
             </div>

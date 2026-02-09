@@ -24,8 +24,8 @@ const props = defineProps<{
     queuedSites: Site[];
 }>();
 
-const activeSite = ref<{ id: number; url: string; name: string | null; screenshot_path?: string | null } | null>(
-    props.currentSite ? { id: props.currentSite.id, url: props.currentSite.url, name: props.currentSite.name, screenshot_path: props.currentSite.screenshot_path } : null,
+const activeSite = ref<{ id: number; url: string; name: string | null; slug: string; screenshot_path?: string | null } | null>(
+    props.currentSite ? { id: props.currentSite.id, url: props.currentSite.url, name: props.currentSite.name, slug: props.currentSite.slug, screenshot_path: props.currentSite.screenshot_path } : null,
 );
 const queuedSiteList = ref<Site[]>(props.queuedSites ?? []);
 const completedSteps = ref<CrawlStep[]>([]);
@@ -57,8 +57,8 @@ let echoChannel: ReturnType<typeof window.Echo.channel> | null = null;
 onMounted(() => {
     echoChannel = window.Echo.channel('crawl-activity');
 
-    echoChannel.listen('.CrawlStarted', (e: { site_id: number; site_url: string; site_name: string }) => {
-        activeSite.value = { id: e.site_id, url: e.site_url, name: e.site_name };
+    echoChannel.listen('.CrawlStarted', (e: { site_id: number; site_url: string; site_name: string; site_slug: string }) => {
+        activeSite.value = { id: e.site_id, url: e.site_url, name: e.site_name, slug: e.site_slug };
         completedSteps.value = [];
         currentStep.value = null;
         completedResult.value = null;
@@ -252,7 +252,7 @@ onUnmounted(() => {
                     </div>
 
                     <div class="flex justify-center">
-                        <Link :href="`/sites/${activeSite.id}`">
+                        <Link :href="`/sites/${activeSite.slug}`">
                             <Button variant="outline">
                                 View Site Details
                             </Button>
@@ -330,7 +330,7 @@ onUnmounted(() => {
                             </div>
                             <div class="flex min-w-0 flex-1 flex-col">
                                 <Link
-                                    :href="`/sites/${site.id}`"
+                                    :href="`/sites/${site.slug}`"
                                     class="truncate text-sm font-medium transition-colors hover:text-primary"
                                 >
                                     {{ site.name || site.domain }}
@@ -344,8 +344,8 @@ onUnmounted(() => {
 
                     <div v-if="queuedSiteList.length === 0" class="flex flex-col items-center gap-4 rounded-xl border border-dashed p-12 text-center">
                         <Clock class="size-12 text-muted-foreground" />
-                        <h3 class="text-lg font-medium">Queue is empty</h3>
-                        <p class="text-muted-foreground">All sites have been crawled. Submit a new site to keep the hype going!</p>
+                        <h3 class="text-lg font-medium">No sites yet</h3>
+                        <p class="text-muted-foreground">Submit a site to get the hype going!</p>
                         <Link href="/submit">
                             <Button>Submit a Site</Button>
                         </Link>

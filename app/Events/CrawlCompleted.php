@@ -18,6 +18,11 @@ class CrawlCompleted implements ShouldBroadcastNow
         public readonly int $ai_mention_count,
     ) {}
 
+    public function broadcastAs(): string
+    {
+        return 'CrawlCompleted';
+    }
+
     /**
      * @return array<int, Channel>
      */

@@ -50,7 +50,7 @@ class CrawlSiteJob implements ShouldQueue
 
         $this->site->update(['status' => 'crawling']);
 
-        CrawlStarted::dispatch($this->site->id, $this->site->url, $this->site->name);
+        CrawlStarted::dispatch($this->site->id, $this->site->url, $this->site->name, $this->site->slug);
         CrawlProgress::dispatch($this->site->id, 'fetching', 'Fetching homepage...');
 
         $observer = new \App\Crawlers\AiMentionCrawlObserver($this->site);

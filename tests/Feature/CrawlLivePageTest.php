@@ -39,7 +39,7 @@ it('broadcasts CrawlProgress event on crawl-activity channel', function () {
 });
 
 it('broadcasts CrawlStarted as ShouldBroadcastNow', function () {
-    $event = new CrawlStarted(1, 'https://example.com', 'Example');
+    $event = new CrawlStarted(1, 'https://example.com', 'Example', 'example-com');
 
     expect($event)->toBeInstanceOf(\Illuminate\Contracts\Broadcasting\ShouldBroadcastNow::class);
     expect($event->broadcastOn())->toHaveCount(1);
@@ -67,4 +67,21 @@ it('broadcasts CrawlProgress with data payload', function () {
         'message' => 'Found 5 AI mentions',
         'data' => ['ai_mention_count' => 5],
     ]);
+});
+
+it('uses correct broadcastAs names matching frontend Echo listeners', function () {
+    $started = new CrawlStarted(1, 'https://example.com', 'Example', 'example-com');
+    $progress = new CrawlProgress(1, 'fetching', 'Fetching...');
+    $completed = new CrawlCompleted(1, 42.5, 5);
+
+    expect($started->broadcastAs())->toBe('CrawlStarted');
+    expect($progress->broadcastAs())->toBe('CrawlProgress');
+    expect($completed->broadcastAs())->toBe('CrawlCompleted');
+});
+
+it('allows null site_name in CrawlStarted', function () {
+    $event = new CrawlStarted(1, 'https://example.com', null, 'example-com');
+
+    expect($event->site_name)->toBeNull();
+    expect($event->broadcastWith()['site_name'])->toBeNull();
 });

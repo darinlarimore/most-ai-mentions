@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Site extends Model
 {
@@ -17,6 +18,27 @@ class Site extends Model
 
     /** @var list<string> */
     protected $guarded = [];
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Site $site) {
+            if (empty($site->slug) && $site->domain) {
+                $site->slug = self::generateSlug($site->domain);
+            }
+        });
+    }
+
+    public static function generateSlug(string $domain): string
+    {
+        $domain = preg_replace('/^www\./', '', $domain);
+
+        return Str::slug(str_replace('.', '-', $domain));
+    }
 
     /**
      * Get the attributes that should be cast.

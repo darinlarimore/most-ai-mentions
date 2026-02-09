@@ -22,6 +22,11 @@ class CrawlProgress implements ShouldBroadcastNow
         public readonly array $data = [],
     ) {}
 
+    public function broadcastAs(): string
+    {
+        return 'CrawlProgress';
+    }
+
     /**
      * @return array<int, Channel>
      */

@@ -74,7 +74,7 @@ const goToPage = (url: string | null) => {
 
                         <!-- Site Info -->
                         <div class="flex min-w-0 flex-1 flex-col gap-1">
-                            <Link :href="`/sites/${site.id}`" class="font-semibold hover:text-primary transition-colors">
+                            <Link :href="`/sites/${site.slug}`" class="font-semibold hover:text-primary transition-colors">
                                 {{ site.name || site.domain }}
                             </Link>
                             <p class="truncate text-sm text-muted-foreground">{{ site.domain }}</p>

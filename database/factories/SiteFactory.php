@@ -24,6 +24,7 @@ class SiteFactory extends Factory
         return [
             'url' => $url,
             'domain' => $domain,
+            'slug' => \App\Models\Site::generateSlug($domain),
             'name' => fake()->company(),
             'description' => fake()->sentence(),
             'category' => fake()->randomElement(SiteCategory::cases())->value,

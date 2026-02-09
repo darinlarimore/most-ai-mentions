@@ -37,7 +37,7 @@ const formattedDate = computed(() => {
 
 <template>
     <Link
-        :href="`/sites/${site.id}`"
+        :href="`/sites/${site.slug}`"
         class="group flex flex-col overflow-hidden rounded-xl border bg-card transition-all hover:border-primary/20 hover:shadow-md dark:hover:border-primary/30"
     >
         <!-- Screenshot Banner -->

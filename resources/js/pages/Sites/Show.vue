@@ -48,7 +48,7 @@ onMounted(() => {
 });
 
 const submitRating = () => {
-    ratingForm.post(`/sites/${props.site.id}/rate`, {
+    ratingForm.post(`/sites/${props.site.slug}/rate`, {
         preserveScroll: true,
         onSuccess: () => {
             markAsRated(props.site.id);
@@ -144,7 +144,7 @@ const formattedCreatedAt = computed(() => {
                                 </div>
                             </div>
                             <div class="mt-4 flex justify-center">
-                                <Link :href="`/sites/${site.id}/annotated`">
+                                <Link :href="`/sites/${site.slug}/annotated`">
                                     <Button variant="outline" size="sm">
                                         <Highlighter class="size-4" />
                                         View Annotated Page
