@@ -35,6 +35,7 @@ class SiteFactory extends Factory
             'crawl_count' => fake()->numberBetween(0, 50),
             'status' => 'completed',
             'last_crawled_at' => fake()->dateTimeBetween('-30 days'),
+            'last_attempted_at' => fake()->dateTimeBetween('-30 days'),
             'cooldown_hours' => 24,
             'is_active' => true,
             'submitted_by' => User::factory(),

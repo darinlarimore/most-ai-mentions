@@ -126,6 +126,21 @@ class CrawlSiteJob implements ShouldQueue
 
         $hypeScore = $scores['total_score'];
 
+        // If no pages were crawled or no HTML captured, the site likely blocked us
+        if ($observer->getPagesCrawled() === 0 || $html === null) {
+            Log::info("Crawl blocked/failed for {$this->site->url} — marking as failed attempt", [
+                'pages_crawled' => $observer->getPagesCrawled(),
+                'has_html' => $html !== null,
+            ]);
+
+            $this->site->update([
+                'last_attempted_at' => now(),
+                'status' => 'pending',
+            ]);
+
+            return;
+        }
+
         // Generate annotated screenshot from local HTML
         if ($html) {
             try {
@@ -165,6 +180,7 @@ class CrawlSiteJob implements ShouldQueue
         $this->site->update([
             'hype_score' => $hypeScore,
             'last_crawled_at' => now(),
+            'last_attempted_at' => now(),
             'status' => 'completed',
         ]);
 

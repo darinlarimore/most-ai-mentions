@@ -27,6 +27,7 @@ class Site extends Model
     {
         return [
             'last_crawled_at' => 'datetime',
+            'last_attempted_at' => 'datetime',
             'is_active' => 'boolean',
         ];
     }
@@ -79,6 +80,9 @@ class Site extends Model
         $query->where(function (Builder $query) {
             $query->whereNull('last_crawled_at')
                 ->orWhereColumn('last_crawled_at', '<=', \Illuminate\Support\Facades\DB::raw('NOW() - INTERVAL cooldown_hours HOUR'));
+        })->where(function (Builder $query) {
+            $query->whereNull('last_attempted_at')
+                ->orWhere('last_attempted_at', '<=', \Illuminate\Support\Facades\DB::raw('NOW() - INTERVAL 24 HOUR'));
         });
     }
 
