@@ -80,7 +80,6 @@ class ScreenshotService
         $factory()
             ->windowSize(self::VIEWPORT_WIDTH, self::VIEWPORT_HEIGHT)
             ->timeout(self::TIMEOUT)
-            ->fullPage()
             ->setScreenshotType('jpeg', 80)
             ->noSandbox()
             ->save($tempPath);
