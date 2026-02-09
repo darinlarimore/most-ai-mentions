@@ -24,13 +24,15 @@ Route::get('/donate/success', [DonationController::class, 'success'])->name('don
 Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
 Route::get('/newsletter/unsubscribe/{token}', [NewsletterController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
 
-// Auth required routes
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/submit', [SiteController::class, 'create'])->name('sites.create');
-    Route::post('/submit', [SiteController::class, 'store'])->name('sites.store');
+// Site submission (public)
+Route::get('/submit', [SiteController::class, 'create'])->name('sites.create');
+Route::post('/submit', [SiteController::class, 'store'])->name('sites.store');
+Route::post('/donate/session', [DonationController::class, 'createSession'])->name('donate.session');
+
+// Rating (requires auth)
+Route::middleware(['auth'])->group(function () {
     Route::post('/sites/{site}/rate', [RatingController::class, 'store'])->name('sites.rate');
     Route::delete('/sites/{site}/rate', [RatingController::class, 'destroy'])->name('sites.rate.destroy');
-    Route::post('/donate/session', [DonationController::class, 'createSession'])->name('donate.session');
 });
 
 // Stripe webhook (no CSRF)

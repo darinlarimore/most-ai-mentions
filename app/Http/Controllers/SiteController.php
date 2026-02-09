@@ -95,7 +95,7 @@ class SiteController extends Controller
             'url' => $validated['url'],
             'name' => $validated['name'] ?? null,
             'domain' => parse_url($validated['url'], PHP_URL_HOST),
-            'submitted_by' => $request->user()->id,
+            'submitted_by' => $request->user()?->id,
             'status' => 'queued',
         ]);
 
