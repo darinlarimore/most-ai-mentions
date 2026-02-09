@@ -9,7 +9,7 @@ import {
     Globe, Radio, ArrowLeft, Scan, Clock,
     Search, ImageIcon, Calculator, Camera, CheckCircle, Loader2, Sparkles,
 } from 'lucide-vue-next';
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
 
 interface CrawlStep {
     key: string;
@@ -42,6 +42,12 @@ const activeSite = ref<{ id: number; url: string; name: string | null; slug: str
     initialSite ? { id: initialSite.id, url: initialSite.url, name: initialSite.name, slug: initialSite.slug, screenshot_path: initialSite.screenshot_path } : null,
 );
 const queuedSiteList = ref<Site[]>(props.queuedSites ?? []);
+
+watch(() => props.queuedSites, (sites) => {
+    if (sites) {
+        queuedSiteList.value = sites;
+    }
+});
 const completedSteps = ref<CrawlStep[]>(
     props.lastCrawledSite && !props.currentSite
         ? allStepKeys.map(key => ({ key, ...stepDefinitions[key] }))
