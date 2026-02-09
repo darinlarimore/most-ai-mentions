@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePoll } from '@inertiajs/vue3';
 import GuestLayout from '@/layouts/GuestLayout.vue';
 import type { Site } from '@/types';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
@@ -10,6 +10,8 @@ import { Globe, Radio, ArrowLeft, Scan, Wifi, WifiOff } from 'lucide-vue-next';
 defineProps<{
     currentSite: Site | null;
 }>();
+
+usePoll(5000);
 </script>
 
 <template>

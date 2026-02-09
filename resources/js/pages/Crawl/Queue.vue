@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, Deferred } from '@inertiajs/vue3';
+import { Head, Link, Deferred, usePoll } from '@inertiajs/vue3';
 import GuestLayout from '@/layouts/GuestLayout.vue';
 import type { Site } from '@/types';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
@@ -11,6 +11,8 @@ defineProps<{
     currentlyCrawling: Site | null;
     queuedSites: Site[];
 }>();
+
+usePoll(5000);
 </script>
 
 <template>

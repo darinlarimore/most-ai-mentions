@@ -62,6 +62,17 @@ class CrawlSiteJob implements ShouldQueue
         // Keep HTML as local variable only — never persisted to DB
         $html = $observer->getCrawledHtml();
 
+        Log::info("Crawl observer results for {$this->site->url}", [
+            'pages_crawled' => $observer->getPagesCrawled(),
+            'ai_mentions' => $observer->getAiMentionCount(),
+            'animations' => $observer->getAnimationCount(),
+            'glows' => $observer->getGlowEffectCount(),
+            'rainbows' => $observer->getRainbowBorderCount(),
+            'has_html' => $html !== null,
+            'html_length' => $html ? strlen($html) : 0,
+            'mention_details' => array_map(fn ($m) => $m['text'].' ('.$m['context'].')', array_slice($observer->getMentionDetails(), 0, 5)),
+        ]);
+
         $crawlResult = CrawlResult::create([
             'site_id' => $this->site->id,
             'mention_details' => $observer->getMentionDetails(),
@@ -77,11 +88,17 @@ class CrawlSiteJob implements ShouldQueue
         $aiImageData = ['ai_image_count' => 0, 'ai_image_score' => 0, 'ai_image_details' => []];
         if ($html) {
             $aiImageData = $imageDetectionService->analyze($html, $this->site->url);
+            Log::info("AI image detection for {$this->site->url}", [
+                'ai_image_count' => $aiImageData['ai_image_count'],
+                'ai_image_score' => $aiImageData['ai_image_score'],
+            ]);
             $crawlResult->update([
                 'ai_image_count' => $aiImageData['ai_image_count'],
                 'ai_image_score' => $aiImageData['ai_image_score'],
                 'ai_image_details' => $aiImageData['ai_image_details'],
             ]);
+        } else {
+            Log::warning("No HTML captured for {$this->site->url} — crawler may have been blocked");
         }
 
         // Calculate scores with AI image data included

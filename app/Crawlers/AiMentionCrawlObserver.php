@@ -55,13 +55,23 @@ class AiMentionCrawlObserver extends CrawlObserver
         ?UriInterface $foundOnUrl = null,
         ?string $linkText = null,
     ): void {
+        $statusCode = $response->getStatusCode();
         $contentType = $response->getHeaderLine('Content-Type');
+
+        Log::info("Crawled page: {$url}", [
+            'site' => $this->site->domain,
+            'status' => $statusCode,
+            'content_type' => $contentType,
+        ]);
+
         if (! str_contains($contentType, 'text/html')) {
             return;
         }
 
         $html = (string) $response->getBody();
         if ($html === '') {
+            Log::warning("Empty HTML body for {$url} on site {$this->site->domain}");
+
             return;
         }
 
@@ -82,7 +92,7 @@ class AiMentionCrawlObserver extends CrawlObserver
         ?UriInterface $foundOnUrl = null,
         ?string $linkText = null,
     ): void {
-        Log::warning("Crawl failed for {$url} on site {$this->site->url}: {$requestException->getMessage()}");
+        Log::warning("Crawl failed for {$url} on site {$this->site->url}: cURL error {$requestException->getCode()}: {$requestException->getMessage()}");
     }
 
     /**
