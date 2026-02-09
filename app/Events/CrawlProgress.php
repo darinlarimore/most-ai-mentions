@@ -8,14 +8,18 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class CrawlStarted implements ShouldBroadcastNow
+class CrawlProgress implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function __construct(
         public readonly int $site_id,
-        public readonly string $site_url,
-        public readonly string $site_name,
+        public readonly string $step,
+        public readonly string $message,
+        public readonly array $data = [],
     ) {}
 
     /**
@@ -35,8 +39,9 @@ class CrawlStarted implements ShouldBroadcastNow
     {
         return [
             'site_id' => $this->site_id,
-            'site_url' => $this->site_url,
-            'site_name' => $this->site_name,
+            'step' => $this->step,
+            'message' => $this->message,
+            'data' => $this->data,
         ];
     }
 }

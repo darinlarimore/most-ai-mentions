@@ -1,17 +1,117 @@
 <script setup lang="ts">
-import { Head, Link, usePoll } from '@inertiajs/vue3';
+import { Head, Link, Deferred } from '@inertiajs/vue3';
 import GuestLayout from '@/layouts/GuestLayout.vue';
 import type { Site } from '@/types';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Globe, Radio, ArrowLeft, Scan, Wifi, WifiOff } from 'lucide-vue-next';
+import {
+    Globe, Radio, ArrowLeft, Scan, Clock,
+    Search, ImageIcon, Calculator, Camera, CheckCircle, Loader2, Sparkles,
+} from 'lucide-vue-next';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 
-defineProps<{
+interface CrawlStep {
+    key: string;
+    label: string;
+    icon: typeof Scan;
+    message?: string;
+    data?: Record<string, unknown>;
+}
+
+const props = defineProps<{
     currentSite: Site | null;
+    queuedSites: Site[];
 }>();
 
-usePoll(5000);
+const activeSite = ref<{ id: number; url: string; name: string | null; screenshot_path?: string | null } | null>(
+    props.currentSite ? { id: props.currentSite.id, url: props.currentSite.url, name: props.currentSite.name, screenshot_path: props.currentSite.screenshot_path } : null,
+);
+const queuedSiteList = ref<Site[]>(props.queuedSites ?? []);
+const completedSteps = ref<CrawlStep[]>([]);
+const currentStep = ref<CrawlStep | null>(null);
+const completedResult = ref<{ hype_score: number; ai_mention_count: number } | null>(null);
+const completedTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
+
+const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
+    fetching: { label: 'Fetching Homepage', icon: Globe },
+    detecting_mentions: { label: 'Detecting AI Mentions', icon: Search },
+    detecting_images: { label: 'Scanning for AI Images', icon: ImageIcon },
+    calculating_score: { label: 'Calculating Hype Score', icon: Calculator },
+    generating_screenshot: { label: 'Generating Screenshot', icon: Camera },
+    finishing: { label: 'Finishing Up', icon: Sparkles },
+};
+
+const allStepKeys = ['fetching', 'detecting_mentions', 'detecting_images', 'calculating_score', 'generating_screenshot', 'finishing'];
+
+const pendingSteps = computed(() => {
+    const completedKeys = new Set(completedSteps.value.map(s => s.key));
+    const currentKey = currentStep.value?.key;
+    return allStepKeys
+        .filter(key => key !== currentKey && !completedKeys.has(key))
+        .map(key => ({ key, ...stepDefinitions[key] }));
+});
+
+let echoChannel: ReturnType<typeof window.Echo.channel> | null = null;
+
+onMounted(() => {
+    echoChannel = window.Echo.channel('crawl-activity');
+
+    echoChannel.listen('.CrawlStarted', (e: { site_id: number; site_url: string; site_name: string }) => {
+        activeSite.value = { id: e.site_id, url: e.site_url, name: e.site_name };
+        completedSteps.value = [];
+        currentStep.value = null;
+        completedResult.value = null;
+
+        // Remove from queue
+        queuedSiteList.value = queuedSiteList.value.filter(s => s.id !== e.site_id);
+    });
+
+    echoChannel.listen('.CrawlProgress', (e: { site_id: number; step: string; message: string; data: Record<string, unknown> }) => {
+        // Move current step to completed
+        if (currentStep.value) {
+            completedSteps.value.push({ ...currentStep.value });
+        }
+
+        const def = stepDefinitions[e.step] ?? { label: e.step, icon: Scan };
+        currentStep.value = {
+            key: e.step,
+            label: def.label,
+            icon: def.icon,
+            message: e.message,
+            data: e.data,
+        };
+    });
+
+    echoChannel.listen('.CrawlCompleted', (e: { site_id: number; hype_score: number; ai_mention_count: number }) => {
+        // Move current step to completed
+        if (currentStep.value) {
+            completedSteps.value.push({ ...currentStep.value });
+            currentStep.value = null;
+        }
+
+        completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };
+
+        // Clear after a few seconds
+        if (completedTimeout.value) {
+            clearTimeout(completedTimeout.value);
+        }
+        completedTimeout.value = setTimeout(() => {
+            activeSite.value = null;
+            completedSteps.value = [];
+            completedResult.value = null;
+        }, 8000);
+    });
+});
+
+onUnmounted(() => {
+    if (echoChannel) {
+        window.Echo.leave('crawl-activity');
+    }
+    if (completedTimeout.value) {
+        clearTimeout(completedTimeout.value);
+    }
+});
 </script>
 
 <template>
@@ -32,7 +132,7 @@ usePoll(5000);
                     <Radio class="size-6 text-primary" />
                     <h1 class="text-3xl font-bold">Live Crawl</h1>
                     <span
-                        v-if="currentSite"
+                        v-if="activeSite && !completedResult"
                         class="ml-2 inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400"
                     >
                         <span class="relative flex size-2">
@@ -48,103 +148,210 @@ usePoll(5000);
             </div>
 
             <!-- Active Crawl -->
-            <Card v-if="currentSite" class="overflow-hidden">
+            <Card v-if="activeSite" class="mb-8 overflow-hidden">
                 <!-- Scanning Animation Bar -->
-                <div class="h-1 overflow-hidden bg-muted">
+                <div v-if="!completedResult" class="h-1 overflow-hidden bg-muted">
                     <div class="animate-scan h-full w-1/3 bg-gradient-to-r from-transparent via-primary to-transparent" />
                 </div>
+                <!-- Completed bar -->
+                <div v-else class="h-1 bg-green-500" />
 
                 <CardHeader class="px-6 pt-5 pb-4">
                     <CardTitle class="flex items-center gap-2">
-                        <Scan class="size-5 animate-pulse text-primary" />
-                        Currently Scanning
+                        <Scan v-if="!completedResult" class="size-5 animate-pulse text-primary" />
+                        <CheckCircle v-else class="size-5 text-green-500" />
+                        {{ completedResult ? 'Scan Complete' : 'Currently Scanning' }}
                     </CardTitle>
                     <CardDescription>
-                        Analyzing {{ currentSite.domain }} for AI mentions, animations, and visual effects
+                        {{ completedResult
+                            ? `Finished analyzing ${activeSite.name || activeSite.url}`
+                            : `Analyzing ${activeSite.name || activeSite.url} for AI mentions, animations, and visual effects`
+                        }}
                     </CardDescription>
                 </CardHeader>
 
                 <CardContent class="flex flex-col gap-6 px-6 pb-6">
-                        <!-- Site Info -->
-                        <div class="flex items-center gap-4">
-                            <div class="relative size-20 shrink-0 overflow-hidden rounded-xl border bg-muted">
-                                <img
-                                    v-if="currentSite.screenshot_path"
-                                    :src="currentSite.screenshot_path"
-                                    :alt="currentSite.name || currentSite.domain"
-                                    class="size-full object-cover"
-                                />
-                                <div v-else class="flex size-full items-center justify-center">
-                                    <Globe class="size-8 text-muted-foreground" />
-                                </div>
-                                <!-- Pulsing overlay -->
-                                <div class="absolute inset-0 animate-pulse bg-primary/5" />
+                    <!-- Site Info -->
+                    <div class="flex items-center gap-4">
+                        <div class="relative size-16 shrink-0 overflow-hidden rounded-xl border bg-muted">
+                            <img
+                                v-if="activeSite.screenshot_path"
+                                :src="activeSite.screenshot_path"
+                                :alt="activeSite.name || activeSite.url"
+                                class="size-full object-cover"
+                            />
+                            <div v-else class="flex size-full items-center justify-center">
+                                <Globe class="size-8 text-muted-foreground" />
                             </div>
+                            <div v-if="!completedResult" class="absolute inset-0 animate-pulse bg-primary/5" />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <h3 class="text-xl font-semibold">
+                                {{ activeSite.name || activeSite.url }}
+                            </h3>
+                            <p class="text-sm text-muted-foreground">{{ activeSite.url }}</p>
+                            <div v-if="completedResult" class="mt-1">
+                                <HypeScoreBadge :score="completedResult.hype_score" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Steps -->
+                    <div class="flex flex-col gap-1.5">
+                        <!-- Completed steps -->
+                        <div
+                            v-for="step in completedSteps"
+                            :key="step.key"
+                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm"
+                        >
+                            <CheckCircle class="size-4 shrink-0 text-green-500" />
+                            <span class="font-medium text-foreground">{{ step.label }}</span>
+                            <span v-if="step.data && step.data.ai_mention_count !== undefined" class="ml-auto text-xs text-muted-foreground">
+                                {{ step.data.ai_mention_count }} mentions found
+                            </span>
+                            <span v-else-if="step.data && step.data.ai_image_count !== undefined" class="ml-auto text-xs text-muted-foreground">
+                                {{ step.data.ai_image_count }} AI images
+                            </span>
+                            <span v-else-if="step.data && step.data.hype_score !== undefined" class="ml-auto text-xs text-muted-foreground">
+                                Score: {{ Math.round(step.data.hype_score as number) }}
+                            </span>
+                        </div>
+
+                        <!-- Current step -->
+                        <div
+                            v-if="currentStep"
+                            class="flex items-center gap-3 rounded-lg bg-primary/5 px-3 py-2 text-sm"
+                        >
+                            <Loader2 class="size-4 shrink-0 animate-spin text-primary" />
+                            <span class="font-medium text-primary">{{ currentStep.label }}</span>
+                            <span class="ml-auto text-xs text-muted-foreground">{{ currentStep.message }}</span>
+                        </div>
+
+                        <!-- Pending steps -->
+                        <div
+                            v-for="step in pendingSteps"
+                            :key="step.key"
+                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/50"
+                        >
+                            <component :is="step.icon" class="size-4 shrink-0" />
+                            <span>{{ step.label }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Completed result summary -->
+                    <div v-if="completedResult" class="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900/50 dark:bg-green-900/10">
+                        <div class="flex items-center justify-between">
                             <div class="flex flex-col gap-1">
-                                <h3 class="text-xl font-semibold">
-                                    {{ currentSite.name || currentSite.domain }}
-                                </h3>
-                                <p class="text-sm text-muted-foreground">{{ currentSite.url }}</p>
-                                <div v-if="currentSite.hype_score > 0" class="mt-1">
-                                    <HypeScoreBadge :score="currentSite.hype_score" />
-                                </div>
+                                <span class="text-sm font-medium text-green-800 dark:text-green-300">Analysis Complete</span>
+                                <span class="text-xs text-green-600 dark:text-green-400">
+                                    Found {{ completedResult.ai_mention_count }} AI mention{{ completedResult.ai_mention_count !== 1 ? 's' : '' }}
+                                </span>
                             </div>
+                            <HypeScoreBadge :score="completedResult.hype_score" />
                         </div>
-
-                        <!-- Scanning Progress Indicators -->
-                        <div class="grid gap-3 sm:grid-cols-2">
-                            <div class="flex items-center gap-3 rounded-lg border p-3">
-                                <div class="flex size-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                                    <Scan class="size-4 animate-pulse text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-sm font-medium">Scanning Page</span>
-                                    <span class="text-xs text-muted-foreground">Searching for AI keywords...</span>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-3 rounded-lg border p-3">
-                                <div class="flex size-8 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
-                                    <Wifi class="size-4 animate-pulse text-purple-600 dark:text-purple-400" />
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-sm font-medium">Analyzing Effects</span>
-                                    <span class="text-xs text-muted-foreground">Checking for glows, animations...</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-center">
-                            <Link :href="`/sites/${currentSite.id}`">
-                                <Button variant="outline">
-                                    View Site Details
-                                </Button>
-                            </Link>
-                        </div>
-                    </CardContent>
-            </Card>
-
-            <!-- No Active Crawl -->
-            <Card v-else>
-                <CardContent class="flex flex-col items-center gap-6 py-16 text-center">
-                    <div class="flex size-20 items-center justify-center rounded-full bg-muted">
-                        <WifiOff class="size-10 text-muted-foreground" />
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <h2 class="text-xl font-semibold">No Active Crawl</h2>
-                        <p class="max-w-md text-muted-foreground">
-                            The crawler is currently idle. Submit a site to start a new crawl, or check back later.
-                        </p>
-                    </div>
-                    <div class="flex gap-3">
-                        <Link href="/submit">
-                            <Button>Submit a Site</Button>
-                        </Link>
-                        <Link href="/crawl/queue">
-                            <Button variant="outline">View Queue</Button>
+
+                    <div class="flex justify-center">
+                        <Link :href="`/sites/${activeSite.id}`">
+                            <Button variant="outline">
+                                View Site Details
+                            </Button>
                         </Link>
                     </div>
                 </CardContent>
             </Card>
+
+            <!-- No Active Crawl -->
+            <Card v-else class="mb-8">
+                <CardContent class="flex flex-col items-center gap-4 py-12 text-center">
+                    <div class="flex size-16 items-center justify-center rounded-full bg-muted">
+                        <Radio class="size-8 text-muted-foreground" />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <h2 class="text-lg font-semibold">No Active Crawl</h2>
+                        <p class="max-w-md text-sm text-muted-foreground">
+                            The crawler is idle. Submit a site or check back soon.
+                        </p>
+                    </div>
+                    <Link href="/submit">
+                        <Button>Submit a Site</Button>
+                    </Link>
+                </CardContent>
+            </Card>
+
+            <!-- Queue -->
+            <div>
+                <h2 class="mb-4 flex items-center gap-2 text-xl font-semibold">
+                    <Clock class="size-5 text-muted-foreground" />
+                    Waiting in Queue
+                </h2>
+
+                <Deferred data="queuedSites">
+                    <template #fallback>
+                        <div class="flex flex-col gap-2">
+                            <div
+                                v-for="i in 5"
+                                :key="i"
+                                class="flex items-center gap-4 rounded-xl border bg-card p-4"
+                            >
+                                <div class="size-8 shrink-0 animate-pulse rounded-full bg-muted" />
+                                <div class="size-10 shrink-0 animate-pulse rounded-lg bg-muted" />
+                                <div class="flex flex-1 flex-col gap-2">
+                                    <div class="h-4 w-40 animate-pulse rounded bg-muted" />
+                                    <div class="h-3 w-28 animate-pulse rounded bg-muted" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <TransitionGroup
+                        name="queue-item"
+                        tag="div"
+                        class="flex flex-col gap-2"
+                    >
+                        <div
+                            v-for="(site, index) in queuedSiteList"
+                            :key="site.id"
+                            class="flex items-center gap-4 rounded-xl border bg-card p-4"
+                        >
+                            <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                                {{ index + 1 }}
+                            </span>
+                            <div class="relative size-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                                <img
+                                    v-if="site.screenshot_path"
+                                    :src="site.screenshot_path"
+                                    :alt="site.name || site.domain"
+                                    class="size-full object-cover"
+                                />
+                                <div v-else class="flex size-full items-center justify-center">
+                                    <Globe class="size-4 text-muted-foreground" />
+                                </div>
+                            </div>
+                            <div class="flex min-w-0 flex-1 flex-col">
+                                <Link
+                                    :href="`/sites/${site.id}`"
+                                    class="truncate text-sm font-medium transition-colors hover:text-primary"
+                                >
+                                    {{ site.name || site.domain }}
+                                </Link>
+                                <span class="truncate text-xs text-muted-foreground">{{ site.domain }}</span>
+                            </div>
+                            <HypeScoreBadge v-if="site.hype_score > 0" :score="site.hype_score" />
+                            <span v-else class="text-xs text-muted-foreground">Pending</span>
+                        </div>
+                    </TransitionGroup>
+
+                    <div v-if="queuedSiteList.length === 0" class="flex flex-col items-center gap-4 rounded-xl border border-dashed p-12 text-center">
+                        <Clock class="size-12 text-muted-foreground" />
+                        <h3 class="text-lg font-medium">Queue is empty</h3>
+                        <p class="text-muted-foreground">All sites have been crawled. Submit a new site to keep the hype going!</p>
+                        <Link href="/submit">
+                            <Button>Submit a Site</Button>
+                        </Link>
+                    </div>
+                </Deferred>
+            </div>
         </div>
     </GuestLayout>
 </template>
@@ -161,5 +368,26 @@ usePoll(5000);
 
 .animate-scan {
     animation: scan 2s ease-in-out infinite;
+}
+
+.queue-item-move,
+.queue-item-enter-active,
+.queue-item-leave-active {
+    transition: all 0.5s ease;
+}
+
+.queue-item-enter-from {
+    opacity: 0;
+    transform: translateX(-30px);
+}
+
+.queue-item-leave-to {
+    opacity: 0;
+    transform: translateX(30px);
+}
+
+.queue-item-leave-active {
+    position: absolute;
+    width: 100%;
 }
 </style>

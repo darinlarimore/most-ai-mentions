@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Events\CrawlCompleted;
+use App\Events\CrawlProgress;
 use App\Events\CrawlStarted;
 use App\Jobs\Middleware\CheckQueuePaused;
 use App\Models\CrawlResult;
@@ -50,6 +51,7 @@ class CrawlSiteJob implements ShouldQueue
         $this->site->update(['status' => 'crawling']);
 
         CrawlStarted::dispatch($this->site->id, $this->site->url, $this->site->name);
+        CrawlProgress::dispatch($this->site->id, 'fetching', 'Fetching homepage...');
 
         $observer = new \App\Crawlers\AiMentionCrawlObserver($this->site);
 
@@ -61,6 +63,11 @@ class CrawlSiteJob implements ShouldQueue
 
         // Keep HTML as local variable only — never persisted to DB
         $html = $observer->getCrawledHtml();
+
+        CrawlProgress::dispatch($this->site->id, 'detecting_mentions', 'Scanning for AI mentions...', [
+            'pages_crawled' => $observer->getPagesCrawled(),
+            'ai_mention_count' => $observer->getAiMentionCount(),
+        ]);
 
         Log::info("Crawl observer results for {$this->site->url}", [
             'pages_crawled' => $observer->getPagesCrawled(),
@@ -85,6 +92,8 @@ class CrawlSiteJob implements ShouldQueue
         ]);
 
         // Detect AI images inline from local HTML
+        CrawlProgress::dispatch($this->site->id, 'detecting_images', 'Scanning for AI-generated images...');
+
         $aiImageData = ['ai_image_count' => 0, 'ai_image_score' => 0, 'ai_image_details' => []];
         if ($html) {
             $aiImageData = $imageDetectionService->analyze($html, $this->site->url);
@@ -102,6 +111,12 @@ class CrawlSiteJob implements ShouldQueue
         }
 
         // Calculate scores with AI image data included
+        CrawlProgress::dispatch($this->site->id, 'calculating_score', 'Calculating hype score...', [
+            'ai_mention_count' => $crawlResult->ai_mention_count,
+            'animation_count' => $crawlResult->animation_count,
+            'ai_image_count' => $aiImageData['ai_image_count'],
+        ]);
+
         $scores = $calculator->calculate(
             $crawlResult->mention_details ?? [],
             $crawlResult->animation_count ?? 0,
@@ -144,6 +159,8 @@ class CrawlSiteJob implements ShouldQueue
         }
 
         // Generate annotated screenshot from local HTML
+        CrawlProgress::dispatch($this->site->id, 'generating_screenshot', 'Generating annotated screenshot...');
+
         if ($html) {
             try {
                 $annotatedHtml = $annotationService->annotate(
@@ -184,6 +201,10 @@ class CrawlSiteJob implements ShouldQueue
             'last_crawled_at' => now(),
             'last_attempted_at' => now(),
             'status' => 'completed',
+        ]);
+
+        CrawlProgress::dispatch($this->site->id, 'finishing', 'Running final checks...', [
+            'hype_score' => $hypeScore,
         ]);
 
         GenerateScreenshotJob::dispatch($this->site);

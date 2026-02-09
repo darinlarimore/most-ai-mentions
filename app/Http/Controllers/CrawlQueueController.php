@@ -3,35 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Models\Site;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class CrawlQueueController extends Controller
 {
     /**
-     * Display the crawl queue with queued and currently crawling sites.
+     * Redirect old queue page to live crawl view.
      */
-    public function index(): Response
+    public function index(): RedirectResponse
     {
-        return Inertia::render('Crawl/Queue', [
+        return redirect()->route('crawl.live');
+    }
+
+    /**
+     * Display the live crawl view with queue and real-time progress.
+     */
+    public function live(): Response
+    {
+        return Inertia::render('Crawl/Live', [
+            'currentSite' => Site::where('status', 'crawling')->first(),
             'queuedSites' => Inertia::defer(fn () => Site::active()
                 ->readyToCrawl()
                 ->where('status', '!=', 'crawling')
                 ->orderByRaw('submitted_by IS NOT NULL AND last_crawled_at IS NULL DESC')
                 ->orderByRaw('last_crawled_at IS NULL DESC')
                 ->orderBy('last_crawled_at')
+                ->limit(20)
                 ->get()),
-            'currentlyCrawling' => Site::where('status', 'crawling')->first(),
-        ]);
-    }
-
-    /**
-     * Display the currently crawling site with live info.
-     */
-    public function live(): Response
-    {
-        return Inertia::render('Crawl/Live', [
-            'currentSite' => Site::where('status', 'crawling')->first(),
         ]);
     }
 }
