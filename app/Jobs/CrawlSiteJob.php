@@ -55,8 +55,8 @@ class CrawlSiteJob implements ShouldQueue
 
         Crawler::create()
             ->setCrawlObserver($observer)
-            ->setMaximumDepth(3)
-            ->setTotalCrawlLimit(50)
+            ->setMaximumDepth(0)
+            ->setTotalCrawlLimit(1)
             ->startCrawling($this->site->url);
 
         // Keep HTML as local variable only — never persisted to DB
