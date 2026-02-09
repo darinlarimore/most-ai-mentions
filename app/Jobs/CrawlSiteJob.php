@@ -79,13 +79,13 @@ class CrawlSiteJob implements ShouldQueue
         // Calculate scores with AI image data included
         $scores = $calculator->calculate(
             $crawlResult->mention_details ?? [],
-            $crawlResult->animation_count,
-            $crawlResult->glow_effect_count,
-            $crawlResult->rainbow_border_count,
+            $crawlResult->animation_count ?? 0,
+            $crawlResult->glow_effect_count ?? 0,
+            $crawlResult->rainbow_border_count ?? 0,
             $crawlResult->lighthouse_performance,
             $crawlResult->lighthouse_accessibility,
-            $crawlResult->ai_image_count,
-            $crawlResult->ai_image_score,
+            $crawlResult->ai_image_count ?? 0,
+            $crawlResult->ai_image_score ?? 0,
         );
 
         $crawlResult->update([
