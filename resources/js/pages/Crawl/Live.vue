@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, Deferred } from '@inertiajs/vue3';
+import { Head, Link, WhenVisible } from '@inertiajs/vue3';
 import GuestLayout from '@/layouts/GuestLayout.vue';
 import type { Site } from '@/types';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
@@ -108,6 +108,9 @@ onMounted(() => {
         }
 
         completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };
+
+        // Remove completed site from queue (it's now on cooldown)
+        queuedSiteList.value = queuedSiteList.value.filter(s => s.id !== e.site_id);
     });
 });
 
@@ -272,7 +275,7 @@ onUnmounted(() => {
                     Waiting in Queue
                 </h2>
 
-                <Deferred data="queuedSites">
+                <WhenVisible data="queuedSites" :buffer="200">
                     <template #fallback>
                         <div class="flex flex-col gap-2">
                             <div
@@ -336,7 +339,7 @@ onUnmounted(() => {
                             <Button>Submit a Site</Button>
                         </Link>
                     </div>
-                </Deferred>
+                </WhenVisible>
             </div>
         </div>
     </GuestLayout>
