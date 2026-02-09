@@ -12,12 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('ratings', function (Blueprint $table) {
-            $table->dropUnique(['user_id', 'site_id']);
             $table->dropForeign(['user_id']);
+        });
 
+        Schema::table('ratings', function (Blueprint $table) {
+            $table->dropUnique(['user_id', 'site_id']);
             $table->foreignId('user_id')->nullable()->change();
             $table->string('ip_address', 45)->nullable()->after('user_id');
-
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
             $table->unique(['ip_address', 'site_id']);
         });
