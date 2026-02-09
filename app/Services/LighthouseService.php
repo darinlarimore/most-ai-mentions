@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Process;
 class LighthouseService
 {
     /** @var int Timeout in seconds for the Lighthouse CLI process. */
-    private const PROCESS_TIMEOUT = 120;
+    private const PROCESS_TIMEOUT = 60;
 
     /**
      * Run a Lighthouse audit against the given URL.

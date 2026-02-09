@@ -17,6 +17,10 @@ class RunLighthouseJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $timeout = 90;
+
+    public int $tries = 2;
+
     public function __construct(
         public readonly Site $site,
         public readonly CrawlResult $crawlResult,
@@ -39,13 +43,13 @@ class RunLighthouseJob implements ShouldQueue
         $freshResult = $this->crawlResult->fresh();
         $scores = $calculator->calculate(
             $freshResult->mention_details ?? [],
-            $freshResult->animation_count,
-            $freshResult->glow_effect_count,
-            $freshResult->rainbow_border_count,
+            $freshResult->animation_count ?? 0,
+            $freshResult->glow_effect_count ?? 0,
+            $freshResult->rainbow_border_count ?? 0,
             $freshResult->lighthouse_performance,
             $freshResult->lighthouse_accessibility,
-            $freshResult->ai_image_count,
-            $freshResult->ai_image_score,
+            $freshResult->ai_image_count ?? 0,
+            $freshResult->ai_image_score ?? 0,
         );
 
         $freshResult->update([
