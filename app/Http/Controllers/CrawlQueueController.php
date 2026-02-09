@@ -17,7 +17,7 @@ class CrawlQueueController extends Controller
             'queuedSites' => Site::where('status', 'queued')
                 ->orderBy('created_at')
                 ->get(),
-            'crawlingSite' => Site::where('status', 'crawling')->first(),
+            'currentlyCrawling' => Site::where('status', 'crawling')->first(),
         ]);
     }
 
