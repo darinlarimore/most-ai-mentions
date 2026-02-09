@@ -15,6 +15,10 @@ class GenerateScreenshotJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $timeout = 60;
+
+    public int $tries = 2;
+
     public function __construct(
         public readonly Site $site,
     ) {}
