@@ -20,6 +20,7 @@ export interface Site {
     domain: string;
     name: string | null;
     description: string | null;
+    category: string | null;
     screenshot_path: string | null;
     hype_score: number;
     user_rating_avg: number;

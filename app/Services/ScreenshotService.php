@@ -59,7 +59,11 @@ class ScreenshotService
         $filename = 'screenshots/annotated-'.Str::slug($slug).'-'.now()->timestamp.'.jpg';
 
         return $this->renderAndStore($filename, function () use ($html) {
-            return Browsershot::html($html);
+            return Browsershot::html($html)
+                ->setOption('waitUntil', 'networkidle0')
+                ->setDelay(2000)
+                ->dismissDialogs()
+                ->fullPage();
         });
     }
 

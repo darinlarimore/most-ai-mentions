@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SiteCategory;
 use App\Models\Site;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,6 +16,7 @@ class LeaderboardController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->value();
+        $category = $request->string('category')->trim()->value();
 
         $sites = Site::active()
             ->whereNotNull('last_crawled_at')
@@ -25,13 +27,23 @@ class LeaderboardController extends Controller
                         ->orWhere('description', 'like', "%{$search}%");
                 });
             })
+            ->when($category, function ($query, $category) {
+                $query->where('category', $category);
+            })
             ->orderByDesc('hype_score')
             ->paginate(25)
             ->withQueryString();
 
+        $categories = collect(SiteCategory::cases())->map(fn (SiteCategory $c) => [
+            'value' => $c->value,
+            'label' => $c->label(),
+        ])->all();
+
         return Inertia::render('Leaderboard/Index', [
             'sites' => $sites,
             'search' => $search,
+            'category' => $category,
+            'categories' => $categories,
         ]);
     }
 

@@ -4,28 +4,47 @@ import GuestLayout from '@/layouts/GuestLayout.vue';
 import type { Site, PaginatedData } from '@/types';
 import SiteCard from '@/components/SiteCard.vue';
 import NewsletterForm from '@/components/NewsletterForm.vue';
-import { Trophy, ArrowRight, Cpu, FlaskConical, Radio, Users, Search } from 'lucide-vue-next';
+import { Trophy, Cpu, FlaskConical, Radio, Users, Search, X } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { computed, ref, watch } from 'vue';
 
+interface CategoryOption {
+    value: string;
+    label: string;
+}
+
 const props = defineProps<{
     sites: PaginatedData<Site>;
     search?: string;
+    category?: string;
+    categories: CategoryOption[];
 }>();
 
 const searchQuery = ref(props.search || '');
+const activeCategory = ref(props.category || '');
 let debounceTimer: ReturnType<typeof setTimeout>;
+
+const applyFilters = (overrides: Record<string, string | undefined> = {}) => {
+    const params: Record<string, string | undefined> = {
+        search: searchQuery.value || undefined,
+        category: activeCategory.value || undefined,
+        ...overrides,
+    };
+    router.get('/', params, { preserveState: true, preserveScroll: true });
+};
 
 watch(searchQuery, (value) => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-        router.get('/', { search: value || undefined }, {
-            preserveState: true,
-            preserveScroll: true,
-        });
+        applyFilters({ search: value || undefined });
     }, 300);
 });
+
+const selectCategory = (value: string) => {
+    activeCategory.value = activeCategory.value === value ? '' : value;
+    applyFilters({ category: activeCategory.value || undefined });
+};
 
 const startRank = computed(() => {
     return (props.sites.current_page - 1) * props.sites.per_page + 1;
@@ -100,6 +119,7 @@ const goToPage = (url: string | null) => {
                         {{ sites.total }} sites ranked
                     </span>
                 </div>
+
                 <div class="relative">
                     <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -109,14 +129,34 @@ const goToPage = (url: string | null) => {
                         class="pl-10"
                     />
                 </div>
+
+                <!-- Category Filters -->
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        v-for="cat in categories"
+                        :key="cat.value"
+                        :class="[
+                            'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                            activeCategory === cat.value
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground',
+                        ]"
+                        @click="selectCategory(cat.value)"
+                    >
+                        {{ cat.label }}
+                        <X v-if="activeCategory === cat.value" class="size-3" />
+                    </button>
+                </div>
             </div>
 
             <div v-if="sites.data.length === 0" class="flex flex-col items-center gap-2 rounded-lg border border-dashed py-12 text-center">
                 <Search class="size-8 text-muted-foreground/40" />
-                <p class="text-sm text-muted-foreground">No sites found matching "{{ searchQuery }}"</p>
+                <p class="text-sm text-muted-foreground">
+                    No sites found{{ searchQuery ? ` matching "${searchQuery}"` : '' }}{{ activeCategory ? ` in ${activeCategory}` : '' }}
+                </p>
             </div>
 
-            <div v-else class="flex flex-col gap-3">
+            <div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <SiteCard
                     v-for="(site, index) in sites.data"
                     :key="site.id"

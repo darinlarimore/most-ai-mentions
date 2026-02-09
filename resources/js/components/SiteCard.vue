@@ -10,6 +10,17 @@ const props = defineProps<{
     rank: number;
 }>();
 
+const categoryLabels: Record<string, string> = {
+    marketing: 'Marketing', company: 'Company', tech: 'Tech', software: 'Software',
+    saas: 'SaaS', agency: 'Agency', startup: 'Startup', enterprise: 'Enterprise',
+    consulting: 'Consulting', ecommerce: 'E-commerce', finance: 'Finance',
+    healthcare: 'Healthcare', education: 'Education', media: 'Media', other: 'Other',
+};
+
+const categoryLabel = computed(() => {
+    return props.site.category ? (categoryLabels[props.site.category] ?? props.site.category) : '';
+});
+
 const rankBadgeClass = computed(() => {
     if (props.rank === 1) return 'bg-yellow-400 text-yellow-900 shadow-yellow-400/30';
     if (props.rank === 2) return 'bg-gray-300 text-gray-800 shadow-gray-300/30';
@@ -27,39 +38,55 @@ const formattedDate = computed(() => {
 <template>
     <Link
         :href="`/sites/${site.id}`"
-        class="group flex items-center gap-4 rounded-xl border bg-card p-4 transition-all hover:shadow-md hover:border-primary/20 dark:hover:border-primary/30"
+        class="group flex flex-col overflow-hidden rounded-xl border bg-card transition-all hover:border-primary/20 hover:shadow-md dark:hover:border-primary/30"
     >
-        <!-- Rank Badge -->
-        <div
-            :class="[
-                'flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-sm',
-                rankBadgeClass,
-            ]"
-        >
-            #{{ rank }}
-        </div>
-
-        <!-- Screenshot Thumbnail -->
-        <div class="relative size-16 shrink-0 overflow-hidden rounded-lg border bg-muted">
+        <!-- Screenshot Banner -->
+        <div class="relative h-32 w-full bg-muted sm:h-36">
             <img
                 v-if="site.screenshot_path"
                 :src="site.screenshot_path"
                 :alt="site.name || site.domain"
-                class="size-full object-cover"
+                class="size-full object-cover object-top"
             />
             <div v-else class="flex size-full items-center justify-center">
-                <Globe class="size-6 text-muted-foreground" />
+                <Globe class="size-10 text-muted-foreground/40" />
             </div>
+
+            <!-- Rank Badge -->
+            <div
+                :class="[
+                    'absolute left-3 top-3 flex size-9 items-center justify-center rounded-full text-xs font-bold shadow-sm',
+                    rankBadgeClass,
+                ]"
+            >
+                #{{ rank }}
+            </div>
+
+            <!-- Category Badge -->
+            <span
+                v-if="site.category"
+                class="absolute right-3 top-3 rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-medium text-foreground backdrop-blur-sm"
+            >
+                {{ categoryLabel }}
+            </span>
         </div>
 
-        <!-- Site Info -->
-        <div class="flex min-w-0 flex-1 flex-col gap-1">
-            <h3 class="truncate font-semibold text-foreground group-hover:text-primary transition-colors">
-                {{ site.name || site.domain }}
-            </h3>
-            <p class="truncate text-sm text-muted-foreground">
-                {{ site.domain }}
-            </p>
+        <!-- Card Body -->
+        <div class="flex flex-1 flex-col gap-3 p-4">
+            <div class="flex items-start justify-between gap-3">
+                <div class="flex min-w-0 flex-col gap-0.5">
+                    <h3 class="truncate font-semibold text-foreground transition-colors group-hover:text-primary">
+                        {{ site.name || site.domain }}
+                    </h3>
+                    <p class="truncate text-sm text-muted-foreground">
+                        {{ site.domain }}
+                    </p>
+                </div>
+                <div class="shrink-0">
+                    <HypeScoreBadge :score="site.hype_score" />
+                </div>
+            </div>
+
             <div class="flex items-center gap-3 text-xs text-muted-foreground">
                 <span class="flex items-center gap-1">
                     <MessageSquare class="size-3" />
@@ -70,11 +97,6 @@ const formattedDate = computed(() => {
                     {{ formattedDate }}
                 </span>
             </div>
-        </div>
-
-        <!-- Hype Score -->
-        <div class="shrink-0">
-            <HypeScoreBadge :score="site.hype_score" />
         </div>
     </Link>
 </template>
