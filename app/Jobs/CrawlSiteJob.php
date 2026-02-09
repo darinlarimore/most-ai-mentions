@@ -46,6 +46,13 @@ class CrawlSiteJob implements ShouldQueue
         AiImageDetectionService $imageDetectionService,
         ScreenshotService $screenshotService,
     ): void {
+        // Normalize URL to homepage if it has a path
+        $parsed = parse_url($this->site->url);
+        $homepageUrl = ($parsed['scheme'] ?? 'https').'://'.($parsed['host'] ?? '');
+        if ($this->site->url !== $homepageUrl) {
+            $this->site->update(['url' => $homepageUrl]);
+        }
+
         Log::info("Starting crawl for site: {$this->site->url}");
 
         $this->site->update(['status' => 'crawling']);

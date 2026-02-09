@@ -35,7 +35,7 @@ class SeedListSeeder extends Seeder
         ['url' => 'https://mistral.ai', 'name' => 'Mistral AI'],
         ['url' => 'https://deepmind.google', 'name' => 'Google DeepMind'],
         ['url' => 'https://meta.ai', 'name' => 'Meta AI'],
-        ['url' => 'https://nvidia.com/ai', 'name' => 'NVIDIA AI'],
+        ['url' => 'https://nvidia.com', 'name' => 'NVIDIA AI'],
         ['url' => 'https://suno.com', 'name' => 'Suno'],
         ['url' => 'https://elevenlabs.io', 'name' => 'ElevenLabs'],
         ['url' => 'https://pika.art', 'name' => 'Pika'],
