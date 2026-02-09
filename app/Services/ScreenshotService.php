@@ -82,6 +82,18 @@ class ScreenshotService
             ->timeout(self::TIMEOUT)
             ->setScreenshotType('jpeg', 80)
             ->noSandbox()
+            ->addChromiumArguments([
+                'disable-dev-shm-usage',
+                'disable-gpu',
+                'disable-accelerated-2d-canvas',
+                'disable-extensions',
+                'disable-software-rasterizer',
+                'disable-features=site-per-process',
+                'disable-background-timer-throttling',
+                'disable-backgrounding-occluded-windows',
+                'disable-renderer-backgrounding',
+                'js-flags=--max-old-space-size=128',
+            ])
             ->save($tempPath);
 
         Storage::disk('public')->put(
