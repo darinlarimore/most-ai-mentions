@@ -14,8 +14,10 @@ class CrawlQueueController extends Controller
     public function index(): Response
     {
         return Inertia::render('Crawl/Queue', [
-            'queuedSites' => Site::where('status', 'queued')
-                ->orderBy('created_at')
+            'queuedSites' => Site::active()
+                ->readyToCrawl()
+                ->where('status', '!=', 'crawling')
+                ->orderByRaw('last_crawled_at IS NOT NULL, last_crawled_at ASC')
                 ->get(),
             'currentlyCrawling' => Site::where('status', 'crawling')->first(),
         ]);
