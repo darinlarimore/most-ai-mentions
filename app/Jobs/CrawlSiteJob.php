@@ -138,6 +138,8 @@ class CrawlSiteJob implements ShouldQueue
                 'status' => 'pending',
             ]);
 
+            self::dispatchNext();
+
             return;
         }
 
@@ -190,5 +192,26 @@ class CrawlSiteJob implements ShouldQueue
         CrawlCompleted::dispatch($this->site->id, $hypeScore, $crawlResult->ai_mention_count);
 
         Log::info("Completed crawl for site: {$this->site->url}, score: {$hypeScore}");
+
+        self::dispatchNext();
+    }
+
+    /**
+     * Find and dispatch the next site ready to crawl.
+     */
+    public static function dispatchNext(): void
+    {
+        $next = Site::query()
+            ->active()
+            ->readyToCrawl()
+            ->where('status', '!=', 'crawling')
+            ->orderByRaw('submitted_by IS NOT NULL AND last_crawled_at IS NULL DESC')
+            ->orderByRaw('last_crawled_at IS NULL DESC')
+            ->orderBy('last_crawled_at')
+            ->first();
+
+        if ($next) {
+            self::dispatch($next);
+        }
     }
 }

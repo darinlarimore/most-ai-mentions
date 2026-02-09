@@ -14,6 +14,13 @@ class CrawlSites extends Command
 
     public function handle(): int
     {
+        // Skip if a crawl is already in progress — the chain will continue on its own
+        if (Site::where('status', 'crawling')->exists()) {
+            $this->info('A crawl is already in progress. Skipping.');
+
+            return self::SUCCESS;
+        }
+
         $limit = (int) $this->option('limit');
 
         $sites = Site::query()
