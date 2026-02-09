@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import type { BreadcrumbItem } from '@/types';
+import GuestLayout from '@/layouts/GuestLayout.vue';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Globe, Send, Info } from 'lucide-vue-next';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Submit Site', href: '/submit' },
-];
 
 const form = useForm({
     url: '',
@@ -29,8 +24,8 @@ const submit = () => {
 <template>
     <Head title="Submit a Site" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-1 flex-col items-center justify-center p-4">
+    <GuestLayout>
+        <div class="flex flex-1 flex-col items-center justify-center p-4 py-12">
             <div class="w-full max-w-lg">
                 <Card>
                     <CardHeader>
@@ -96,5 +91,5 @@ const submit = () => {
                 </Card>
             </div>
         </div>
-    </AppLayout>
+    </GuestLayout>
 </template>
