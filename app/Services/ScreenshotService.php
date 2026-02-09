@@ -36,7 +36,8 @@ class ScreenshotService
 
         return $this->renderAndStore($filename, function () use ($url) {
             return Browsershot::url($url)
-                ->waitUntilNetworkIdle()
+                ->setOption('waitUntil', 'load')
+                ->setDelay(2000)
                 ->dismissDialogs();
         });
     }
