@@ -36,6 +36,91 @@ class SiteDiscoveryService
         'diffusion', 'transformer', 'large language model',
     ];
 
+    /** @var array<string, string> Curated popular sites likely to mention AI heavily (url => name) */
+    private const POPULAR_SITES = [
+        // AI Companies & Products
+        'https://openai.com' => 'OpenAI',
+        'https://anthropic.com' => 'Anthropic',
+        'https://deepmind.google' => 'Google DeepMind',
+        'https://ai.meta.com' => 'Meta AI',
+        'https://ai.google' => 'Google AI',
+        'https://microsoft.com/ai' => 'Microsoft AI',
+        'https://nvidia.com/ai' => 'NVIDIA AI',
+        'https://stability.ai' => 'Stability AI',
+        'https://midjourney.com' => 'Midjourney',
+        'https://huggingface.co' => 'Hugging Face',
+        'https://replicate.com' => 'Replicate',
+        'https://cohere.com' => 'Cohere',
+        'https://mistral.ai' => 'Mistral AI',
+        'https://perplexity.ai' => 'Perplexity',
+        'https://inflection.ai' => 'Inflection AI',
+        'https://together.ai' => 'Together AI',
+        'https://groq.com' => 'Groq',
+        'https://fireworks.ai' => 'Fireworks AI',
+        'https://anyscale.com' => 'Anyscale',
+        'https://langchain.com' => 'LangChain',
+        'https://llamaindex.ai' => 'LlamaIndex',
+        'https://pinecone.io' => 'Pinecone',
+        'https://weaviate.io' => 'Weaviate',
+        'https://chromadb.dev' => 'Chroma',
+
+        // AI-Powered Tools & Apps
+        'https://jasper.ai' => 'Jasper',
+        'https://copy.ai' => 'Copy.ai',
+        'https://writesonic.com' => 'Writesonic',
+        'https://grammarly.com' => 'Grammarly',
+        'https://notion.so' => 'Notion',
+        'https://canva.com' => 'Canva',
+        'https://figma.com' => 'Figma',
+        'https://adobe.com/sensei' => 'Adobe Sensei',
+        'https://runway.ml' => 'Runway',
+        'https://descript.com' => 'Descript',
+        'https://synthesia.io' => 'Synthesia',
+        'https://elevenlabs.io' => 'ElevenLabs',
+        'https://cursor.com' => 'Cursor',
+        'https://replit.com' => 'Replit',
+        'https://vercel.com' => 'Vercel',
+        'https://supabase.com' => 'Supabase',
+
+        // AI Code & Dev Tools
+        'https://github.com/features/copilot' => 'GitHub Copilot',
+        'https://tabnine.com' => 'Tabnine',
+        'https://codeium.com' => 'Codeium',
+        'https://sourcegraph.com' => 'Sourcegraph',
+
+        // AI News, Research & Community
+        'https://techcrunch.com/category/artificial-intelligence' => 'TechCrunch AI',
+        'https://theverge.com/ai-artificial-intelligence' => 'The Verge AI',
+        'https://wired.com/tag/artificial-intelligence' => 'WIRED AI',
+        'https://arstechnica.com/ai' => 'Ars Technica AI',
+        'https://venturebeat.com/ai' => 'VentureBeat AI',
+        'https://thenextweb.com/topic/artificial-intelligence' => 'TNW AI',
+        'https://aiweirdness.com' => 'AI Weirdness',
+        'https://bensbites.com' => "Ben's Bites",
+        'https://therundown.ai' => 'The Rundown AI',
+
+        // Enterprise AI Platforms
+        'https://databricks.com' => 'Databricks',
+        'https://snowflake.com' => 'Snowflake',
+        'https://datadog.com' => 'Datadog',
+        'https://scale.com' => 'Scale AI',
+        'https://labelbox.com' => 'Labelbox',
+        'https://weights-biases.com' => 'Weights & Biases',
+        'https://neptune.ai' => 'Neptune.ai',
+        'https://mlflow.org' => 'MLflow',
+
+        // AI Chip & Hardware
+        'https://cerebras.net' => 'Cerebras',
+        'https://sambanova.ai' => 'SambaNova',
+        'https://graphcore.ai' => 'Graphcore',
+
+        // Honorable mentions — sites that love AI buzzwords
+        'https://salesforce.com/artificial-intelligence' => 'Salesforce AI',
+        'https://ibm.com/watson' => 'IBM Watson',
+        'https://oracle.com/artificial-intelligence' => 'Oracle AI',
+        'https://sap.com/products/artificial-intelligence.html' => 'SAP AI',
+    ];
+
     /** @var list<string> Domains to skip (social media, generic, etc.) */
     private const EXCLUDED_DOMAINS = [
         'google.com', 'youtube.com', 'twitter.com', 'x.com', 'facebook.com',
@@ -51,11 +136,49 @@ class SiteDiscoveryService
     {
         $total = 0;
 
+        $total += $this->discoverPopular()->count();
         $total += $this->discoverFromG2()->count();
         $total += $this->discoverFromProductHunt()->count();
         $total += $this->discoverFromHackerNews()->count();
 
         return $total;
+    }
+
+    /**
+     * Add curated popular AI sites that are known to mention AI heavily.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverPopular(): Collection
+    {
+        $created = collect();
+
+        $existingDomains = Site::pluck('domain')->toArray();
+
+        foreach (self::POPULAR_SITES as $url => $name) {
+            $domain = parse_url($url, PHP_URL_HOST);
+
+            if (! $domain || in_array($domain, $existingDomains)) {
+                continue;
+            }
+
+            try {
+                $site = Site::create([
+                    'url' => $url,
+                    'domain' => $domain,
+                    'name' => $name,
+                    'status' => 'queued',
+                    'source' => 'curated',
+                ]);
+
+                $created->push($site);
+                $existingDomains[] = $domain;
+            } catch (\Throwable $e) {
+                Log::debug("SiteDiscovery: Skipped {$url}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $created;
     }
 
     /**
