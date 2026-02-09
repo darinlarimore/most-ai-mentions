@@ -15,6 +15,9 @@ class AiMentionCrawlObserver extends CrawlObserver
     /** @var list<array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string}> */
     private array $mentionDetails = [];
 
+    /** @var array<string, true> Track seen context hashes to deduplicate nav/footer repeats across pages */
+    private array $seenContexts = [];
+
     private int $pagesCrawled = 0;
 
     private int $animationCount = 0;
@@ -157,6 +160,14 @@ class AiMentionCrawlObserver extends CrawlObserver
                 $offset = $match[1];
 
                 $context = $this->extractContext($visibleText, $offset, mb_strlen($matchText));
+
+                // Deduplicate: skip if we've seen this exact keyword+context before (e.g. repeated nav menus)
+                $contextHash = md5(mb_strtolower($matchText).'|'.$context);
+                if (isset($this->seenContexts[$contextHash])) {
+                    continue;
+                }
+                $this->seenContexts[$contextHash] = true;
+
                 $fontSize = $this->estimateFontSize($html, $matchText);
                 $hasAnimation = $this->mentionHasAnimation($html, $matchText);
                 $hasGlow = $this->mentionHasGlow($html, $matchText);
