@@ -28,7 +28,13 @@ class LighthouseService
         $outputPath = storage_path('app/private/lighthouse-'.md5($url).'-'.now()->timestamp.'.json');
 
         try {
-            $result = Process::timeout(self::PROCESS_TIMEOUT)->run([
+            $env = [];
+            $chromePath = env('CHROME_PATH');
+            if ($chromePath) {
+                $env['CHROME_PATH'] = $chromePath;
+            }
+
+            $result = Process::timeout(self::PROCESS_TIMEOUT)->env($env)->run([
                 'npx', 'lighthouse', $url,
                 '--output=json',
                 '--output-path='.$outputPath,
