@@ -2,44 +2,30 @@
 import { Head, Link } from '@inertiajs/vue3';
 import type { Site, CrawlResult } from '@/types';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ExternalLink, AlertTriangle } from 'lucide-vue-next';
-import { ref, onMounted, watch } from 'vue';
+import { ArrowLeft, ExternalLink, AlertTriangle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-vue-next';
+import { ref } from 'vue';
 
 const props = defineProps<{
     site: Site;
-    annotatedHtml: string;
+    annotatedScreenshotUrl: string | null;
     crawlResult: CrawlResult | null;
 }>();
 
-const iframeRef = ref<HTMLIFrameElement | null>(null);
-const iframeHeight = ref('100vh');
+const scale = ref(1);
+const minScale = 0.25;
+const maxScale = 3;
 
-const updateIframeContent = () => {
-    if (!iframeRef.value || !props.annotatedHtml) return;
-
-    const doc = iframeRef.value.contentDocument;
-    if (!doc) return;
-
-    doc.open();
-    doc.write(props.annotatedHtml);
-    doc.close();
-
-    // Adjust iframe height to content after load
-    iframeRef.value.onload = () => {
-        if (iframeRef.value?.contentDocument?.body) {
-            const height = iframeRef.value.contentDocument.body.scrollHeight;
-            iframeHeight.value = Math.max(height, 600) + 'px';
-        }
-    };
+const zoomIn = () => {
+    scale.value = Math.min(maxScale, scale.value + 0.25);
 };
 
-onMounted(() => {
-    updateIframeContent();
-});
+const zoomOut = () => {
+    scale.value = Math.max(minScale, scale.value - 0.25);
+};
 
-watch(() => props.annotatedHtml, () => {
-    updateIframeContent();
-});
+const resetZoom = () => {
+    scale.value = 1;
+};
 </script>
 
 <template>
@@ -87,30 +73,46 @@ watch(() => props.annotatedHtml, () => {
                 <span class="font-semibold">Legend:</span>
                 <span class="flex items-center gap-1.5">
                     <span class="inline-block h-3 w-6 rounded" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);"></span>
-                    AI Keyword (hover for points)
+                    AI Keyword
                 </span>
                 <span class="flex items-center gap-1.5">
-                    <span class="inline-block size-3 rounded-full bg-purple-600"></span>
-                    Animated mention
+                    <span class="inline-block size-3 rounded border-2 border-red-500"></span>
+                    AI Image (high confidence)
                 </span>
                 <span class="flex items-center gap-1.5">
-                    <span class="inline-block size-3 rounded-full bg-amber-600"></span>
-                    Glow effect
+                    <span class="inline-block size-3 rounded border-2 border-orange-500"></span>
+                    AI Image (medium confidence)
                 </span>
-                <span>Score panel is in the top-right corner of the preview below.</span>
+                <span>Score panel is in the top-right corner of the screenshot.</span>
             </div>
         </div>
 
-        <!-- Annotated Content -->
+        <!-- Zoom Controls -->
+        <div v-if="annotatedScreenshotUrl" class="mx-auto max-w-7xl px-4 py-2">
+            <div class="flex items-center gap-2">
+                <Button variant="outline" size="sm" @click="zoomOut" :disabled="scale <= minScale">
+                    <ZoomOut class="size-4" />
+                </Button>
+                <span class="min-w-[4rem] text-center text-sm text-muted-foreground">{{ Math.round(scale * 100) }}%</span>
+                <Button variant="outline" size="sm" @click="zoomIn" :disabled="scale >= maxScale">
+                    <ZoomIn class="size-4" />
+                </Button>
+                <Button variant="outline" size="sm" @click="resetZoom" v-show="scale !== 1">
+                    <RotateCcw class="size-4" />
+                    Reset
+                </Button>
+            </div>
+        </div>
+
+        <!-- Annotated Screenshot -->
         <div class="mx-auto max-w-7xl px-4 py-4">
-            <div v-if="annotatedHtml" class="overflow-hidden rounded-xl border shadow-lg">
-                <iframe
-                    ref="iframeRef"
-                    sandbox="allow-same-origin"
-                    class="w-full border-0"
-                    :style="{ height: iframeHeight, minHeight: '600px' }"
-                    title="Annotated site view"
-                ></iframe>
+            <div v-if="annotatedScreenshotUrl" class="overflow-auto rounded-xl border shadow-lg">
+                <img
+                    :src="annotatedScreenshotUrl"
+                    :style="{ transform: `scale(${scale})`, transformOrigin: 'top left' }"
+                    class="max-w-none"
+                    alt="Annotated screenshot showing highlighted AI keywords"
+                />
             </div>
 
             <div v-else class="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed py-20">
@@ -118,7 +120,7 @@ watch(() => props.annotatedHtml, () => {
                 <div class="text-center">
                     <h3 class="text-lg font-semibold">No Annotated View Available</h3>
                     <p class="mt-1 max-w-md text-sm text-muted-foreground">
-                        This site hasn't been crawled yet, or the crawled HTML wasn't captured.
+                        This site hasn't been crawled yet, or the annotated screenshot wasn't captured.
                         Submit a re-crawl to generate an annotated view.
                     </p>
                 </div>

@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SubmitSiteRequest;
 use App\Jobs\CrawlSiteJob;
 use App\Models\Site;
-use App\Services\HtmlAnnotationService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,47 +30,20 @@ class SiteController extends Controller
     }
 
     /**
-     * Display the annotated/highlighted version of a crawled site.
+     * Display the annotated/highlighted screenshot of a crawled site.
      */
-    public function annotated(Site $site, HtmlAnnotationService $annotationService): Response
+    public function annotated(Site $site): Response
     {
         $crawlResult = $site->crawlResults()->latest()->first();
 
-        $annotatedHtml = '';
-        if ($crawlResult) {
-            // Use cached annotated HTML if available, otherwise generate on the fly
-            if ($crawlResult->annotated_html) {
-                $annotatedHtml = $crawlResult->annotated_html;
-            } elseif ($crawlResult->crawled_html) {
-                $annotatedHtml = $annotationService->annotate(
-                    $crawlResult->crawled_html,
-                    $crawlResult->mention_details ?? [],
-                    [
-                        'total_score' => $crawlResult->total_score,
-                        'mention_score' => $crawlResult->mention_score,
-                        'font_size_score' => $crawlResult->font_size_score,
-                        'animation_score' => $crawlResult->animation_score,
-                        'visual_effects_score' => $crawlResult->visual_effects_score,
-                        'lighthouse_perf_bonus' => $crawlResult->lighthouse_perf_bonus,
-                        'lighthouse_a11y_bonus' => $crawlResult->lighthouse_a11y_bonus,
-                        'ai_mention_count' => $crawlResult->ai_mention_count,
-                        'animation_count' => $crawlResult->animation_count,
-                        'glow_effect_count' => $crawlResult->glow_effect_count,
-                        'rainbow_border_count' => $crawlResult->rainbow_border_count,
-                        'ai_image_count' => $crawlResult->ai_image_count,
-                        'ai_image_hype_bonus' => $crawlResult->ai_image_hype_bonus,
-                    ],
-                    $crawlResult->ai_image_details ?? [],
-                );
-
-                // Cache for next time
-                $crawlResult->update(['annotated_html' => $annotatedHtml]);
-            }
+        $annotatedScreenshotUrl = null;
+        if ($crawlResult?->annotated_screenshot_path) {
+            $annotatedScreenshotUrl = Storage::disk('public')->url($crawlResult->annotated_screenshot_path);
         }
 
         return Inertia::render('Sites/Annotated', [
             'site' => $site,
-            'annotatedHtml' => $annotatedHtml,
+            'annotatedScreenshotUrl' => $annotatedScreenshotUrl,
             'crawlResult' => $crawlResult,
         ]);
     }

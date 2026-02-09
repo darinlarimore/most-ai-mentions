@@ -56,6 +56,7 @@ export interface CrawlResult {
     ai_image_score: number;
     ai_image_details: AiImageDetail[] | null;
     ai_image_hype_bonus: number;
+    annotated_screenshot_path: string | null;
     created_at: string;
 }
 
