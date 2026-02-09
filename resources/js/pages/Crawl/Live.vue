@@ -25,6 +25,17 @@ const props = defineProps<{
     queuedSites: Site[];
 }>();
 
+const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
+    fetching: { label: 'Fetching Homepage', icon: Globe },
+    detecting_mentions: { label: 'Detecting AI Mentions', icon: Search },
+    detecting_images: { label: 'Scanning for AI Images', icon: ImageIcon },
+    calculating_score: { label: 'Calculating Hype Score', icon: Calculator },
+    generating_screenshot: { label: 'Generating Screenshot', icon: Camera },
+    finishing: { label: 'Finishing Up', icon: Sparkles },
+};
+
+const allStepKeys = ['fetching', 'detecting_mentions', 'detecting_images', 'calculating_score', 'generating_screenshot', 'finishing'];
+
 const initialSite = props.currentSite ?? props.lastCrawledSite;
 
 const activeSite = ref<{ id: number; url: string; name: string | null; slug: string; screenshot_path?: string | null } | null>(
@@ -43,17 +54,6 @@ const completedResult = ref<{ hype_score: number; ai_mention_count: number } | n
         : null,
 );
 const isLive = computed(() => activeSite.value && !completedResult.value);
-
-const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
-    fetching: { label: 'Fetching Homepage', icon: Globe },
-    detecting_mentions: { label: 'Detecting AI Mentions', icon: Search },
-    detecting_images: { label: 'Scanning for AI Images', icon: ImageIcon },
-    calculating_score: { label: 'Calculating Hype Score', icon: Calculator },
-    generating_screenshot: { label: 'Generating Screenshot', icon: Camera },
-    finishing: { label: 'Finishing Up', icon: Sparkles },
-};
-
-const allStepKeys = ['fetching', 'detecting_mentions', 'detecting_images', 'calculating_score', 'generating_screenshot', 'finishing'];
 
 const pendingSteps = computed(() => {
     const completedKeys = new Set(completedSteps.value.map(s => s.key));
