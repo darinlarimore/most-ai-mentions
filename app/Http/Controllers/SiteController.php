@@ -6,7 +6,6 @@ use App\Http\Requests\SubmitSiteRequest;
 use App\Jobs\CrawlSiteJob;
 use App\Models\Site;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -36,14 +35,9 @@ class SiteController extends Controller
     {
         $crawlResult = $site->crawlResults()->latest()->first();
 
-        $annotatedScreenshotUrl = null;
-        if ($crawlResult?->annotated_screenshot_path) {
-            $annotatedScreenshotUrl = Storage::disk('public')->url($crawlResult->annotated_screenshot_path);
-        }
-
         return Inertia::render('Sites/Annotated', [
             'site' => $site,
-            'annotatedScreenshotUrl' => $annotatedScreenshotUrl,
+            'annotatedScreenshotUrl' => $crawlResult?->annotated_screenshot_path,
             'crawlResult' => $crawlResult,
         ]);
     }

@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Storage;
 
 class Site extends Model
 {
@@ -27,6 +29,13 @@ class Site extends Model
             'last_crawled_at' => 'datetime',
             'is_active' => 'boolean',
         ];
+    }
+
+    protected function screenshotPath(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value ? Storage::disk('public')->url($value) : null,
+        );
     }
 
     public function submitter(): BelongsTo
