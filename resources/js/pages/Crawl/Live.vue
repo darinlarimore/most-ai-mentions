@@ -49,23 +49,22 @@ usePoll(5000);
 
             <!-- Active Crawl -->
             <Card v-if="currentSite" class="overflow-hidden">
-                <div class="relative">
-                    <!-- Scanning Animation Bar -->
-                    <div class="absolute inset-x-0 top-0 h-1 overflow-hidden bg-muted">
-                        <div class="animate-scan h-full w-1/3 bg-gradient-to-r from-transparent via-primary to-transparent" />
-                    </div>
+                <!-- Scanning Animation Bar -->
+                <div class="h-1 overflow-hidden bg-muted">
+                    <div class="animate-scan h-full w-1/3 bg-gradient-to-r from-transparent via-primary to-transparent" />
+                </div>
 
-                    <CardHeader class="pt-6">
-                        <CardTitle class="flex items-center gap-2">
-                            <Scan class="size-5 animate-pulse text-primary" />
-                            Currently Scanning
-                        </CardTitle>
-                        <CardDescription>
-                            Analyzing {{ currentSite.domain }} for AI mentions, animations, and visual effects
-                        </CardDescription>
-                    </CardHeader>
+                <CardHeader class="px-6 pt-5 pb-4">
+                    <CardTitle class="flex items-center gap-2">
+                        <Scan class="size-5 animate-pulse text-primary" />
+                        Currently Scanning
+                    </CardTitle>
+                    <CardDescription>
+                        Analyzing {{ currentSite.domain }} for AI mentions, animations, and visual effects
+                    </CardDescription>
+                </CardHeader>
 
-                    <CardContent class="flex flex-col gap-6">
+                <CardContent class="flex flex-col gap-6 px-6 pb-6">
                         <!-- Site Info -->
                         <div class="flex items-center gap-4">
                             <div class="relative size-20 shrink-0 overflow-hidden rounded-xl border bg-muted">
@@ -122,7 +121,6 @@ usePoll(5000);
                             </Link>
                         </div>
                     </CardContent>
-                </div>
             </Card>
 
             <!-- No Active Crawl -->
