@@ -13,7 +13,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post('/sites', {
+    form.post('/submit', {
         onSuccess: () => {
             form.reset();
         },

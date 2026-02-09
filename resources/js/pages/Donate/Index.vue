@@ -38,7 +38,7 @@ const form = useForm({});
 const handleDonate = () => {
     if (donationAmount.value <= 0) return;
 
-    form.post(`/donate/checkout?amount=${donationAmount.value * 100}`, {
+    form.post(`/donate/session?amount=${donationAmount.value * 100}`, {
         preserveScroll: true,
     });
 };
