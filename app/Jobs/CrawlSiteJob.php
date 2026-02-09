@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Events\CrawlCompleted;
 use App\Events\CrawlStarted;
+use App\Jobs\Middleware\CheckQueuePaused;
 use App\Models\CrawlResult;
 use App\Models\Site;
 use App\Services\AiImageDetectionService;
@@ -32,6 +33,11 @@ class CrawlSiteJob implements ShouldQueue
     public function __construct(
         public readonly Site $site,
     ) {}
+
+    public function middleware(): array
+    {
+        return [new CheckQueuePaused];
+    }
 
     public function handle(
         HypeScoreCalculator $calculator,

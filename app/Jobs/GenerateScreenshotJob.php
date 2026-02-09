@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Middleware\CheckQueuePaused;
 use App\Models\Site;
 use App\Services\ScreenshotService;
 use Illuminate\Bus\Queueable;
@@ -22,6 +23,11 @@ class GenerateScreenshotJob implements ShouldQueue
     public function __construct(
         public readonly Site $site,
     ) {}
+
+    public function middleware(): array
+    {
+        return [new CheckQueuePaused];
+    }
 
     public function handle(ScreenshotService $screenshotService): void
     {

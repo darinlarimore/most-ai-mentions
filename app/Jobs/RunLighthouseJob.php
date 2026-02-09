@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Middleware\CheckQueuePaused;
 use App\Models\CrawlResult;
 use App\Models\Site;
 use App\Services\HypeScoreCalculator;
@@ -25,6 +26,11 @@ class RunLighthouseJob implements ShouldQueue
         public readonly Site $site,
         public readonly CrawlResult $crawlResult,
     ) {}
+
+    public function middleware(): array
+    {
+        return [new CheckQueuePaused];
+    }
 
     public function handle(
         LighthouseService $lighthouseService,

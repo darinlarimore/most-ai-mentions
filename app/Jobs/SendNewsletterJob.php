@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Middleware\CheckQueuePaused;
 use App\Mail\WeeklyNewsletter;
 use App\Models\NewsletterEdition;
 use App\Models\NewsletterSubscriber;
@@ -20,6 +21,11 @@ class SendNewsletterJob implements ShouldQueue
     public function __construct(
         public readonly NewsletterEdition $edition,
     ) {}
+
+    public function middleware(): array
+    {
+        return [new CheckQueuePaused];
+    }
 
     public function handle(): void
     {
