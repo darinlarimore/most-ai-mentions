@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, WhenVisible } from '@inertiajs/vue3';
+import { Head, Link, InfiniteScroll } from '@inertiajs/vue3';
 import GuestLayout from '@/layouts/GuestLayout.vue';
 import type { Site } from '@/types';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
@@ -19,10 +19,15 @@ interface CrawlStep {
     data?: Record<string, unknown>;
 }
 
+interface PaginatedSites {
+    data: Site[];
+    next_page_url: string | null;
+}
+
 const props = defineProps<{
     currentSite: Site | null;
     lastCrawledSite: Site | null;
-    queuedSites: Site[];
+    queuedSites: PaginatedSites;
 }>();
 
 const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
@@ -41,13 +46,10 @@ const initialSite = props.currentSite ?? props.lastCrawledSite;
 const activeSite = ref<{ id: number; url: string; name: string | null; slug: string; screenshot_path?: string | null } | null>(
     initialSite ? { id: initialSite.id, url: initialSite.url, name: initialSite.name, slug: initialSite.slug, screenshot_path: initialSite.screenshot_path } : null,
 );
-const queuedSiteList = ref<Site[]>(props.queuedSites ?? []);
-
-watch(() => props.queuedSites, (sites) => {
-    if (sites) {
-        queuedSiteList.value = sites;
-    }
-});
+const removedSiteIds = ref(new Set<number>());
+const filteredQueuedSites = computed(() =>
+    (props.queuedSites?.data ?? []).filter(s => !removedSiteIds.value.has(s.id)),
+);
 const completedSteps = ref<CrawlStep[]>(
     props.lastCrawledSite && !props.currentSite
         ? allStepKeys.map(key => ({ key, ...stepDefinitions[key] }))
@@ -81,7 +83,7 @@ onMounted(() => {
         completedResult.value = null;
 
         // Remove from queue
-        queuedSiteList.value = queuedSiteList.value.filter(s => s.id !== e.site_id);
+        removedSiteIds.value.add(e.site_id);
     });
 
     echoChannel.listen('.CrawlProgress', (e: { site_id: number; step: string; message: string; data: Record<string, unknown> }) => {
@@ -110,7 +112,7 @@ onMounted(() => {
         completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };
 
         // Remove completed site from queue (it's now on cooldown)
-        queuedSiteList.value = queuedSiteList.value.filter(s => s.id !== e.site_id);
+        removedSiteIds.value.add(e.site_id);
     });
 });
 
@@ -275,31 +277,14 @@ onUnmounted(() => {
                     Waiting in Queue
                 </h2>
 
-                <WhenVisible data="queuedSites" :buffer="200">
-                    <template #fallback>
-                        <div class="flex flex-col gap-2">
-                            <div
-                                v-for="i in 5"
-                                :key="i"
-                                class="flex items-center gap-4 rounded-xl border bg-card p-4"
-                            >
-                                <div class="size-8 shrink-0 animate-pulse rounded-full bg-muted" />
-                                <div class="size-10 shrink-0 animate-pulse rounded-lg bg-muted" />
-                                <div class="flex flex-1 flex-col gap-2">
-                                    <div class="h-4 w-40 animate-pulse rounded bg-muted" />
-                                    <div class="h-3 w-28 animate-pulse rounded bg-muted" />
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-
+                <InfiniteScroll data="queuedSites">
                     <TransitionGroup
                         name="queue-item"
                         tag="div"
                         class="flex flex-col gap-2"
                     >
                         <div
-                            v-for="(site, index) in queuedSiteList"
+                            v-for="(site, index) in filteredQueuedSites"
                             :key="site.id"
                             class="flex items-center gap-4 rounded-xl border bg-card p-4"
                         >
@@ -331,15 +316,32 @@ onUnmounted(() => {
                         </div>
                     </TransitionGroup>
 
-                    <div v-if="queuedSiteList.length === 0" class="flex flex-col items-center gap-4 rounded-xl border border-dashed p-12 text-center">
-                        <Clock class="size-12 text-muted-foreground" />
-                        <h3 class="text-lg font-medium">No sites yet</h3>
-                        <p class="text-muted-foreground">Submit a site to get the hype going!</p>
-                        <Link href="/submit">
-                            <Button>Submit a Site</Button>
-                        </Link>
-                    </div>
-                </WhenVisible>
+                    <template #loading>
+                        <div class="flex flex-col gap-2 pt-2">
+                            <div
+                                v-for="i in 3"
+                                :key="i"
+                                class="flex items-center gap-4 rounded-xl border bg-card p-4"
+                            >
+                                <div class="size-8 shrink-0 animate-pulse rounded-full bg-muted" />
+                                <div class="size-10 shrink-0 animate-pulse rounded-lg bg-muted" />
+                                <div class="flex flex-1 flex-col gap-2">
+                                    <div class="h-4 w-40 animate-pulse rounded bg-muted" />
+                                    <div class="h-3 w-28 animate-pulse rounded bg-muted" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </InfiniteScroll>
+
+                <div v-if="filteredQueuedSites.length === 0 && !queuedSites?.next_page_url" class="flex flex-col items-center gap-4 rounded-xl border border-dashed p-12 text-center">
+                    <Clock class="size-12 text-muted-foreground" />
+                    <h3 class="text-lg font-medium">No sites yet</h3>
+                    <p class="text-muted-foreground">Submit a site to get the hype going!</p>
+                    <Link href="/submit">
+                        <Button>Submit a Site</Button>
+                    </Link>
+                </div>
             </div>
         </div>
     </GuestLayout>

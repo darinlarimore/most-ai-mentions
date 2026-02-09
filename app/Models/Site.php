@@ -99,12 +99,22 @@ class Site extends Model
      */
     public function scopeReadyToCrawl(Builder $query): void
     {
-        $query->where(function (Builder $query) {
+        $driver = $query->getConnection()->getDriverName();
+
+        $cooldownExpr = $driver === 'sqlite'
+            ? "last_crawled_at <= datetime('now', '-' || cooldown_hours || ' hours')"
+            : 'last_crawled_at <= NOW() - INTERVAL cooldown_hours HOUR';
+
+        $attemptExpr = $driver === 'sqlite'
+            ? "last_attempted_at <= datetime('now', '-24 hours')"
+            : 'last_attempted_at <= NOW() - INTERVAL 24 HOUR';
+
+        $query->where(function (Builder $query) use ($cooldownExpr) {
             $query->whereNull('last_crawled_at')
-                ->orWhereColumn('last_crawled_at', '<=', \Illuminate\Support\Facades\DB::raw('NOW() - INTERVAL cooldown_hours HOUR'));
-        })->where(function (Builder $query) {
+                ->orWhereRaw($cooldownExpr);
+        })->where(function (Builder $query) use ($attemptExpr) {
             $query->whereNull('last_attempted_at')
-                ->orWhere('last_attempted_at', '<=', \Illuminate\Support\Facades\DB::raw('NOW() - INTERVAL 24 HOUR'));
+                ->orWhereRaw($attemptExpr);
         });
     }
 
