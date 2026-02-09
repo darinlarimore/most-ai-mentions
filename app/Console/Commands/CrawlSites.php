@@ -19,6 +19,7 @@ class CrawlSites extends Command
         $sites = Site::query()
             ->active()
             ->readyToCrawl()
+            ->where('status', '!=', 'crawling')
             ->limit($limit)
             ->get();
 

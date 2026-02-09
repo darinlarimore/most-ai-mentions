@@ -47,6 +47,8 @@ class CrawlSiteJob implements ShouldQueue
     ): void {
         Log::info("Starting crawl for site: {$this->site->url}");
 
+        $this->site->update(['status' => 'crawling']);
+
         CrawlStarted::dispatch($this->site->id, $this->site->url, $this->site->name);
 
         $observer = new \App\Crawlers\AiMentionCrawlObserver($this->site);
@@ -146,6 +148,7 @@ class CrawlSiteJob implements ShouldQueue
         $this->site->update([
             'hype_score' => $hypeScore,
             'last_crawled_at' => now(),
+            'status' => 'completed',
         ]);
 
         GenerateScreenshotJob::dispatch($this->site);
