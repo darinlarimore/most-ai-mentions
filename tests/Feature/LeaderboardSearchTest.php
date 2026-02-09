@@ -38,6 +38,18 @@ it('filters sites by domain', function () {
         );
 });
 
+it('excludes uncrawled sites from leaderboard', function () {
+    Site::factory()->create(['is_active' => true, 'last_crawled_at' => now()]);
+    Site::factory()->create(['is_active' => true, 'last_crawled_at' => null]);
+
+    $this->get('/')
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('Leaderboard/Index')
+            ->has('sites.data', 1)
+        );
+});
+
 it('returns empty results for non-matching search', function () {
     Site::factory()->create(['name' => 'OpenAI', 'is_active' => true]);
 

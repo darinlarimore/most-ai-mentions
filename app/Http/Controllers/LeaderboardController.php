@@ -17,6 +17,7 @@ class LeaderboardController extends Controller
         $search = $request->string('search')->trim()->value();
 
         $sites = Site::active()
+            ->whereNotNull('last_crawled_at')
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -40,6 +41,7 @@ class LeaderboardController extends Controller
     public function userRated(): Response
     {
         $sites = Site::active()
+            ->whereNotNull('last_crawled_at')
             ->orderByDesc('user_rating_avg')
             ->paginate(25);
 
