@@ -39,6 +39,7 @@
         "laravel-echo": "^2.3.0",
         "laravel-vite-plugin": "^2.0.0",
         "lucide-vue-next": "^0.468.0",
+        "puppeteer": "^24.37.2",
         "pusher-js": "^8.4.0",
         "reka-ui": "^2.6.1",
         "tailwind-merge": "^3.2.0",
