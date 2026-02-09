@@ -20,7 +20,7 @@ class CrawlSites extends Command
             ->active()
             ->readyToCrawl()
             ->where('status', '!=', 'crawling')
-            ->orderByRaw('submitted_by IS NOT NULL DESC')
+            ->orderByRaw('submitted_by IS NOT NULL AND last_crawled_at IS NULL DESC')
             ->orderByRaw('last_crawled_at IS NULL DESC')
             ->orderBy('last_crawled_at')
             ->limit($limit)
