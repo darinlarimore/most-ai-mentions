@@ -7,9 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Globe, Send, Info } from 'lucide-vue-next';
 
+interface CategoryOption {
+    value: string;
+    label: string;
+}
+
+defineProps<{
+    categories: CategoryOption[];
+}>();
+
 const form = useForm({
     url: '',
     name: '',
+    category: '',
 });
 
 const submit = () => {
@@ -68,6 +78,23 @@ const submit = () => {
                                 />
                                 <p v-if="form.errors.name" class="text-sm text-destructive">
                                     {{ form.errors.name }}
+                                </p>
+                            </div>
+
+                            <div class="flex flex-col gap-1.5">
+                                <Label for="category">Category (optional)</Label>
+                                <select
+                                    id="category"
+                                    v-model="form.category"
+                                    class="border-input bg-transparent dark:bg-input/30 h-9 w-full rounded-md border px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
+                                >
+                                    <option value="">Auto-detect from site</option>
+                                    <option v-for="cat in categories" :key="cat.value" :value="cat.value">
+                                        {{ cat.label }}
+                                    </option>
+                                </select>
+                                <p v-if="form.errors.category" class="text-sm text-destructive">
+                                    {{ form.errors.category }}
                                 </p>
                             </div>
 

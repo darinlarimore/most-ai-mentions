@@ -36,6 +36,51 @@ it('rejects duplicate domains', function () {
     ])->assertSessionHasErrors('url');
 });
 
+it('passes categories to the submit page', function () {
+    $this->get('/submit')
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->has('categories')
+            ->where('categories.0.value', 'marketing')
+            ->where('categories.0.label', 'Marketing')
+        );
+});
+
+it('can submit a site with a category', function () {
+    Queue::fake();
+
+    $this->post('/submit', [
+        'url' => 'https://healthapp.com',
+        'name' => 'Health App',
+        'category' => 'healthcare',
+    ])->assertRedirect();
+
+    $this->assertDatabaseHas('sites', [
+        'domain' => 'healthapp.com',
+        'category' => 'healthcare',
+    ]);
+});
+
+it('defaults category to other when not provided', function () {
+    Queue::fake();
+
+    $this->post('/submit', [
+        'url' => 'https://nocategory.com',
+    ])->assertRedirect();
+
+    $this->assertDatabaseHas('sites', [
+        'domain' => 'nocategory.com',
+        'category' => 'other',
+    ]);
+});
+
+it('rejects invalid category values', function () {
+    $this->post('/submit', [
+        'url' => 'https://example.com',
+        'category' => 'invalid-category',
+    ])->assertSessionHasErrors('category');
+});
+
 it('renders the donate page', function () {
     $this->get('/donate')->assertSuccessful();
 });

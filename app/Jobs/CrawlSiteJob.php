@@ -12,6 +12,7 @@ use App\Services\AiImageDetectionService;
 use App\Services\HtmlAnnotationService;
 use App\Services\HypeScoreCalculator;
 use App\Services\ScreenshotService;
+use App\Services\SiteCategoryDetector;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -45,6 +46,7 @@ class CrawlSiteJob implements ShouldQueue
         HtmlAnnotationService $annotationService,
         AiImageDetectionService $imageDetectionService,
         ScreenshotService $screenshotService,
+        SiteCategoryDetector $categoryDetector,
     ): void {
         // Normalize URL to homepage if it has a path
         $parsed = parse_url($this->site->url);
@@ -70,6 +72,14 @@ class CrawlSiteJob implements ShouldQueue
 
         // Keep HTML as local variable only — never persisted to DB
         $html = $observer->getCrawledHtml();
+
+        // Auto-detect category from metadata (only if currently 'other')
+        if ($html && $this->site->category === 'other') {
+            CrawlProgress::dispatch($this->site->id, 'detecting_category', 'Detecting site category...');
+            $detectedCategory = $categoryDetector->detect($html);
+            $this->site->update(['category' => $detectedCategory->value]);
+            Log::info("Category detection for {$this->site->url}", ['detected' => $detectedCategory->value]);
+        }
 
         CrawlProgress::dispatch($this->site->id, 'detecting_mentions', 'Scanning for AI mentions...', [
             'pages_crawled' => $observer->getPagesCrawled(),

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, InfiniteScroll } from '@inertiajs/vue3';
+import { Head, Link, InfiniteScroll, router } from '@inertiajs/vue3';
 import GuestLayout from '@/layouts/GuestLayout.vue';
 import type { Site } from '@/types';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import {
     Globe, Radio, ArrowLeft, Scan, Clock,
-    Search, ImageIcon, Calculator, Camera, CheckCircle, Loader2, Sparkles,
+    Search, ImageIcon, Calculator, Camera, CheckCircle, Loader2, Sparkles, Tag,
 } from 'lucide-vue-next';
 import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
 
@@ -32,6 +32,7 @@ const props = defineProps<{
 
 const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
     fetching: { label: 'Fetching Homepage', icon: Globe },
+    detecting_category: { label: 'Detecting Category', icon: Tag },
     detecting_mentions: { label: 'Detecting AI Mentions', icon: Search },
     detecting_images: { label: 'Scanning for AI Images', icon: ImageIcon },
     calculating_score: { label: 'Calculating Hype Score', icon: Calculator },
@@ -39,7 +40,7 @@ const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
     finishing: { label: 'Finishing Up', icon: Sparkles },
 };
 
-const allStepKeys = ['fetching', 'detecting_mentions', 'detecting_images', 'calculating_score', 'generating_screenshot', 'finishing'];
+const allStepKeys = ['fetching', 'detecting_category', 'detecting_mentions', 'detecting_images', 'calculating_score', 'generating_screenshot', 'finishing'];
 
 const initialSite = props.currentSite ?? props.lastCrawledSite;
 
@@ -82,8 +83,9 @@ onMounted(() => {
         currentStep.value = null;
         completedResult.value = null;
 
-        // Remove from queue
-        removedSiteIds.value.add(e.site_id);
+        // Refresh queue from server to show accurate next items
+        removedSiteIds.value.clear();
+        router.reload({ only: ['queuedSites'] });
     });
 
     echoChannel.listen('.CrawlProgress', (e: { site_id: number; step: string; message: string; data: Record<string, unknown> }) => {
@@ -110,9 +112,6 @@ onMounted(() => {
         }
 
         completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };
-
-        // Remove completed site from queue (it's now on cooldown)
-        removedSiteIds.value.add(e.site_id);
     });
 });
 
