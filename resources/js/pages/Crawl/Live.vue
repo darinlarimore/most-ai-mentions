@@ -148,7 +148,7 @@ onUnmounted(() => {
             </div>
 
             <!-- Active Crawl -->
-            <Card v-if="activeSite" class="mb-8 overflow-hidden">
+            <Card v-if="activeSite" class="mb-8 overflow-hidden pt-0">
                 <!-- Scanning Animation Bar -->
                 <div v-if="!completedResult" class="h-1 overflow-hidden bg-muted">
                     <div class="animate-scan h-full w-1/3 bg-gradient-to-r from-transparent via-primary to-transparent" />
