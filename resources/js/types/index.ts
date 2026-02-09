@@ -37,6 +37,17 @@ export interface Site {
     submitter?: User;
 }
 
+export interface ScoreAverages {
+    mention_score: number;
+    font_size_score: number;
+    animation_score: number;
+    visual_effects_score: number;
+    ai_image_hype_bonus: number;
+    lighthouse_perf_bonus: number;
+    lighthouse_a11y_bonus: number;
+    total_score: number;
+}
+
 export interface CrawlResult {
     id: number;
     site_id: number;

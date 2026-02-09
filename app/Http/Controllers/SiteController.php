@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\SubmitSiteRequest;
 use App\Jobs\CrawlSiteJob;
+use App\Models\CrawlResult;
 use App\Models\Site;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -25,6 +26,16 @@ class SiteController extends Controller
 
         return Inertia::render('Sites/Show', [
             'site' => $site,
+            'scoreAverages' => CrawlResult::query()->selectRaw('
+                ROUND(AVG(mention_score)) as mention_score,
+                ROUND(AVG(font_size_score)) as font_size_score,
+                ROUND(AVG(animation_score)) as animation_score,
+                ROUND(AVG(visual_effects_score)) as visual_effects_score,
+                ROUND(AVG(ai_image_hype_bonus)) as ai_image_hype_bonus,
+                ROUND(AVG(lighthouse_perf_bonus)) as lighthouse_perf_bonus,
+                ROUND(AVG(lighthouse_a11y_bonus)) as lighthouse_a11y_bonus,
+                ROUND(AVG(total_score)) as total_score
+            ')->first(),
         ]);
     }
 

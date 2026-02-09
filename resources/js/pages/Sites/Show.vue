@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import GuestLayout from '@/layouts/GuestLayout.vue';
-import type { Site } from '@/types';
+import type { Site, ScoreAverages } from '@/types';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
 import HypeOMeter from '@/components/HypeOMeter.vue';
 import ScoreBreakdown from '@/components/ScoreBreakdown.vue';
@@ -16,6 +16,7 @@ import { computed, ref, onMounted } from 'vue';
 
 const props = defineProps<{
     site: Site;
+    scoreAverages: ScoreAverages;
 }>();
 
 const ratingForm = useForm({
@@ -163,7 +164,7 @@ const formattedCreatedAt = computed(() => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ScoreBreakdown :crawl-result="site.latest_crawl_result" />
+                            <ScoreBreakdown :crawl-result="site.latest_crawl_result" :averages="scoreAverages" />
                         </CardContent>
                     </Card>
 

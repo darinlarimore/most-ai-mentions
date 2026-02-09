@@ -6,7 +6,7 @@ use App\Models\Site;
 it('allows unauthenticated users to rate a site', function () {
     $site = Site::factory()->create();
 
-    $this->post("/sites/{$site->id}/rate", [
+    $this->post("/sites/{$site->slug}/rate", [
         'score' => 4,
         'comment' => 'Pretty hyped!',
     ])->assertRedirect();
@@ -26,8 +26,8 @@ it('allows unauthenticated users to rate a site', function () {
 it('updates existing rating from the same IP', function () {
     $site = Site::factory()->create();
 
-    $this->post("/sites/{$site->id}/rate", ['score' => 3]);
-    $this->post("/sites/{$site->id}/rate", ['score' => 5]);
+    $this->post("/sites/{$site->slug}/rate", ['score' => 3]);
+    $this->post("/sites/{$site->slug}/rate", ['score' => 5]);
 
     expect(Rating::where('site_id', $site->id)->count())->toBe(1);
     expect(Rating::where('site_id', $site->id)->first()->score)->toBe(5);
@@ -36,10 +36,10 @@ it('updates existing rating from the same IP', function () {
 it('validates score is between 1 and 5', function () {
     $site = Site::factory()->create();
 
-    $this->post("/sites/{$site->id}/rate", ['score' => 0])
+    $this->post("/sites/{$site->slug}/rate", ['score' => 0])
         ->assertSessionHasErrors('score');
 
-    $this->post("/sites/{$site->id}/rate", ['score' => 6])
+    $this->post("/sites/{$site->slug}/rate", ['score' => 6])
         ->assertSessionHasErrors('score');
 });
 
@@ -48,7 +48,7 @@ it('stores user_id when authenticated', function () {
     $user = \App\Models\User::factory()->create();
 
     $this->actingAs($user)
-        ->post("/sites/{$site->id}/rate", ['score' => 5]);
+        ->post("/sites/{$site->slug}/rate", ['score' => 5]);
 
     $this->assertDatabaseHas('ratings', [
         'site_id' => $site->id,
