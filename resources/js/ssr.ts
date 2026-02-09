@@ -21,5 +21,5 @@ createServer(
             setup: ({ App, props, plugin }) =>
                 createSSRApp({ render: () => h(App, props) }).use(plugin),
         }),
-    { cluster: true },
+    { cluster: false },
 );
