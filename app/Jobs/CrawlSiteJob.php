@@ -51,6 +51,10 @@ class CrawlSiteJob implements ShouldQueue
             'ai_mention_count' => $observer->getAiMentionCount(),
             'pages_crawled' => $observer->getPagesCrawled(),
             'computed_styles' => $observer->getComputedStyles(),
+            'crawled_html' => $observer->getCrawledHtml(),
+            'animation_count' => $observer->getAnimationCount(),
+            'glow_effect_count' => $observer->getGlowEffectCount(),
+            'rainbow_border_count' => $observer->getRainbowBorderCount(),
         ]);
 
         $scores = $calculator->calculate(
