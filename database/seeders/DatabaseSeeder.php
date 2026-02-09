@@ -42,7 +42,7 @@ class DatabaseSeeder extends Seeder
 
             // Create a score history entry for each crawl result
             $crawlResults->each(function (CrawlResult $crawlResult) use ($site) {
-                ScoreHistory::forceCreate([
+                ScoreHistory::create([
                     'site_id' => $site->id,
                     'crawl_result_id' => $crawlResult->id,
                     'hype_score' => $crawlResult->total_score,

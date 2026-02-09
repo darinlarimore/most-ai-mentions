@@ -69,7 +69,7 @@ class Site extends Model
     {
         $query->where(function (Builder $query) {
             $query->whereNull('last_crawled_at')
-                ->orWhereRaw('last_crawled_at <= NOW() - INTERVAL cooldown_hours HOUR');
+                ->orWhereColumn('last_crawled_at', '<=', \Illuminate\Support\Facades\DB::raw('NOW() - INTERVAL cooldown_hours HOUR'));
         });
     }
 

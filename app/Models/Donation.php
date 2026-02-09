@@ -10,6 +10,18 @@ class Donation extends Model
 {
     use HasFactory;
 
+    /** @var list<string> */
+    protected $fillable = [
+        'stripe_payment_id',
+        'amount',
+        'currency',
+        'status',
+        'user_id',
+        'donor_name',
+        'donor_email',
+        'message',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

@@ -17,7 +17,7 @@ class SiteObserver
         $previousScore = (float) $site->getOriginal('hype_score');
         $newScore = (float) $site->hype_score;
 
-        ScoreHistory::forceCreate([
+        ScoreHistory::create([
             'site_id' => $site->id,
             'hype_score' => (int) $newScore,
             'recorded_at' => now(),

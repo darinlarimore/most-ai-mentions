@@ -10,6 +10,17 @@ class NewsletterSubscriber extends Model
 {
     use HasFactory;
 
+    /** @var list<string> */
+    protected $fillable = [
+        'email',
+        'name',
+        'user_id',
+        'token',
+        'is_active',
+        'confirmed_at',
+        'unsubscribed_at',
+    ];
+
     /**
      * Get the attributes that should be cast.
      *

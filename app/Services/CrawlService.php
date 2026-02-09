@@ -111,7 +111,7 @@ class CrawlService
             'crawl_count' => $site->crawl_count + 1,
         ]);
 
-        ScoreHistory::forceCreate([
+        ScoreHistory::create([
             'site_id' => $site->id,
             'crawl_result_id' => $result->id,
             'hype_score' => $result->total_score,
