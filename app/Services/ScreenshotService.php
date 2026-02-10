@@ -95,8 +95,8 @@ class ScreenshotService
 
         return $this->renderAndStore($filename, function () use ($html) {
             return Browsershot::html($html)
-                ->setOption('waitUntil', 'networkidle0')
-                ->setDelay(2000)
+                ->setOption('waitUntil', 'domcontentloaded')
+                ->setDelay(3000)
                 ->dismissDialogs()
                 ->fullPage();
         });
