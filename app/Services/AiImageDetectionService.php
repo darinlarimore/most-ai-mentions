@@ -507,8 +507,8 @@ class AiImageDetectionService
      */
     private function resolveUrl(string $src, string $baseUrl): ?string
     {
-        // Skip data URIs and empty srcs
-        if ($src === '' || str_starts_with($src, 'data:')) {
+        // Skip data URIs, empty srcs, and Next.js image proxy URLs
+        if ($src === '' || str_starts_with($src, 'data:') || str_contains($src, '/_next/image')) {
             return null;
         }
 

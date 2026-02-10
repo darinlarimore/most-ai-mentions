@@ -20,7 +20,8 @@ class RunLighthouseJob implements ShouldQueue
 
     public int $timeout = 90;
 
-    public int $tries = 2;
+    /** Only count actual exceptions, not middleware releases. */
+    public int $maxExceptions = 2;
 
     public function __construct(
         public readonly Site $site,
