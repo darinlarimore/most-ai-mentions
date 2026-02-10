@@ -83,9 +83,12 @@ onMounted(() => {
         currentStep.value = null;
         completedResult.value = null;
 
-        // Refresh queue from server to show accurate next items
-        removedSiteIds.value.clear();
-        router.reload({ only: ['queuedSites'] });
+        // Animate the site out of queue, then refresh from server
+        removedSiteIds.value.add(e.site_id);
+        setTimeout(() => {
+            removedSiteIds.value.clear();
+            router.reload({ only: ['queuedSites'] });
+        }, 600);
     });
 
     echoChannel.listen('.CrawlProgress', (e: { site_id: number; step: string; message: string; data: Record<string, unknown> }) => {
@@ -280,7 +283,7 @@ onUnmounted(() => {
                     <TransitionGroup
                         name="queue-item"
                         tag="div"
-                        class="flex flex-col gap-2"
+                        class="relative flex flex-col gap-2"
                     >
                         <div
                             v-for="(site, index) in filteredQueuedSites"
