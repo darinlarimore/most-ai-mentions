@@ -2,12 +2,12 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Trophy, Cpu, FlaskConical, Radio, Users, Search, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import NewsletterForm from '@/components/NewsletterForm.vue';
 import SiteCard from '@/components/SiteCard.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import GuestLayout from '@/layouts/GuestLayout.vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import type { Site, PaginatedData } from '@/types';
 
 interface CategoryOption {

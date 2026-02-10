@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Menu, X } from 'lucide-vue-next';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { ref } from 'vue';
 
 const mobileMenuOpen = ref(false);
