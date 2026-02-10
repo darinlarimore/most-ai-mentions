@@ -14,6 +14,7 @@ use App\Services\HtmlAnnotationService;
 use App\Services\HypeScoreCalculator;
 use App\Services\ScreenshotService;
 use App\Services\SiteCategoryDetector;
+use GuzzleHttp\RequestOptions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -84,7 +85,15 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
         $observer = new \App\Crawlers\AiMentionCrawlObserver($this->site);
 
-        Crawler::create()
+        Crawler::create([
+            RequestOptions::COOKIES => true,
+            RequestOptions::CONNECT_TIMEOUT => 10,
+            RequestOptions::TIMEOUT => 10,
+            RequestOptions::ALLOW_REDIRECTS => true,
+            RequestOptions::HEADERS => [
+                'User-Agent' => 'Mozilla/5.0 (compatible; MostAIMentions/1.0)',
+            ],
+        ])
             ->setCrawlObserver($observer)
             ->setMaximumDepth(0)
             ->setTotalCrawlLimit(1)
