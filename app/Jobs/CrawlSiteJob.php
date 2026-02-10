@@ -243,7 +243,11 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'last_attempted_at' => now(),
         ]);
 
-        QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
+        try {
+            QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
+        } catch (\Throwable $e) {
+            Log::warning("Failed to broadcast QueueUpdated: {$e->getMessage()}");
+        }
 
         self::dispatchNext();
     }
