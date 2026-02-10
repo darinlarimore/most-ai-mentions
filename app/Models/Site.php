@@ -141,12 +141,22 @@ class Site extends Model
      */
     public function scopeNeedsBackfill(Builder $query): void
     {
+        $driver = $query->getConnection()->getDriverName();
+
+        $attemptExpr = $driver === 'sqlite'
+            ? "last_attempted_at <= datetime('now', '-24 hours')"
+            : 'last_attempted_at <= NOW() - INTERVAL 24 HOUR';
+
         $query->active()
             ->where('status', '!=', 'crawling')
             ->whereNotNull('last_crawled_at')
             ->where(function (Builder $query) {
                 $query->where('category', 'other')
                     ->orWhereNull('screenshot_path');
+            })
+            ->where(function (Builder $query) use ($attemptExpr) {
+                $query->whereNull('last_attempted_at')
+                    ->orWhereRaw($attemptExpr);
             })
             ->orderBy('last_crawled_at')
             ->orderBy('id');

@@ -9,6 +9,7 @@ it('includes sites with category "other" in needsBackfill scope', function () {
         'category' => 'other',
         'screenshot_path' => 'screenshots/test.png',
         'last_crawled_at' => now()->subDay(),
+        'last_attempted_at' => now()->subDays(2),
         'status' => 'completed',
     ]);
 
@@ -20,6 +21,7 @@ it('includes sites with null screenshot_path in needsBackfill scope', function (
         'category' => 'ai-tools',
         'screenshot_path' => null,
         'last_crawled_at' => now()->subDay(),
+        'last_attempted_at' => now()->subDays(2),
         'status' => 'completed',
     ]);
 
@@ -61,7 +63,19 @@ it('excludes currently crawling sites from needsBackfill', function () {
     $site = Site::factory()->create([
         'category' => 'other',
         'last_crawled_at' => now()->subDay(),
+        'last_attempted_at' => now()->subDays(2),
         'status' => 'crawling',
+    ]);
+
+    expect(Site::query()->needsBackfill()->pluck('id'))->not->toContain($site->id);
+});
+
+it('excludes recently attempted sites from needsBackfill', function () {
+    $site = Site::factory()->create([
+        'category' => 'other',
+        'last_crawled_at' => now()->subDay(),
+        'last_attempted_at' => now()->subHour(),
+        'status' => 'completed',
     ]);
 
     expect(Site::query()->needsBackfill()->pluck('id'))->not->toContain($site->id);
@@ -70,10 +84,11 @@ it('excludes currently crawling sites from needsBackfill', function () {
 it('dispatches backfill job when normal queue is empty', function () {
     Queue::fake();
 
-    // Create a site that's on cooldown but needs backfill
+    // Create a site that's on cooldown but needs backfill, with old attempt
     Site::factory()->create([
         'category' => 'other',
         'last_crawled_at' => now()->subHour(),
+        'last_attempted_at' => now()->subDays(2),
         'cooldown_hours' => 168,
         'status' => 'completed',
     ]);
@@ -90,6 +105,7 @@ it('prefers normal queue over backfill sites', function () {
     Site::factory()->create([
         'category' => 'other',
         'last_crawled_at' => now()->subHour(),
+        'last_attempted_at' => now()->subDays(2),
         'cooldown_hours' => 168,
         'status' => 'completed',
     ]);
