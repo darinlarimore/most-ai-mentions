@@ -36,6 +36,15 @@ it('redirects to existing site when submitting a duplicate domain', function () 
     ])->assertRedirect("/sites/{$existing->slug}");
 });
 
+it('redirects to existing www site when submitting without www', function () {
+    $existing = Site::factory()->create(['domain' => 'www.coupa.com', 'slug' => 'coupa-com']);
+
+    $this->post('/submit', [
+        'url' => 'https://coupa.com',
+        'name' => 'Coupa',
+    ])->assertRedirect("/sites/{$existing->slug}");
+});
+
 it('passes categories to the submit page', function () {
     $this->get('/submit')
         ->assertSuccessful()

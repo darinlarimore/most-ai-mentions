@@ -80,11 +80,14 @@ class SiteController extends Controller
         $host = preg_replace('/^www\./', '', $parsed['host'] ?? '');
         $normalizedUrl = ($parsed['scheme'] ?? 'https')."://{$host}";
 
-        // Check for existing site by domain (handles race conditions past validation)
-        $existing = Site::where('domain', $host)->first();
+        // Check for existing site by domain or slug (handles www variants and race conditions)
+        $slug = Site::generateSlug($host);
+        $existing = Site::where('domain', $host)
+            ->orWhere('domain', "www.{$host}")
+            ->orWhere('slug', $slug)
+            ->first();
         if ($existing) {
-            return redirect()->route('sites.show', $existing)
-                ->with('info', 'This site has already been submitted! Here are its results.');
+            return redirect()->route('sites.show', $existing);
         }
 
         $site = Site::create([
