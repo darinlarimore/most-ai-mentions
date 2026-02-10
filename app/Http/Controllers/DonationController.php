@@ -24,7 +24,7 @@ class DonationController extends Controller
     /**
      * Create a Stripe Checkout session for a one-time donation.
      */
-    public function createSession(Request $request): JsonResponse
+    public function createSession(Request $request): \Symfony\Component\HttpFoundation\Response
     {
         $request->validate([
             'amount' => ['required', 'integer', 'min:100'],
@@ -52,7 +52,7 @@ class DonationController extends Controller
             ],
         ]);
 
-        return response()->json(['url' => $session->url]);
+        return Inertia::location($session->url);
     }
 
     /**
