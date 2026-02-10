@@ -7,6 +7,7 @@ use App\Models\NewsletterSubscriber;
 use App\Services\NewsletterService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class PreviewNewsletter extends Command
 {
@@ -27,7 +28,7 @@ class PreviewNewsletter extends Command
         $edition = $newsletterService->compileWeeklyEdition();
 
         $subscriber = NewsletterSubscriber::where('email', $email)->first()
-            ?? NewsletterSubscriber::factory()->make(['email' => $email]);
+            ?? new NewsletterSubscriber(['email' => $email, 'token' => Str::random(64)]);
 
         $this->info("Sending test newsletter to {$email}...");
 
