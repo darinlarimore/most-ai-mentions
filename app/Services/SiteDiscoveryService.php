@@ -1800,6 +1800,10 @@ class SiteDiscoveryService
                 continue;
             }
 
+            if (app(DomainFilterService::class)->isBlocked($domain)) {
+                continue;
+            }
+
             try {
                 $site = Site::create([
                     'url' => $url,

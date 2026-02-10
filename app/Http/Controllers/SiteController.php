@@ -7,6 +7,7 @@ use App\Http\Requests\SubmitSiteRequest;
 use App\Jobs\CrawlSiteJob;
 use App\Models\CrawlResult;
 use App\Models\Site;
+use App\Services\DomainFilterService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -79,6 +80,11 @@ class SiteController extends Controller
         $parsed = parse_url($validated['url']);
         $host = preg_replace('/^www\./', '', $parsed['host'] ?? '');
         $normalizedUrl = ($parsed['scheme'] ?? 'https')."://{$host}";
+
+        // Block inappropriate domains
+        if (app(DomainFilterService::class)->isBlocked($host)) {
+            return back()->withErrors(['url' => 'This site cannot be added.']);
+        }
 
         // Check for existing site by domain or slug (handles www variants and race conditions)
         $slug = Site::generateSlug($host);

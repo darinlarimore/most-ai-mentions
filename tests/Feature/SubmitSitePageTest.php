@@ -90,6 +90,15 @@ it('rejects invalid category values', function () {
     ])->assertSessionHasErrors('category');
 });
 
+it('rejects blocked domains', function () {
+    $this->post('/submit', [
+        'url' => 'https://pornhub.com',
+        'name' => 'Blocked Site',
+    ])->assertSessionHasErrors('url');
+
+    $this->assertDatabaseMissing('sites', ['domain' => 'pornhub.com']);
+});
+
 it('renders the donate page', function () {
     $this->get('/donate')->assertSuccessful();
 });
