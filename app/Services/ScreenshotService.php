@@ -18,6 +18,40 @@ class ScreenshotService
     private const TIMEOUT = 45;
 
     /**
+     * Fetch the fully-rendered HTML of a URL using a real Chrome browser.
+     *
+     * Waits for the page to reach network-idle so JS-rendered content is
+     * included. Uses Chrome's native TLS stack to avoid bot detection.
+     *
+     * @param  string  $url  The fully-qualified URL to fetch.
+     * @return string The rendered page HTML.
+     *
+     * @throws \Spatie\Browsershot\Exceptions\CouldNotTakeBrowsershot
+     */
+    public function fetchHtml(string $url): string
+    {
+        return Browsershot::url($url)
+            ->setOption('waitUntil', 'networkidle0')
+            ->windowSize(self::VIEWPORT_WIDTH, self::VIEWPORT_HEIGHT)
+            ->timeout(self::TIMEOUT)
+            ->dismissDialogs()
+            ->noSandbox()
+            ->addChromiumArguments([
+                'disable-dev-shm-usage',
+                'disable-gpu',
+                'disable-accelerated-2d-canvas',
+                'disable-extensions',
+                'disable-software-rasterizer',
+                'disable-features=site-per-process',
+                'disable-background-timer-throttling',
+                'disable-backgrounding-occluded-windows',
+                'disable-renderer-backgrounding',
+                'js-flags=--max-old-space-size=128',
+            ])
+            ->bodyHtml();
+    }
+
+    /**
      * Capture a screenshot of the given URL and store it on disk.
      *
      * Uses Spatie Browsershot (Puppeteer under the hood) to render the page

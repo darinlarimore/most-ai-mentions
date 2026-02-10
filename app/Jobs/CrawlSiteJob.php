@@ -13,7 +13,6 @@ use App\Services\HtmlAnnotationService;
 use App\Services\HypeScoreCalculator;
 use App\Services\ScreenshotService;
 use App\Services\SiteCategoryDetector;
-use GuzzleHttp\RequestOptions;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,7 +20,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Spatie\Crawler\Crawler;
 
 class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 {
@@ -85,22 +83,12 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
         $observer = new \App\Crawlers\AiMentionCrawlObserver($this->site);
 
-        Crawler::create([
-            RequestOptions::COOKIES => true,
-            RequestOptions::CONNECT_TIMEOUT => 10,
-            RequestOptions::TIMEOUT => 10,
-            RequestOptions::ALLOW_REDIRECTS => true,
-            RequestOptions::HEADERS => [
-                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-            ],
-        ])
-            ->setCrawlObserver($observer)
-            ->setMaximumDepth(0)
-            ->setTotalCrawlLimit(1)
-            ->startCrawling($this->site->url);
+        // Fetch HTML using real Chrome browser (bypasses TLS fingerprinting and JS challenges)
+        $html = $screenshotService->fetchHtml($this->site->url);
 
-        // Keep HTML as local variable only — never persisted to DB
-        $html = $observer->getCrawledHtml();
+        if ($html) {
+            $observer->analyzeHtml($html);
+        }
 
         // Auto-detect category from metadata (only if currently 'other')
         if ($html && $this->site->category === 'other') {

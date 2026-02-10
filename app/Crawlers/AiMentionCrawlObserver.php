@@ -126,6 +126,17 @@ class AiMentionCrawlObserver extends CrawlObserver
         ];
     }
 
+    /**
+     * Analyze pre-fetched HTML directly (bypasses Spatie Crawler).
+     */
+    public function analyzeHtml(string $html): void
+    {
+        $this->pagesCrawled++;
+        $this->crawledHtml = $html;
+        $this->extractMentions($html);
+        $this->extractVisualEffects($html);
+    }
+
     public function getCrawledHtml(): ?string
     {
         return $this->crawledHtml;
