@@ -40,6 +40,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
     public function __construct(
         public readonly Site $site,
+        public readonly bool $backfill = false,
     ) {}
 
     public function uniqueId(): string
@@ -59,8 +60,9 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         SiteCategoryDetector $categoryDetector,
     ): void {
         // Guard: skip if this site was already crawled recently (duplicate job protection)
+        // Backfill crawls bypass cooldown since they target sites missing data
         $this->site->refresh();
-        if ($this->site->isOnCooldown()) {
+        if (! $this->backfill && $this->site->isOnCooldown()) {
             Log::info("Skipping duplicate crawl for {$this->site->url} — site is on cooldown");
             self::dispatchNext();
 
@@ -264,8 +266,22 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
         if ($next) {
             self::dispatch($next);
-        } else {
-            Log::info('CrawlSiteJob: No sites in crawl queue — waiting for scheduler');
+
+            return;
         }
+
+        // Backfill: re-crawl sites missing category or screenshot during downtime
+        $backfillSite = Site::query()
+            ->needsBackfill()
+            ->first();
+
+        if ($backfillSite) {
+            Log::info("CrawlSiteJob: Backfilling {$backfillSite->url} (missing data)");
+            self::dispatch($backfillSite, backfill: true);
+
+            return;
+        }
+
+        Log::info('CrawlSiteJob: No sites in crawl queue — waiting for scheduler');
     }
 }

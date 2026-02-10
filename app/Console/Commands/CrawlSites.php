@@ -30,6 +30,23 @@ class CrawlSites extends Command
             ->get();
 
         if ($sites->isEmpty()) {
+            // Backfill: re-crawl sites missing category or screenshot during downtime
+            $backfillSites = Site::query()
+                ->needsBackfill()
+                ->limit($limit)
+                ->get();
+
+            if ($backfillSites->isNotEmpty()) {
+                $this->info("Backfilling {$backfillSites->count()} site(s) missing data...");
+
+                foreach ($backfillSites as $site) {
+                    CrawlSiteJob::dispatch($site, backfill: true);
+                    $this->line("  Queued (backfill): {$site->name} ({$site->url})");
+                }
+
+                return self::SUCCESS;
+            }
+
             $this->info('No sites are ready to crawl. Dispatching discovery...');
             DiscoverSitesJob::dispatch();
 

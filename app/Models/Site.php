@@ -135,6 +135,24 @@ class Site extends Model
     }
 
     /**
+     * Scope for sites that have been crawled but are missing category or screenshot.
+     *
+     * Used to backfill data during queue downtime.
+     */
+    public function scopeNeedsBackfill(Builder $query): void
+    {
+        $query->active()
+            ->where('status', '!=', 'crawling')
+            ->whereNotNull('last_crawled_at')
+            ->where(function (Builder $query) {
+                $query->where('category', 'other')
+                    ->orWhereNull('screenshot_path');
+            })
+            ->orderBy('last_crawled_at')
+            ->orderBy('id');
+    }
+
+    /**
      * Determine if the site is currently on cooldown.
      */
     public function isOnCooldown(): bool
