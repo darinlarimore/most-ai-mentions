@@ -20,13 +20,13 @@ class HypeScoreCalculator
     public const RAINBOW_BORDER_POINTS = 30;
 
     /** @var int Maximum animation count used for scoring. */
-    public const MAX_ANIMATION_COUNT = 100;
+    public const MAX_ANIMATION_COUNT = 10;
 
     /** @var int Maximum glow effect count used for scoring. */
-    public const MAX_GLOW_COUNT = 100;
+    public const MAX_GLOW_COUNT = 10;
 
     /** @var int Maximum rainbow border count used for scoring. */
-    public const MAX_RAINBOW_COUNT = 50;
+    public const MAX_RAINBOW_COUNT = 5;
 
     /** @var int Baseline font size in pixels; sizes above this earn bonus points. */
     private const BASE_FONT_SIZE = 16;
@@ -37,7 +37,8 @@ class HypeScoreCalculator
      * @var list<string>
      */
     public const AI_KEYWORDS = [
-        'artificial intelligence', 'machine learning', 'deep learning', 'neural network',
+        // Core AI terms
+        'artificial intelligence', 'machine learning', 'deep learning', 'neural network', 'neural net',
         'AI-powered', 'AI-driven', 'GPT', 'LLM', 'large language model', 'generative AI',
         'ChatGPT', 'copilot', 'AI assistant', 'natural language processing', 'NLP',
         'computer vision', 'transformer', 'diffusion model', 'AI agent', 'agentic',
@@ -45,6 +46,22 @@ class HypeScoreCalculator
         'conversational AI', 'responsible AI', 'AI ethics', 'foundation model',
         'multimodal', 'RAG', 'retrieval augmented', 'fine-tuning', 'prompt engineering',
         'AI infrastructure', 'MLOps', 'AI platform', 'superintelligence', 'AGI',
+
+        // AI products and companies
+        'Claude', 'Gemini', 'GPT-4', 'GPT-4o', 'Midjourney', 'DALL-E',
+        'Stable Diffusion', 'Perplexity', 'Llama', 'Mistral',
+
+        // Technical ML terms
+        'reinforcement learning', 'embeddings', 'vector database', 'attention mechanism',
+        'inference', 'training data', 'supervised learning',
+
+        // Newer AI concepts
+        'AI safety', 'AI alignment', 'hallucination', 'reasoning model',
+        'chain of thought', 'AI governance', 'synthetic data', 'AI regulation',
+
+        // Marketing buzzwords
+        'AI-enhanced', 'AI-enabled', 'AI-optimized', 'powered by AI', 'built with AI',
+        'AI integration', 'AI solution', 'AI transformation',
     ];
 
     /**

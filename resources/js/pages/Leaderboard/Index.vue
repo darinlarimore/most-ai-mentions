@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Trophy, Cpu, FlaskConical, Radio, Users, Search, X } from 'lucide-vue-next';
+import { Trophy, Cpu, FlaskConical, Radio, Users, Search, X, ArrowUpDown, Calendar } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import NewsletterForm from '@/components/NewsletterForm.vue';
 import SiteCard from '@/components/SiteCard.vue';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import GuestLayout from '@/layouts/GuestLayout.vue';
 import type { Site, PaginatedData } from '@/types';
@@ -15,21 +22,43 @@ interface CategoryOption {
     label: string;
 }
 
+const periodOptions = [
+    { value: 'all', label: 'All Time' },
+    { value: 'today', label: 'Today' },
+    { value: 'week', label: 'This Week' },
+    { value: 'month', label: 'This Month' },
+    { value: 'year', label: 'This Year' },
+];
+
+const sortOptions = [
+    { value: 'hype_score', label: 'Hype Score' },
+    { value: 'mentions', label: 'Most Mentions' },
+    { value: 'user_rating', label: 'User Rated' },
+    { value: 'newest', label: 'Recently Crawled' },
+    { value: 'recently_added', label: 'Recently Added' },
+];
+
 const props = defineProps<{
     sites: PaginatedData<Site>;
     search?: string;
     category?: string;
+    period?: string;
+    sort?: string;
     categories: CategoryOption[];
 }>();
 
 const searchQuery = ref(props.search || '');
 const activeCategory = ref(props.category || '');
+const activePeriod = ref(props.period || 'all');
+const activeSort = ref(props.sort || 'hype_score');
 let debounceTimer: ReturnType<typeof setTimeout>;
 
 const applyFilters = (overrides: Record<string, string | undefined> = {}) => {
     const params: Record<string, string | undefined> = {
         search: searchQuery.value || undefined,
         category: activeCategory.value || undefined,
+        period: activePeriod.value !== 'all' ? activePeriod.value : undefined,
+        sort: activeSort.value !== 'hype_score' ? activeSort.value : undefined,
         ...overrides,
     };
     router.get('/', params, { preserveState: true, preserveScroll: true });
@@ -46,6 +75,31 @@ const selectCategory = (value: string) => {
     activeCategory.value = activeCategory.value === value ? '' : value;
     applyFilters({ category: activeCategory.value || undefined });
 };
+
+const selectPeriod = (value: string) => {
+    activePeriod.value = value;
+    applyFilters({ period: value !== 'all' ? value : undefined });
+};
+
+const selectSort = (value: string) => {
+    activeSort.value = value;
+    applyFilters({ sort: value !== 'hype_score' ? value : undefined });
+};
+
+const activeSortLabel = computed(() => {
+    return sortOptions.find((o) => o.value === activeSort.value)?.label || 'Hype Score';
+});
+
+const leaderboardTitle = computed(() => {
+    const titles: Record<string, string> = {
+        hype_score: 'Hype Leaderboard',
+        mentions: 'Most Mentions',
+        user_rating: 'User Rated',
+        newest: 'Recently Crawled',
+        recently_added: 'Recently Added',
+    };
+    return titles[activeSort.value] || 'Hype Leaderboard';
+});
 
 const startRank = computed(() => {
     return (props.sites.current_page - 1) * props.sites.per_page + 1;
@@ -117,7 +171,7 @@ const goToPage = (url: string | null) => {
             <div class="mb-8 flex flex-col gap-4">
                 <div class="flex items-center gap-3">
                     <Trophy class="size-6 text-yellow-500" />
-                    <h2 class="text-2xl font-bold">Hype Leaderboard</h2>
+                    <h2 class="text-2xl font-bold">{{ leaderboardTitle }}</h2>
                     <span class="ml-auto text-sm text-muted-foreground">
                         {{ sites.total }} sites ranked
                     </span>
@@ -131,6 +185,46 @@ const goToPage = (url: string | null) => {
                         placeholder="Search sites by name or domain..."
                         class="pl-10"
                     />
+                </div>
+
+                <!-- Period & Sort Filters -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-1.5">
+                        <Calendar class="size-4 text-muted-foreground" />
+                        <div class="flex flex-wrap gap-1.5">
+                            <button
+                                v-for="opt in periodOptions"
+                                :key="opt.value"
+                                :class="[
+                                    'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                                    activePeriod === opt.value
+                                        ? 'border-primary bg-primary text-primary-foreground'
+                                        : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground',
+                                ]"
+                                @click="selectPeriod(opt.value)"
+                            >
+                                {{ opt.label }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ml-auto">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="outline" size="sm">
+                                    <ArrowUpDown class="size-4" />
+                                    {{ activeSortLabel }}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuRadioGroup :model-value="activeSort" @update:model-value="selectSort">
+                                    <DropdownMenuRadioItem v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
+                                        {{ opt.label }}
+                                    </DropdownMenuRadioItem>
+                                </DropdownMenuRadioGroup>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
 
                 <!-- Category Filters -->
