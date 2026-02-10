@@ -28,12 +28,12 @@ it('validates url is required', function () {
     ])->assertSessionHasErrors('url');
 });
 
-it('rejects duplicate domains', function () {
-    Site::factory()->create(['domain' => 'example.com']);
+it('redirects to existing site when submitting a duplicate domain', function () {
+    $existing = Site::factory()->create(['domain' => 'example.com']);
 
     $this->post('/submit', [
         'url' => 'https://example.com',
-    ])->assertSessionHasErrors('url');
+    ])->assertRedirect("/sites/{$existing->slug}");
 });
 
 it('passes categories to the submit page', function () {

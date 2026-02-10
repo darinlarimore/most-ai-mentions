@@ -77,8 +77,15 @@ class SiteController extends Controller
 
         // Normalize to homepage URL
         $parsed = parse_url($validated['url']);
-        $host = $parsed['host'] ?? '';
+        $host = preg_replace('/^www\./', '', $parsed['host'] ?? '');
         $normalizedUrl = ($parsed['scheme'] ?? 'https')."://{$host}";
+
+        // Check for existing site by domain (handles race conditions past validation)
+        $existing = Site::where('domain', $host)->first();
+        if ($existing) {
+            return redirect()->route('sites.show', $existing)
+                ->with('info', 'This site has already been submitted! Here are its results.');
+        }
 
         $site = Site::create([
             'url' => $normalizedUrl,

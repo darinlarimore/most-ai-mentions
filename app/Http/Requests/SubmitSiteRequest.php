@@ -29,15 +29,4 @@ class SubmitSiteRequest extends FormRequest
             'category' => ['nullable', 'string', new Enum(SiteCategory::class)],
         ];
     }
-
-    public function withValidator(\Illuminate\Validation\Validator $validator): void
-    {
-        $validator->after(function (\Illuminate\Validation\Validator $validator) {
-            $host = parse_url($this->input('url'), PHP_URL_HOST);
-
-            if ($host && \App\Models\Site::where('domain', preg_replace('/^www\./', '', $host))->exists()) {
-                $validator->errors()->add('url', 'This site has already been submitted.');
-            }
-        });
-    }
 }
