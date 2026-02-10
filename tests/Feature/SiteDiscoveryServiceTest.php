@@ -136,6 +136,115 @@ it('discovers sites from tranco csv zip', function () {
     expect($sites->pluck('source')->unique()->toArray())->toBe(['tranco']);
 });
 
+it('discovers sites from awwwards html', function () {
+    Http::fake([
+        'www.awwwards.com/*' => Http::response('
+            <html><body>
+                <a href="https://cool-agency.example.com">Cool Agency</a>
+                <a href="https://design-studio.example.com">Design Studio</a>
+                <a href="/internal-link">Internal</a>
+            </body></html>
+        '),
+        '*' => Http::response('', 404),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromAwwwards();
+
+    expect($sites->count())->toBeGreaterThanOrEqual(1);
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['awwwards']);
+});
+
+it('discovers sites from capterra html', function () {
+    Http::fake([
+        'www.capterra.com/*' => Http::response('
+            <html><body>
+                <a class="visit-website" href="https://projecttool.example.com">Visit Website</a>
+                <a href="/software/123/coolapp">CoolApp</a>
+            </body></html>
+        '),
+        '*' => Http::response('', 404),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromCapterra();
+
+    expect($sites->count())->toBeGreaterThanOrEqual(1);
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['capterra']);
+});
+
+it('discovers sites from alternativeto html', function () {
+    Http::fake([
+        'alternativeto.net/*' => Http::response('
+            <html><body>
+                <a href="https://myapp.example.com">MyApp</a>
+                <a href="https://alternativeto.net/software/something/">Internal</a>
+            </body></html>
+        '),
+        '*' => Http::response('', 404),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromAlternativeTo();
+
+    expect($sites->count())->toBeGreaterThanOrEqual(1);
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['alternativeto']);
+});
+
+it('discovers sites from similarweb html', function () {
+    Http::fake([
+        'www.similarweb.com/*' => Http::response('
+            <html><body>
+                <a href="/website/coolsite.example.com/">CoolSite</a>
+                <a href="/website/another.example.com/">Another</a>
+            </body></html>
+        '),
+        '*' => Http::response('', 404),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromSimilarWeb();
+
+    expect($sites->count())->toBeGreaterThanOrEqual(1);
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['similarweb']);
+});
+
+it('discovers sites from stackshare html', function () {
+    Http::fake([
+        'stackshare.io/*' => Http::response('
+            <html><body>
+                <a href="https://devtool.example.com">DevTool</a>
+                <a href="https://stackshare.io/some-page">Internal</a>
+            </body></html>
+        '),
+        '*' => Http::response('', 404),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromStackShare();
+
+    expect($sites->count())->toBeGreaterThanOrEqual(1);
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['stackshare']);
+});
+
+it('discovers sites from builtwith html', function () {
+    Http::fake([
+        'builtwith.com/*' => Http::response('
+            <html><body>
+                <a href="https://bigsite.example.com">BigSite</a>
+                <a href="https://builtwith.com/internal">Internal</a>
+            </body></html>
+        '),
+        '*' => Http::response('', 404),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromBuiltWith();
+
+    expect($sites->count())->toBeGreaterThanOrEqual(1);
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['builtwith']);
+});
+
 it('sets source and status correctly on discovered sites', function () {
     Http::fake([
         'news.ycombinator.com/*' => Http::response('
