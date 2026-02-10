@@ -106,7 +106,7 @@ onMounted(() => {
                         scanCardEntering.value = false;
                     });
                 });
-            }, 700);
+            }, 400);
         } else {
             // Site not in visible queue — remove and show scan card immediately
             removedSiteIds.value.add(e.site_id);
@@ -448,56 +448,28 @@ onUnmounted(() => {
     width: 100%;
 }
 
-/* Queue item "promote" animation — grows open, glows, then flies up to scan position */
-@keyframes promote-to-scan {
-    0% {
-        transform: translateY(0) scaleX(1) scaleY(1);
-        opacity: 1;
-        box-shadow: none;
-        border-color: hsl(var(--border));
-    }
-    /* Grow open — item expands with a glow */
-    25% {
-        transform: translateY(0) scaleX(1.03) scaleY(1.3);
-        opacity: 1;
-        box-shadow: 0 0 30px 6px hsl(var(--primary) / 0.3);
-        border-color: hsl(var(--primary) / 0.6);
-        background: hsl(var(--primary) / 0.05);
-    }
-    /* Hold expanded briefly */
-    40% {
-        transform: translateY(0) scaleX(1.03) scaleY(1.3);
-        opacity: 1;
-        box-shadow: 0 0 30px 6px hsl(var(--primary) / 0.3);
-        border-color: hsl(var(--primary) / 0.6);
-        background: hsl(var(--primary) / 0.05);
-    }
-    /* Fly upward to scan card position */
-    100% {
-        transform: translateY(calc(-100vh + 200px)) scaleX(1.05) scaleY(1.3);
-        opacity: 0;
-        box-shadow: 0 8px 50px 12px hsl(var(--primary) / 0.15);
-        border-color: hsl(var(--primary) / 0.3);
-    }
+/* Queue item "promote" — slides out to the left */
+.queue-item-promote {
+    animation: slide-left 0.4s ease forwards;
+    position: relative;
 }
 
-.queue-item-promote {
-    animation: promote-to-scan 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    z-index: 10;
-    position: relative;
-    transform-origin: center top;
+@keyframes slide-left {
+    to {
+        transform: translateX(-60px);
+        opacity: 0;
+    }
 }
 
 /* Active scan card entrance animation */
 .scan-card-enter-active {
-    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .scan-card-enter-from,
 .scan-card-initial {
     opacity: 0;
-    transform: translateY(30px) scaleY(0.8) scaleX(0.98);
-    transform-origin: center top;
+    transform: translateY(24px) scale(0.97);
 }
 
 .scan-card-leave-active {
