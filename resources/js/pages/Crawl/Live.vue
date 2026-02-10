@@ -49,7 +49,7 @@ const activeSite = ref<{ id: number; url: string; name: string | null; slug: str
 );
 const removedSiteIds = ref(new Set<number>());
 const filteredQueuedSites = computed(() =>
-    (props.queuedSites?.data ?? []).filter(s => !removedSiteIds.value.has(s.id)),
+    (props.queuedSites?.data ?? []).filter(s => !removedSiteIds.value.has(s.id) && s.id !== activeSite.value?.id),
 );
 const completedSteps = ref<CrawlStep[]>(
     props.lastCrawledSite && !props.currentSite
@@ -115,6 +115,8 @@ onMounted(() => {
         }
 
         completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };
+
+        router.reload({ only: ['queuedSites'] });
     });
 });
 
