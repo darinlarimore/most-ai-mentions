@@ -26,7 +26,8 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 3;
+    /** Only count actual exceptions, not middleware releases. */
+    public int $maxExceptions = 3;
 
     /** @var array<int, int> */
     public array $backoff = [30, 60, 120];
@@ -248,6 +249,23 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         CrawlCompleted::dispatch($this->site->id, $hypeScore, $crawlResult->ai_mention_count);
 
         Log::info("Completed crawl for site: {$this->site->url}, score: {$hypeScore}");
+
+        self::dispatchNext();
+    }
+
+    /**
+     * Handle a permanently failed job.
+     */
+    public function failed(?\Throwable $exception): void
+    {
+        Log::error("CrawlSiteJob permanently failed for {$this->site->url}", [
+            'error' => $exception?->getMessage(),
+        ]);
+
+        $this->site->update([
+            'status' => 'pending',
+            'last_attempted_at' => now(),
+        ]);
 
         self::dispatchNext();
     }
