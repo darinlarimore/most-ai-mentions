@@ -119,6 +119,22 @@ class Site extends Model
     }
 
     /**
+     * Scope to filter and order sites by crawl queue priority.
+     *
+     * User-submitted never-crawled sites first, then never-crawled, then oldest crawled.
+     */
+    public function scopeCrawlQueue(Builder $query): void
+    {
+        $query->active()
+            ->readyToCrawl()
+            ->where('status', '!=', 'crawling')
+            ->orderByRaw('submitted_by IS NOT NULL AND last_crawled_at IS NULL DESC')
+            ->orderByRaw('last_crawled_at IS NULL DESC')
+            ->orderBy('last_crawled_at')
+            ->orderBy('id');
+    }
+
+    /**
      * Determine if the site is currently on cooldown.
      */
     public function isOnCooldown(): bool

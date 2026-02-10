@@ -32,12 +32,7 @@ class CrawlQueueController extends Controller
                 ->orderByDesc('last_crawled_at')
                 ->first(),
             'queuedSites' => Inertia::scroll(fn () => Site::query()
-                ->active()
-                ->readyToCrawl()
-                ->where('status', '!=', 'crawling')
-                ->orderByRaw('submitted_by IS NOT NULL AND last_crawled_at IS NULL DESC')
-                ->orderByRaw('last_crawled_at IS NULL DESC')
-                ->orderBy('last_crawled_at')
+                ->crawlQueue()
                 ->simplePaginate(10)),
         ]);
     }

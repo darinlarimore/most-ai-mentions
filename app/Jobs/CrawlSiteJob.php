@@ -276,12 +276,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
     public static function dispatchNext(): void
     {
         $next = Site::query()
-            ->active()
-            ->readyToCrawl()
-            ->where('status', '!=', 'crawling')
-            ->orderByRaw('submitted_by IS NOT NULL AND last_crawled_at IS NULL DESC')
-            ->orderByRaw('last_crawled_at IS NULL DESC')
-            ->orderBy('last_crawled_at')
+            ->crawlQueue()
             ->first();
 
         if ($next) {
