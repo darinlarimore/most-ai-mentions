@@ -7,6 +7,7 @@ use App\Models\NewsletterSubscriber;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class NewsletterService
@@ -30,7 +31,7 @@ class NewsletterService
 
         $topSites = Site::query()
             ->active()
-            ->where('crawl_count', '>', 0)
+            ->where('hype_score', '>', 0)
             ->orderByDesc('hype_score')
             ->limit(self::TOP_SITES_LIMIT)
             ->get();
@@ -39,9 +40,12 @@ class NewsletterService
             'id' => $site->id,
             'name' => $site->name ?? $site->domain,
             'domain' => $site->domain,
+            'slug' => $site->slug,
             'url' => $site->url,
             'hype_score' => $site->hype_score,
-            'screenshot_path' => $site->screenshot_path,
+            'screenshot_url' => $site->screenshot_path
+                ? Storage::disk('public')->url($site->screenshot_path)
+                : null,
         ])->toArray();
 
         $subscriberCount = NewsletterSubscriber::where('is_active', true)->count();
@@ -136,7 +140,7 @@ class NewsletterService
      * Generates a plain-text summary of the weekly top sites suitable
      * for rendering in email templates.
      *
-     * @param  array<int, array{id: int, name: string, domain: string, url: string, hype_score: int, screenshot_path: string|null}>  $topSites
+     * @param  array<int, array{id: int, name: string, domain: string, slug: string, url: string, hype_score: int, screenshot_url: string|null}>  $topSites
      */
     private function buildContent(array $topSites, Carbon $weekStart, Carbon $weekEnd): string
     {

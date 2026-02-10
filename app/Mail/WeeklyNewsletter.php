@@ -34,6 +34,7 @@ class WeeklyNewsletter extends Mailable
                 'topSites' => $this->edition->top_sites,
                 'weekStart' => $this->edition->week_start,
                 'weekEnd' => $this->edition->week_end,
+                'appUrl' => config('app.url'),
                 'unsubscribeUrl' => route('newsletter.unsubscribe', $this->subscriber->token),
             ],
         );
