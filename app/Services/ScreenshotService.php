@@ -15,7 +15,7 @@ class ScreenshotService
     private const VIEWPORT_HEIGHT = 800;
 
     /** @var int Timeout in seconds for the headless browser to load the page. */
-    private const TIMEOUT = 45;
+    private const TIMEOUT = 60;
 
     /**
      * Fetch the fully-rendered HTML of a URL using a real Chrome browser.
@@ -71,8 +71,8 @@ class ScreenshotService
 
         return $this->renderAndStore($filename, function () use ($url) {
             return Browsershot::url($url)
-                ->setOption('waitUntil', 'load')
-                ->setDelay(2000)
+                ->setOption('waitUntil', 'domcontentloaded')
+                ->setDelay(3000)
                 ->dismissDialogs();
         });
     }
