@@ -31,7 +31,7 @@ class LeaderboardController extends Controller
                 $query->where('category', $category);
             })
             ->orderByDesc('hype_score')
-            ->paginate(25)
+            ->paginate(24)
             ->withQueryString();
 
         $categories = collect(SiteCategory::cases())->map(fn (SiteCategory $c) => [
@@ -55,7 +55,7 @@ class LeaderboardController extends Controller
         $sites = Site::active()
             ->whereNotNull('last_crawled_at')
             ->orderByDesc('user_rating_avg')
-            ->paginate(25);
+            ->paginate(24);
 
         return Inertia::render('Leaderboard/UserRated', [
             'sites' => $sites,
