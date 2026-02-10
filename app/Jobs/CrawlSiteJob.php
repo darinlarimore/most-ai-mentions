@@ -14,6 +14,7 @@ use App\Services\HypeScoreCalculator;
 use App\Services\ScreenshotService;
 use App\Services\SiteCategoryDetector;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -21,7 +22,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Spatie\Crawler\Crawler;
 
-class CrawlSiteJob implements ShouldQueue
+class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -32,9 +33,17 @@ class CrawlSiteJob implements ShouldQueue
 
     public int $timeout = 300;
 
+    /** Keep the unique lock for 10 minutes to cover the full crawl duration. */
+    public int $uniqueFor = 600;
+
     public function __construct(
         public readonly Site $site,
     ) {}
+
+    public function uniqueId(): string
+    {
+        return (string) $this->site->id;
+    }
 
     public function middleware(): array
     {
@@ -48,6 +57,15 @@ class CrawlSiteJob implements ShouldQueue
         ScreenshotService $screenshotService,
         SiteCategoryDetector $categoryDetector,
     ): void {
+        // Guard: skip if this site was already crawled recently (duplicate job protection)
+        $this->site->refresh();
+        if ($this->site->isOnCooldown()) {
+            Log::info("Skipping duplicate crawl for {$this->site->url} — site is on cooldown");
+            self::dispatchNext();
+
+            return;
+        }
+
         // Normalize URL to homepage if it has a path
         $parsed = parse_url($this->site->url);
         $homepageUrl = ($parsed['scheme'] ?? 'https').'://'.($parsed['host'] ?? '');
