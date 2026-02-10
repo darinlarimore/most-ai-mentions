@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import GuestLayout from '@/layouts/GuestLayout.vue';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Globe, Send, Info } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Globe, Send, Info } from 'lucide-vue-next';
+import GuestLayout from '@/layouts/GuestLayout.vue';
 
 interface CategoryOption {
     value: string;

@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import GuestLayout from '@/layouts/GuestLayout.vue';
-import type { Site, ScoreAverages } from '@/types';
-import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
-import HypeOMeter from '@/components/HypeOMeter.vue';
-import ScoreBreakdown from '@/components/ScoreBreakdown.vue';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
-    Globe, ExternalLink, ArrowLeft, Star, Clock, MessageSquare, Sparkles, User, Highlighter, ImageIcon,
+    Globe, ExternalLink, ArrowLeft, Star, Clock, MessageSquare, User, Highlighter, ImageIcon,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
+import HypeOMeter from '@/components/HypeOMeter.vue';
+import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
+import ScoreBreakdown from '@/components/ScoreBreakdown.vue';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import GuestLayout from '@/layouts/GuestLayout.vue';
+import type { Site, ScoreAverages } from '@/types';
 
 const props = defineProps<{
     site: Site;

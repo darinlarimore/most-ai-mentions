@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useForm } from '@inertiajs/vue3';
+import { Mail, CheckCircle2, AlertCircle } from 'lucide-vue-next';
+import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Mail, CheckCircle2, AlertCircle } from 'lucide-vue-next';
 
 const form = useForm({
     email: '',

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { CrawlResult, ScoreAverages } from '@/types';
-import { computed } from 'vue';
 import { MessageSquare, Type, Sparkles, Eye, Gauge, Accessibility, ImageIcon } from 'lucide-vue-next';
+import { computed } from 'vue';
+import type { CrawlResult, ScoreAverages } from '@/types';
 
 const props = defineProps<{
     crawlResult: CrawlResult;

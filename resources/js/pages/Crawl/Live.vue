@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { Head, Link, InfiniteScroll, router } from '@inertiajs/vue3';
-import GuestLayout from '@/layouts/GuestLayout.vue';
-import type { Site } from '@/types';
-import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import {
     Globe, Radio, ArrowLeft, Scan, Clock,
     Search, ImageIcon, Calculator, Camera, CheckCircle, Loader2, Sparkles, Tag,
 } from 'lucide-vue-next';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
+import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import GuestLayout from '@/layouts/GuestLayout.vue';
+import type { Site } from '@/types';
 
 interface CrawlStep {
     key: string;

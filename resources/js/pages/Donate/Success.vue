@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import GuestLayout from '@/layouts/GuestLayout.vue';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Heart, PartyPopper, ArrowRight } from 'lucide-vue-next';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import GuestLayout from '@/layouts/GuestLayout.vue';
 </script>
 
 <template>

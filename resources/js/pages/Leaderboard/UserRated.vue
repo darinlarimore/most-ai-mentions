@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import GuestLayout from '@/layouts/GuestLayout.vue';
-import type { Site, PaginatedData } from '@/types';
+import { Globe, ArrowLeft, Users } from 'lucide-vue-next';
+import { computed } from 'vue';
 import HypeOMeter from '@/components/HypeOMeter.vue';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Globe, ArrowLeft, Users } from 'lucide-vue-next';
-import { computed } from 'vue';
+import GuestLayout from '@/layouts/GuestLayout.vue';
+import type { Site, PaginatedData } from '@/types';
 
 const props = defineProps<{
     sites: PaginatedData<Site>;

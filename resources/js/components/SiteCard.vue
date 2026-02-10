@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import type { Site } from '@/types';
-import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
 import { Globe, Clock, MessageSquare } from 'lucide-vue-next';
 import { computed } from 'vue';
+import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
+import type { Site } from '@/types';
 
 const props = defineProps<{
     site: Site;

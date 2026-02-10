@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import type { Site, CrawlResult } from '@/types';
-import { Button } from '@/components/ui/button';
 import { ArrowLeft, ExternalLink, AlertTriangle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-vue-next';
 import { ref } from 'vue';
+import { Button } from '@/components/ui/button';
+import type { Site, CrawlResult } from '@/types';
 
-const props = defineProps<{
+defineProps<{
     site: Site;
     annotatedScreenshotUrl: string | null;
     crawlResult: CrawlResult | null;

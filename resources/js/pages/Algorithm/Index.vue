@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import GuestLayout from '@/layouts/GuestLayout.vue';
-import type { AlgorithmFactor } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import {
     ArrowLeft, Cpu, MessageSquare, Type, Sparkles, Eye,
     Gauge, Accessibility, Zap, Brain,
 } from 'lucide-vue-next';
-import { computed } from 'vue';
-
-const props = defineProps<{
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import GuestLayout from '@/layouts/GuestLayout.vue';
+import type { AlgorithmFactor } from '@/types';
+defineProps<{
     factors: AlgorithmFactor[];
 }>();
 
