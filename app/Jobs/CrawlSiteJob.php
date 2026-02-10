@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\CrawlCompleted;
 use App\Events\CrawlProgress;
 use App\Events\CrawlStarted;
+use App\Events\QueueUpdated;
 use App\Jobs\Middleware\CheckQueuePaused;
 use App\Models\CrawlResult;
 use App\Models\Site;
@@ -189,6 +190,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
                 'status' => 'pending',
             ]);
 
+            QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
             self::dispatchNext();
 
             return;
@@ -247,6 +249,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         RunLighthouseJob::dispatch($this->site, $crawlResult);
 
         CrawlCompleted::dispatch($this->site->id, $hypeScore, $crawlResult->ai_mention_count);
+        QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
 
         Log::info("Completed crawl for site: {$this->site->url}, score: {$hypeScore}");
 
@@ -266,6 +269,8 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'status' => 'pending',
             'last_attempted_at' => now(),
         ]);
+
+        QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
 
         self::dispatchNext();
     }

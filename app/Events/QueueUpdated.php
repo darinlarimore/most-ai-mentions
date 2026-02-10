@@ -4,11 +4,11 @@ namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class QueueUpdated implements ShouldBroadcast
+class QueueUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -19,6 +19,11 @@ class QueueUpdated implements ShouldBroadcast
         public readonly int $queued_count,
         public readonly ?array $currently_crawling = null,
     ) {}
+
+    public function broadcastAs(): string
+    {
+        return 'QueueUpdated';
+    }
 
     /**
      * @return array<int, Channel>

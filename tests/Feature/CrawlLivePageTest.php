@@ -3,6 +3,7 @@
 use App\Events\CrawlCompleted;
 use App\Events\CrawlProgress;
 use App\Events\CrawlStarted;
+use App\Events\QueueUpdated;
 use App\Models\Site;
 use Illuminate\Support\Facades\Event;
 
@@ -114,4 +115,21 @@ it('allows null site_name in CrawlStarted', function () {
 
     expect($event->site_name)->toBeNull();
     expect($event->broadcastWith()['site_name'])->toBeNull();
+});
+
+it('broadcasts QueueUpdated as ShouldBroadcastNow', function () {
+    $event = new QueueUpdated(15);
+
+    expect($event)->toBeInstanceOf(\Illuminate\Contracts\Broadcasting\ShouldBroadcastNow::class);
+    expect($event->broadcastAs())->toBe('QueueUpdated');
+    expect($event->broadcastOn())->toHaveCount(1);
+});
+
+it('broadcasts QueueUpdated with queue count', function () {
+    $event = new QueueUpdated(42, ['id' => 1, 'url' => 'https://example.com']);
+
+    expect($event->broadcastWith())->toMatchArray([
+        'queued_count' => 42,
+        'currently_crawling' => ['id' => 1, 'url' => 'https://example.com'],
+    ]);
 });
