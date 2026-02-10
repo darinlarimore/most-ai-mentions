@@ -7,7 +7,6 @@ use App\Models\NewsletterSubscriber;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class NewsletterService
@@ -43,9 +42,7 @@ class NewsletterService
             'slug' => $site->slug,
             'url' => $site->url,
             'hype_score' => $site->hype_score,
-            'screenshot_url' => $site->screenshot_path
-                ? Storage::disk('public')->url($site->screenshot_path)
-                : null,
+            'screenshot_url' => $site->screenshot_path,
         ])->toArray();
 
         $subscriberCount = NewsletterSubscriber::where('is_active', true)->count();
