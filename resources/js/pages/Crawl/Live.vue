@@ -212,7 +212,7 @@ onUnmounted(() => {
             </div>
 
             <!-- Active Crawl -->
-            <Transition name="scan-card">
+            <Transition name="scan-card" :appear="false">
                 <Card
                     v-if="activeSite"
                     :key="activeSite.id"
