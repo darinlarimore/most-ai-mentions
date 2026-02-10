@@ -73,6 +73,7 @@ const pendingSteps = computed(() => {
 });
 
 let echoChannel: ReturnType<typeof window.Echo.channel> | null = null;
+let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
     echoChannel = window.Echo.channel('crawl-activity');
@@ -83,12 +84,8 @@ onMounted(() => {
         currentStep.value = null;
         completedResult.value = null;
 
-        // Animate the site out of queue, then refresh from server
+        // Animate the site out of queue immediately
         removedSiteIds.value.add(e.site_id);
-        setTimeout(() => {
-            removedSiteIds.value.clear();
-            router.reload({ only: ['queuedSites'] });
-        }, 600);
     });
 
     echoChannel.listen('.CrawlProgress', (e: { site_id: number; step: string; message: string; data: Record<string, unknown> }) => {
@@ -115,14 +112,21 @@ onMounted(() => {
         }
 
         completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };
-
-        router.reload({ only: ['queuedSites'] });
     });
+
+    // Poll queue data every 15 seconds to stay in sync
+    pollInterval = setInterval(() => {
+        removedSiteIds.value.clear();
+        router.reload({ only: ['queuedSites'] });
+    }, 15000);
 });
 
 onUnmounted(() => {
     if (echoChannel) {
         window.Echo.leave('crawl-activity');
+    }
+    if (pollInterval) {
+        clearInterval(pollInterval);
     }
 });
 </script>
