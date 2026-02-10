@@ -46,6 +46,8 @@ class RunLighthouseJob implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
 
+            $this->release(30);
+
             return;
         }
 

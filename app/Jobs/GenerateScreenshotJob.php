@@ -46,6 +46,8 @@ class GenerateScreenshotJob implements ShouldQueue
             Log::warning("Screenshot failed for site: {$this->site->url}", [
                 'error' => $e->getMessage(),
             ]);
+
+            $this->release(30);
         }
     }
 }
