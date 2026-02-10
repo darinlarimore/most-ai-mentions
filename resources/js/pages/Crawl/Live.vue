@@ -74,6 +74,18 @@ const pendingSteps = computed(() => {
 
 let echoChannel: ReturnType<typeof window.Echo.channel> | null = null;
 let pollInterval: ReturnType<typeof setInterval> | null = null;
+let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Debounced queue reload — waits for rapid events to settle before hitting the server. */
+function scheduleQueueReload(delayMs = 2000): void {
+    if (reloadTimer) {
+        clearTimeout(reloadTimer);
+    }
+    reloadTimer = setTimeout(() => {
+        removedSiteIds.value.clear();
+        router.reload({ only: ['queuedSites'] });
+    }, delayMs);
+}
 
 onMounted(() => {
     echoChannel = window.Echo.channel('crawl-activity');
@@ -86,6 +98,8 @@ onMounted(() => {
 
         // Animate the site out of queue immediately
         removedSiteIds.value.add(e.site_id);
+        // Reload after events settle (debounced to handle rapid skips)
+        scheduleQueueReload();
     });
 
     echoChannel.listen('.CrawlProgress', (e: { site_id: number; step: string; message: string; data: Record<string, unknown> }) => {
@@ -112,13 +126,15 @@ onMounted(() => {
         }
 
         completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };
+        // Reload queue after completion
+        scheduleQueueReload();
     });
 
-    // Poll queue data every 15 seconds to stay in sync
+    // Poll queue data every 30 seconds as a safety net
     pollInterval = setInterval(() => {
         removedSiteIds.value.clear();
         router.reload({ only: ['queuedSites'] });
-    }, 15000);
+    }, 30000);
 });
 
 onUnmounted(() => {
