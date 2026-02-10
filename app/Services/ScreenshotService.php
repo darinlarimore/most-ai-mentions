@@ -20,8 +20,8 @@ class ScreenshotService
     /**
      * Fetch the fully-rendered HTML of a URL using a real Chrome browser.
      *
-     * Waits for the page to reach network-idle so JS-rendered content is
-     * included. Uses Chrome's native TLS stack to avoid bot detection.
+     * Waits for DOMContentLoaded plus a short delay so JS-rendered content
+     * is included. Uses Chrome's native TLS stack to avoid bot detection.
      *
      * @param  string  $url  The fully-qualified URL to fetch.
      * @return string The rendered page HTML.
@@ -31,7 +31,8 @@ class ScreenshotService
     public function fetchHtml(string $url): string
     {
         return Browsershot::url($url)
-            ->setOption('waitUntil', 'networkidle0')
+            ->setOption('waitUntil', 'domcontentloaded')
+            ->setDelay(2000)
             ->windowSize(self::VIEWPORT_WIDTH, self::VIEWPORT_HEIGHT)
             ->timeout(self::TIMEOUT)
             ->dismissDialogs()
