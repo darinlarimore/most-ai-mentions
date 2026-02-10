@@ -22,7 +22,7 @@ class SubscribeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email', 'unique:newsletter_subscribers'],
+            'email' => ['required', 'email'],
             'name' => ['nullable', 'string', 'max:255'],
         ];
     }

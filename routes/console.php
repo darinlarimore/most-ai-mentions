@@ -5,3 +5,4 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=120')->everyMinute()->withoutOverlapping();
 Schedule::command('app:discover-sites')->everyFourHours();
 Schedule::command('app:crawl-sites --limit=1')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('app:send-newsletter')->weeklyOn(1, '9:00');

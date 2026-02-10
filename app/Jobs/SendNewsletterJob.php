@@ -38,12 +38,12 @@ class SendNewsletterJob implements ShouldQueue
 
         foreach ($subscribers as $subscriber) {
             Mail::to($subscriber->email)
-                ->queue(new WeeklyNewsletter($this->edition));
+                ->queue(new WeeklyNewsletter($this->edition, $subscriber));
         }
 
         $this->edition->update([
             'sent_at' => now(),
-            'recipient_count' => $subscribers->count(),
+            'subscriber_count' => $subscribers->count(),
         ]);
 
         Log::info("Newsletter edition #{$this->edition->id} sent to {$subscribers->count()} subscribers");

@@ -7,6 +7,7 @@ import SiteCard from '@/components/SiteCard.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import GuestLayout from '@/layouts/GuestLayout.vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import type { Site, PaginatedData } from '@/types';
 
 interface CategoryOption {
@@ -69,6 +70,8 @@ const goToPage = (url: string | null) => {
                         <Cpu class="size-4" />
                         <span>Tracking AI hype in real-time</span>
                     </div>
+
+                    <AppLogoIcon class="size-32" />
 
                     <h1 class="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
                         Most AI Mentions

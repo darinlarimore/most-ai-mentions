@@ -13,7 +13,6 @@ const mobileMenuOpen = ref(false);
             <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center gap-2">
                     <Link href="/" class="flex items-center gap-2 font-bold text-lg">
-                        <AppLogoIcon class="size-14" />
                         <span>Most AI Mentions</span>
                     </Link>
                 </div>
@@ -73,7 +72,6 @@ const mobileMenuOpen = ref(false);
         <footer class="border-t">
             <div class="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-8 text-center text-sm text-muted-foreground sm:px-6 lg:px-8">
                 <div class="flex items-center gap-2">
-                    <AppLogoIcon class="size-4" />
                     <span>Most AI Mentions</span>
                 </div>
                 <p>Tracking AI hype across the web, so you don't have to.</p>

@@ -10,6 +10,9 @@ class NewsletterEdition extends Model
 {
     use HasFactory;
 
+    /** @var array<int, string> */
+    protected $guarded = [];
+
     /**
      * Get the attributes that should be cast.
      *
