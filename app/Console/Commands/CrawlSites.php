@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Jobs\CrawlSiteJob;
+use App\Jobs\DiscoverSitesJob;
 use App\Models\Site;
 use Illuminate\Console\Command;
 
@@ -29,7 +30,8 @@ class CrawlSites extends Command
             ->get();
 
         if ($sites->isEmpty()) {
-            $this->info('No sites are ready to crawl at this time.');
+            $this->info('No sites are ready to crawl. Dispatching discovery...');
+            DiscoverSitesJob::dispatch();
 
             return self::SUCCESS;
         }
