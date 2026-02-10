@@ -9,7 +9,7 @@ import {
     Globe, Radio, ArrowLeft, Scan, Clock,
     Search, ImageIcon, Calculator, Camera, CheckCircle, Loader2, Sparkles, Tag,
 } from 'lucide-vue-next';
-import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 
 interface CrawlStep {
     key: string;
@@ -48,8 +48,6 @@ const activeSite = ref<{ id: number; url: string; name: string | null; slug: str
     initialSite ? { id: initialSite.id, url: initialSite.url, name: initialSite.name, slug: initialSite.slug, screenshot_path: initialSite.screenshot_path } : null,
 );
 const removedSiteIds = ref(new Set<number>());
-const promotingSiteId = ref<number | null>(null);
-const scanCardEntering = ref(false);
 const filteredQueuedSites = computed(() =>
     (props.queuedSites?.data ?? []).filter(s => !removedSiteIds.value.has(s.id) && s.id !== activeSite.value?.id),
 );
@@ -79,53 +77,17 @@ let echoQueueChannel: ReturnType<typeof window.Echo.channel> | null = null;
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
-    // Subscribe to crawl activity events (progress, start, complete)
     echoActivityChannel = window.Echo.channel('crawl-activity');
 
     echoActivityChannel.listen('.CrawlStarted', (e: { site_id: number; site_url: string; site_name: string; site_slug: string }) => {
-        // Check before filtering — is this site in the visible queue?
-        const isInQueue = (props.queuedSites?.data ?? []).some(s => s.id === e.site_id);
-
-        if (isInQueue) {
-            // Start promote animation on the queue item (don't remove yet — let animation play)
-            promotingSiteId.value = e.site_id;
-
-            // After promote animation plays, remove from queue and show scan card
-            setTimeout(() => {
-                removedSiteIds.value.add(e.site_id);
-                promotingSiteId.value = null;
-                activeSite.value = { id: e.site_id, url: e.site_url, name: e.site_name, slug: e.site_slug };
-                completedSteps.value = [];
-                currentStep.value = null;
-                completedResult.value = null;
-
-                // Trigger scan card entrance animation
-                scanCardEntering.value = true;
-                nextTick(() => {
-                    requestAnimationFrame(() => {
-                        scanCardEntering.value = false;
-                    });
-                });
-            }, 500);
-        } else {
-            // Site not in visible queue — remove and show scan card immediately
-            removedSiteIds.value.add(e.site_id);
-            activeSite.value = { id: e.site_id, url: e.site_url, name: e.site_name, slug: e.site_slug };
-            completedSteps.value = [];
-            currentStep.value = null;
-            completedResult.value = null;
-
-            scanCardEntering.value = true;
-            nextTick(() => {
-                requestAnimationFrame(() => {
-                    scanCardEntering.value = false;
-                });
-            });
-        }
+        removedSiteIds.value.add(e.site_id);
+        activeSite.value = { id: e.site_id, url: e.site_url, name: e.site_name, slug: e.site_slug };
+        completedSteps.value = [];
+        currentStep.value = null;
+        completedResult.value = null;
     });
 
     echoActivityChannel.listen('.CrawlProgress', (e: { site_id: number; step: string; message: string; data: Record<string, unknown> }) => {
-        // Move current step to completed
         if (currentStep.value) {
             completedSteps.value.push({ ...currentStep.value });
         }
@@ -141,7 +103,6 @@ onMounted(() => {
     });
 
     echoActivityChannel.listen('.CrawlCompleted', (e: { site_id: number; hype_score: number; ai_mention_count: number }) => {
-        // Move current step to completed
         if (currentStep.value) {
             completedSteps.value.push({ ...currentStep.value });
             currentStep.value = null;
@@ -150,7 +111,6 @@ onMounted(() => {
         completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };
     });
 
-    // Subscribe to queue update events (replaces polling)
     echoQueueChannel = window.Echo.channel('crawl-queue');
 
     echoQueueChannel.listen('.QueueUpdated', () => {
@@ -158,7 +118,6 @@ onMounted(() => {
         router.reload({ only: ['queuedSites'], reset: ['queuedSites'] });
     });
 
-    // Safety-net poll every 60 seconds (in case a WebSocket event is missed)
     pollInterval = setInterval(() => {
         removedSiteIds.value.clear();
         router.reload({ only: ['queuedSites'], reset: ['queuedSites'] });
@@ -212,125 +171,118 @@ onUnmounted(() => {
             </div>
 
             <!-- Active Crawl -->
-            <Transition name="scan-card" :appear="false">
-                <Card
-                    v-if="activeSite"
-                    :key="activeSite.id"
-                    class="mb-8 overflow-hidden pt-0"
-                    :class="{ 'scan-card-initial': scanCardEntering }"
-                >
-                    <!-- Scanning Animation Bar -->
-                    <div v-if="!completedResult" class="h-1 overflow-hidden bg-muted">
-                        <div class="animate-scan h-full w-1/3 bg-gradient-to-r from-transparent via-primary to-transparent" />
-                    </div>
-                    <!-- Completed bar -->
-                    <div v-else class="h-1 bg-green-500" />
+            <Card v-if="activeSite" class="mb-8 overflow-hidden pt-0">
+                <!-- Scanning Animation Bar -->
+                <div v-if="!completedResult" class="h-1 overflow-hidden bg-muted">
+                    <div class="animate-scan h-full w-1/3 bg-gradient-to-r from-transparent via-primary to-transparent" />
+                </div>
+                <!-- Completed bar -->
+                <div v-else class="h-1 bg-green-500" />
 
-                    <CardHeader class="px-6 pt-5 pb-4">
-                        <CardTitle class="flex items-center gap-2">
-                            <Scan v-if="!completedResult" class="size-5 animate-pulse text-primary" />
-                            <CheckCircle v-else class="size-5 text-green-500" />
-                            {{ completedResult ? 'Scan Complete' : 'Currently Scanning' }}
-                        </CardTitle>
-                        <CardDescription>
-                            {{ completedResult
-                                ? `Finished analyzing ${activeSite.name || activeSite.url}`
-                                : `Analyzing ${activeSite.name || activeSite.url} for AI mentions, animations, and visual effects`
-                            }}
-                        </CardDescription>
-                    </CardHeader>
+                <CardHeader class="px-6 pt-5 pb-4">
+                    <CardTitle class="flex items-center gap-2">
+                        <Scan v-if="!completedResult" class="size-5 animate-pulse text-primary" />
+                        <CheckCircle v-else class="size-5 text-green-500" />
+                        {{ completedResult ? 'Scan Complete' : 'Currently Scanning' }}
+                    </CardTitle>
+                    <CardDescription>
+                        {{ completedResult
+                            ? `Finished analyzing ${activeSite.name || activeSite.url}`
+                            : `Analyzing ${activeSite.name || activeSite.url} for AI mentions, animations, and visual effects`
+                        }}
+                    </CardDescription>
+                </CardHeader>
 
-                    <CardContent class="flex flex-col gap-6 px-6 pb-6">
-                        <!-- Site Info -->
-                        <div class="flex items-center gap-4">
-                            <div class="relative size-16 shrink-0 overflow-hidden rounded-xl border bg-muted">
-                                <img
-                                    v-if="activeSite.screenshot_path"
-                                    :src="activeSite.screenshot_path"
-                                    :alt="activeSite.name || activeSite.url"
-                                    class="size-full object-cover"
-                                />
-                                <div v-else class="flex size-full items-center justify-center">
-                                    <Globe class="size-8 text-muted-foreground" />
-                                </div>
-                                <div v-if="!completedResult" class="absolute inset-0 animate-pulse bg-primary/5" />
+                <CardContent class="flex flex-col gap-6 px-6 pb-6">
+                    <!-- Site Info -->
+                    <div class="flex items-center gap-4">
+                        <div class="relative size-16 shrink-0 overflow-hidden rounded-xl border bg-muted">
+                            <img
+                                v-if="activeSite.screenshot_path"
+                                :src="activeSite.screenshot_path"
+                                :alt="activeSite.name || activeSite.url"
+                                class="size-full object-cover"
+                            />
+                            <div v-else class="flex size-full items-center justify-center">
+                                <Globe class="size-8 text-muted-foreground" />
                             </div>
-                            <div class="flex flex-col gap-1">
-                                <h3 class="text-xl font-semibold">
-                                    {{ activeSite.name || activeSite.url }}
-                                </h3>
-                                <p class="text-sm text-muted-foreground">{{ activeSite.url }}</p>
-                                <div v-if="completedResult" class="mt-1">
-                                    <HypeScoreBadge :score="completedResult.hype_score" />
-                                </div>
-                            </div>
+                            <div v-if="!completedResult" class="absolute inset-0 animate-pulse bg-primary/5" />
                         </div>
-
-                        <!-- Progress Steps -->
-                        <div class="flex flex-col gap-1.5">
-                            <!-- Completed steps -->
-                            <div
-                                v-for="step in completedSteps"
-                                :key="step.key"
-                                class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm"
-                            >
-                                <CheckCircle class="size-4 shrink-0 text-green-500" />
-                                <span class="font-medium text-foreground">{{ step.label }}</span>
-                                <span v-if="step.data && step.data.ai_mention_count !== undefined" class="ml-auto text-xs text-muted-foreground">
-                                    {{ step.data.ai_mention_count }} mentions found
-                                </span>
-                                <span v-else-if="step.data && step.data.ai_image_count !== undefined" class="ml-auto text-xs text-muted-foreground">
-                                    {{ step.data.ai_image_count }} AI images
-                                </span>
-                                <span v-else-if="step.data && step.data.hype_score !== undefined" class="ml-auto text-xs text-muted-foreground">
-                                    Score: {{ Math.round(step.data.hype_score as number) }}
-                                </span>
-                            </div>
-
-                            <!-- Current step -->
-                            <div
-                                v-if="currentStep"
-                                class="flex items-center gap-3 rounded-lg bg-primary/5 px-3 py-2 text-sm"
-                            >
-                                <Loader2 class="size-4 shrink-0 animate-spin text-primary" />
-                                <span class="font-medium text-primary">{{ currentStep.label }}</span>
-                                <span class="ml-auto text-xs text-muted-foreground">{{ currentStep.message }}</span>
-                            </div>
-
-                            <!-- Pending steps -->
-                            <div
-                                v-for="step in pendingSteps"
-                                :key="step.key"
-                                class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/50"
-                            >
-                                <component :is="step.icon" class="size-4 shrink-0" />
-                                <span>{{ step.label }}</span>
-                            </div>
-                        </div>
-
-                        <!-- Completed result summary -->
-                        <div v-if="completedResult" class="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900/50 dark:bg-green-900/10">
-                            <div class="flex items-center justify-between">
-                                <div class="flex flex-col gap-1">
-                                    <span class="text-sm font-medium text-green-800 dark:text-green-300">Analysis Complete</span>
-                                    <span class="text-xs text-green-600 dark:text-green-400">
-                                        Found {{ completedResult.ai_mention_count }} AI mention{{ completedResult.ai_mention_count !== 1 ? 's' : '' }}
-                                    </span>
-                                </div>
+                        <div class="flex flex-col gap-1">
+                            <h3 class="text-xl font-semibold">
+                                {{ activeSite.name || activeSite.url }}
+                            </h3>
+                            <p class="text-sm text-muted-foreground">{{ activeSite.url }}</p>
+                            <div v-if="completedResult" class="mt-1">
                                 <HypeScoreBadge :score="completedResult.hype_score" />
                             </div>
                         </div>
+                    </div>
 
-                        <div class="flex justify-center">
-                            <Link :href="`/sites/${activeSite.slug}`">
-                                <Button variant="outline">
-                                    View Site Details
-                                </Button>
-                            </Link>
+                    <!-- Progress Steps -->
+                    <div class="flex flex-col gap-1.5">
+                        <!-- Completed steps -->
+                        <div
+                            v-for="step in completedSteps"
+                            :key="step.key"
+                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm"
+                        >
+                            <CheckCircle class="size-4 shrink-0 text-green-500" />
+                            <span class="font-medium text-foreground">{{ step.label }}</span>
+                            <span v-if="step.data && step.data.ai_mention_count !== undefined" class="ml-auto text-xs text-muted-foreground">
+                                {{ step.data.ai_mention_count }} mentions found
+                            </span>
+                            <span v-else-if="step.data && step.data.ai_image_count !== undefined" class="ml-auto text-xs text-muted-foreground">
+                                {{ step.data.ai_image_count }} AI images
+                            </span>
+                            <span v-else-if="step.data && step.data.hype_score !== undefined" class="ml-auto text-xs text-muted-foreground">
+                                Score: {{ Math.round(step.data.hype_score as number) }}
+                            </span>
                         </div>
-                    </CardContent>
-                </Card>
-            </Transition>
+
+                        <!-- Current step -->
+                        <div
+                            v-if="currentStep"
+                            class="flex items-center gap-3 rounded-lg bg-primary/5 px-3 py-2 text-sm"
+                        >
+                            <Loader2 class="size-4 shrink-0 animate-spin text-primary" />
+                            <span class="font-medium text-primary">{{ currentStep.label }}</span>
+                            <span class="ml-auto text-xs text-muted-foreground">{{ currentStep.message }}</span>
+                        </div>
+
+                        <!-- Pending steps -->
+                        <div
+                            v-for="step in pendingSteps"
+                            :key="step.key"
+                            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/50"
+                        >
+                            <component :is="step.icon" class="size-4 shrink-0" />
+                            <span>{{ step.label }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Completed result summary -->
+                    <div v-if="completedResult" class="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900/50 dark:bg-green-900/10">
+                        <div class="flex items-center justify-between">
+                            <div class="flex flex-col gap-1">
+                                <span class="text-sm font-medium text-green-800 dark:text-green-300">Analysis Complete</span>
+                                <span class="text-xs text-green-600 dark:text-green-400">
+                                    Found {{ completedResult.ai_mention_count }} AI mention{{ completedResult.ai_mention_count !== 1 ? 's' : '' }}
+                                </span>
+                            </div>
+                            <HypeScoreBadge :score="completedResult.hype_score" />
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <Link :href="`/sites/${activeSite.slug}`">
+                            <Button variant="outline">
+                                View Site Details
+                            </Button>
+                        </Link>
+                    </div>
+                </CardContent>
+            </Card>
 
             <!-- Queue -->
             <div>
@@ -340,18 +292,11 @@ onUnmounted(() => {
                 </h2>
 
                 <InfiniteScroll data="queuedSites">
-                    <TransitionGroup
-                        name="queue-item"
-                        tag="div"
-                        class="relative flex flex-col gap-2"
-                    >
+                    <div class="flex flex-col gap-2">
                         <div
                             v-for="(site, index) in filteredQueuedSites"
                             :key="site.id"
-                            class="flex items-center gap-4 rounded-xl border bg-card p-4 transition-all duration-300"
-                            :class="{
-                                'queue-item-promote': promotingSiteId === site.id,
-                            }"
+                            class="flex items-center gap-4 rounded-xl border bg-card p-4"
                         >
                             <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
                                 {{ index + 1 }}
@@ -379,7 +324,7 @@ onUnmounted(() => {
                             <HypeScoreBadge v-if="site.hype_score > 0" :score="site.hype_score" />
                             <span v-else class="text-xs text-muted-foreground">Pending</span>
                         </div>
-                    </TransitionGroup>
+                    </div>
 
                     <template #loading>
                         <div class="flex flex-col gap-2 pt-2">
@@ -424,56 +369,5 @@ onUnmounted(() => {
 
 .animate-scan {
     animation: scan 2s ease-in-out infinite;
-}
-
-/* Queue item transitions — use transform/opacity only to stay on compositor */
-.queue-item-move {
-    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.queue-item-enter-active {
-    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease;
-}
-
-.queue-item-leave-active {
-    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease;
-    position: absolute;
-    width: 100%;
-}
-
-.queue-item-enter-from {
-    opacity: 0;
-    transform: translateX(-20px);
-}
-
-.queue-item-leave-to {
-    opacity: 0;
-    transform: translateX(20px);
-}
-
-/* Queue item "promote" — smooth slide-left exit */
-.queue-item-promote {
-    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease;
-    transform: translateX(-40px);
-    opacity: 0;
-}
-
-/* Active scan card entrance */
-.scan-card-enter-active {
-    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease;
-}
-
-.scan-card-enter-from,
-.scan-card-initial {
-    opacity: 0;
-    transform: translateY(16px);
-}
-
-.scan-card-leave-active {
-    transition: opacity 0.3s ease;
-}
-
-.scan-card-leave-to {
-    opacity: 0;
 }
 </style>
