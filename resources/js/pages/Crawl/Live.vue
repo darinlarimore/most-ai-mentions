@@ -83,21 +83,21 @@ onMounted(() => {
     echoActivityChannel = window.Echo.channel('crawl-activity');
 
     echoActivityChannel.listen('.CrawlStarted', (e: { site_id: number; site_url: string; site_name: string; site_slug: string }) => {
-        // Check if this site is in the visible queue for the promote animation
-        const isInQueue = filteredQueuedSites.value.some(s => s.id === e.site_id);
+        // Check before filtering — is this site in the visible queue?
+        const isInQueue = (props.queuedSites?.data ?? []).some(s => s.id === e.site_id);
 
         if (isInQueue) {
-            // Start promote animation on the queue item
+            // Start promote animation on the queue item (don't remove yet — let animation play)
             promotingSiteId.value = e.site_id;
 
-            // After promote animation plays, switch to active scan card
+            // After promote animation plays, remove from queue and show scan card
             setTimeout(() => {
+                removedSiteIds.value.add(e.site_id);
+                promotingSiteId.value = null;
                 activeSite.value = { id: e.site_id, url: e.site_url, name: e.site_name, slug: e.site_slug };
                 completedSteps.value = [];
                 currentStep.value = null;
                 completedResult.value = null;
-                removedSiteIds.value.add(e.site_id);
-                promotingSiteId.value = null;
 
                 // Trigger scan card entrance animation
                 scanCardEntering.value = true;
@@ -106,14 +106,14 @@ onMounted(() => {
                         scanCardEntering.value = false;
                     });
                 });
-            }, 500);
+            }, 700);
         } else {
-            // Site not visible in queue — just show the scan card with animation
+            // Site not in visible queue — remove and show scan card immediately
+            removedSiteIds.value.add(e.site_id);
             activeSite.value = { id: e.site_id, url: e.site_url, name: e.site_name, slug: e.site_slug };
             completedSteps.value = [];
             currentStep.value = null;
             completedResult.value = null;
-            removedSiteIds.value.add(e.site_id);
 
             scanCardEntering.value = true;
             nextTick(() => {
@@ -155,13 +155,13 @@ onMounted(() => {
 
     echoQueueChannel.listen('.QueueUpdated', () => {
         removedSiteIds.value.clear();
-        router.reload({ only: ['queuedSites'] });
+        router.reload({ only: ['queuedSites'], reset: ['queuedSites'] });
     });
 
     // Safety-net poll every 60 seconds (in case a WebSocket event is missed)
     pollInterval = setInterval(() => {
         removedSiteIds.value.clear();
-        router.reload({ only: ['queuedSites'] });
+        router.reload({ only: ['queuedSites'], reset: ['queuedSites'] });
     }, 60000);
 });
 
@@ -448,41 +448,56 @@ onUnmounted(() => {
     width: 100%;
 }
 
-/* Queue item "promote" animation — lifts upward with glow before becoming the active scan */
-@keyframes promote-out {
+/* Queue item "promote" animation — grows open, glows, then flies up to scan position */
+@keyframes promote-to-scan {
     0% {
-        transform: translateY(0) scale(1);
+        transform: translateY(0) scaleX(1) scaleY(1);
         opacity: 1;
-        box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
+        box-shadow: none;
+        border-color: hsl(var(--border));
     }
-    30% {
-        transform: translateY(-4px) scale(1.02);
+    /* Grow open — item expands with a glow */
+    25% {
+        transform: translateY(0) scaleX(1.03) scaleY(1.3);
         opacity: 1;
-        box-shadow: 0 0 24px 4px hsl(var(--primary) / 0.25);
-        border-color: hsl(var(--primary) / 0.5);
+        box-shadow: 0 0 30px 6px hsl(var(--primary) / 0.3);
+        border-color: hsl(var(--primary) / 0.6);
+        background: hsl(var(--primary) / 0.05);
     }
+    /* Hold expanded briefly */
+    40% {
+        transform: translateY(0) scaleX(1.03) scaleY(1.3);
+        opacity: 1;
+        box-shadow: 0 0 30px 6px hsl(var(--primary) / 0.3);
+        border-color: hsl(var(--primary) / 0.6);
+        background: hsl(var(--primary) / 0.05);
+    }
+    /* Fly upward to scan card position */
     100% {
-        transform: translateY(-48px) scale(0.95);
+        transform: translateY(calc(-100vh + 200px)) scaleX(1.05) scaleY(1.3);
         opacity: 0;
-        box-shadow: 0 0 40px 8px hsl(var(--primary) / 0);
+        box-shadow: 0 8px 50px 12px hsl(var(--primary) / 0.15);
+        border-color: hsl(var(--primary) / 0.3);
     }
 }
 
 .queue-item-promote {
-    animation: promote-out 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: promote-to-scan 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     z-index: 10;
     position: relative;
+    transform-origin: center top;
 }
 
 /* Active scan card entrance animation */
 .scan-card-enter-active {
-    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .scan-card-enter-from,
 .scan-card-initial {
     opacity: 0;
-    transform: translateY(24px) scale(0.97);
+    transform: translateY(30px) scaleY(0.8) scaleX(0.98);
+    transform-origin: center top;
 }
 
 .scan-card-leave-active {
