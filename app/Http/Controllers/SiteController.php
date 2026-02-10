@@ -100,6 +100,7 @@ class SiteController extends Controller
             'domain' => $host,
             'category' => $validated['category'] ?? 'other',
             'submitted_by' => $request->user()?->id,
+            'source' => 'submitted',
             'status' => 'queued',
         ]);
 
@@ -161,6 +162,7 @@ class SiteController extends Controller
                 'domain' => $host,
                 'category' => 'other',
                 'submitted_by' => $request->user()?->id,
+                'source' => 'submitted',
                 'status' => 'queued',
             ]);
 
