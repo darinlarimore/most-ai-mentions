@@ -114,6 +114,7 @@ it('prefers normal queue over backfill sites', function () {
     $queued = Site::factory()->create([
         'category' => 'ai-tools',
         'last_crawled_at' => null,
+        'last_attempted_at' => null,
         'status' => 'pending',
     ]);
 

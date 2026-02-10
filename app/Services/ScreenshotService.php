@@ -14,8 +14,8 @@ class ScreenshotService
     /** @var int Default viewport height in pixels. */
     private const VIEWPORT_HEIGHT = 800;
 
-    /** @var int Timeout in seconds for the headless browser to load the page. */
-    private const TIMEOUT = 60;
+    /** @var int Timeout in seconds for the headless browser process (includes page load + delay). */
+    private const TIMEOUT = 90;
 
     /**
      * Fetch the fully-rendered HTML of a URL using a real Chrome browser.

@@ -84,7 +84,12 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         $observer = new \App\Crawlers\AiMentionCrawlObserver($this->site);
 
         // Fetch HTML using real Chrome browser (bypasses TLS fingerprinting and JS challenges)
-        $html = $screenshotService->fetchHtml($this->site->url);
+        $html = null;
+        try {
+            $html = $screenshotService->fetchHtml($this->site->url);
+        } catch (\Throwable $e) {
+            Log::warning("Failed to fetch HTML for {$this->site->url}: {$e->getMessage()}");
+        }
 
         if ($html) {
             $observer->analyzeHtml($html);
