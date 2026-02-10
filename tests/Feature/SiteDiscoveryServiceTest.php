@@ -71,6 +71,71 @@ it('normalizes urls to homepage', function () {
     expect($service->normalizeUrl(''))->toBeNull();
 });
 
+it('discovers sites from downdetector html', function () {
+    Http::fake([
+        'downdetector.com/*' => Http::response('
+            <html><body>
+                <a href="/status/netflix/">Netflix</a>
+                <a href="/status/spotify/">Spotify</a>
+                <a href="/status/steam/">Steam</a>
+                <a href="/some-other-link">Not a status link</a>
+            </body></html>
+        '),
+        '*' => Http::response('', 404),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromDowndetector();
+
+    expect($sites->count())->toBeGreaterThanOrEqual(1);
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['downdetector']);
+});
+
+it('discovers sites from g2 broad categories', function () {
+    Http::fake([
+        'www.g2.com/categories/*' => Http::response('
+            <html><body>
+                <a href="/products/slack-reviews" class="product-link">Slack</a>
+                <a href="/products/asana-reviews" class="product-link">Asana</a>
+                <a class="website" href="https://basecamp.example.com">Visit Website</a>
+            </body></html>
+        '),
+        '*' => Http::response('', 404),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromG2Broad();
+
+    expect($sites->count())->toBeGreaterThanOrEqual(1);
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['g2-broad']);
+});
+
+it('discovers sites from tranco csv zip', function () {
+    // Create a minimal CSV and zip it
+    $csv = "1,example-tranco-one.com\n2,example-tranco-two.com\n3,google.com\n";
+    $tmpZip = tempnam(sys_get_temp_dir(), 'test_tranco_');
+    $zip = new ZipArchive;
+    $zip->open($tmpZip, ZipArchive::CREATE);
+    $zip->addFromString('top-1m.csv', $csv);
+    $zip->close();
+    $zipContent = file_get_contents($tmpZip);
+    unlink($tmpZip);
+
+    Http::fake([
+        'tranco-list.eu/*' => Http::response($zipContent),
+        '*' => Http::response('', 404),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromTrancoList(10);
+
+    // google.com is excluded, so we should get 2
+    expect($sites)->toHaveCount(2);
+    expect($sites->pluck('domain')->toArray())->toContain('example-tranco-one.com');
+    expect($sites->pluck('domain')->toArray())->toContain('example-tranco-two.com');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['tranco']);
+});
+
 it('sets source and status correctly on discovered sites', function () {
     Http::fake([
         'news.ycombinator.com/*' => Http::response('

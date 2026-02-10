@@ -30,6 +30,27 @@ class SiteDiscoveryService
     ];
 
     /** @var list<string> */
+    private const G2_BROAD_CATEGORY_URLS = [
+        'https://www.g2.com/categories/crm',
+        'https://www.g2.com/categories/project-management',
+        'https://www.g2.com/categories/accounting',
+        'https://www.g2.com/categories/email-marketing',
+        'https://www.g2.com/categories/help-desk',
+        'https://www.g2.com/categories/video-conferencing',
+        'https://www.g2.com/categories/e-commerce-platforms',
+        'https://www.g2.com/categories/social-media-management',
+        'https://www.g2.com/categories/hr-management-suites',
+        'https://www.g2.com/categories/website-builder',
+    ];
+
+    private const DOWNDETECTOR_URLS = [
+        'https://downdetector.com/trending/',
+        'https://downdetector.com/companies/',
+    ];
+
+    private const TRANCO_LIST_URL = 'https://tranco-list.eu/top-1m.csv.zip';
+
+    /** @var list<string> */
     private const AI_KEYWORDS = [
         'ai', 'artificial intelligence', 'machine learning', 'llm', 'gpt',
         'chatbot', 'generative', 'neural', 'deep learning', 'copilot',
@@ -829,8 +850,11 @@ class SiteDiscoveryService
 
         $total += $this->discoverPopular()->count();
         $total += $this->discoverFromG2()->count();
+        $total += $this->discoverFromG2Broad()->count();
         $total += $this->discoverFromProductHunt()->count();
         $total += $this->discoverFromHackerNews()->count();
+        $total += $this->discoverFromDowndetector()->count();
+        $total += $this->discoverFromTrancoList()->count();
 
         return $total;
     }
@@ -954,6 +978,190 @@ class SiteDiscoveryService
         }
 
         return $this->createSitesFromUrls($urls, 'hackernews');
+    }
+
+    /**
+     * Discover popular software sites from broader G2 categories (not AI-specific).
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromG2Broad(): Collection
+    {
+        $urls = [];
+
+        foreach (self::G2_BROAD_CATEGORY_URLS as $categoryUrl) {
+            try {
+                $response = Http::withHeaders($this->browserHeaders())
+                    ->timeout(15)
+                    ->get($categoryUrl);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $urls = array_merge($urls, $this->extractG2ProductUrls($response->body()));
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed to fetch G2 broad page {$categoryUrl}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'g2-broad');
+    }
+
+    /**
+     * Discover popular sites from Downdetector trending/company listings.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromDowndetector(): Collection
+    {
+        $urls = [];
+
+        foreach (self::DOWNDETECTOR_URLS as $ddUrl) {
+            try {
+                $response = Http::withHeaders($this->browserHeaders())
+                    ->timeout(15)
+                    ->get($ddUrl);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $urls = array_merge($urls, $this->extractDowndetectorUrls($response->body()));
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed to fetch Downdetector page {$ddUrl}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'downdetector');
+    }
+
+    /**
+     * Discover top sites from the Tranco research ranking list.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromTrancoList(int $limit = 500): Collection
+    {
+        try {
+            $response = Http::withHeaders($this->browserHeaders())
+                ->timeout(30)
+                ->get(self::TRANCO_LIST_URL);
+
+            if (! $response->successful()) {
+                Log::warning('SiteDiscovery: Failed to download Tranco list', ['status' => $response->status()]);
+
+                return collect();
+            }
+
+            $urls = $this->extractTrancoUrls($response->body(), $limit);
+
+            return $this->createSitesFromUrls($urls, 'tranco');
+        } catch (\Throwable $e) {
+            Log::warning('SiteDiscovery: Failed to fetch Tranco list', ['error' => $e->getMessage()]);
+
+            return collect();
+        }
+    }
+
+    /**
+     * Extract site URLs from Downdetector HTML.
+     *
+     * @return list<string>
+     */
+    private function extractDowndetectorUrls(string $html): array
+    {
+        $urls = [];
+        $doc = $this->parseHtml($html);
+
+        if (! $doc) {
+            return $urls;
+        }
+
+        $xpath = new DOMXPath($doc);
+
+        // Downdetector links to company status pages: /status/SLUG/
+        $links = $xpath->query('//a[contains(@href, "/status/")]');
+
+        if ($links) {
+            foreach ($links as $link) {
+                $href = $link->getAttribute('href');
+
+                if (preg_match('#/status/([a-z0-9-]+)#i', $href, $matches)) {
+                    $slug = $matches[1];
+
+                    // Convert slug to a likely base URL
+                    $domain = str_replace('-', '', $slug).'.com';
+                    $url = "https://{$domain}";
+
+                    if ($this->isValidExternalUrl($url)) {
+                        $urls[] = $url;
+                    }
+                }
+            }
+        }
+
+        return $urls;
+    }
+
+    /**
+     * Extract domain URLs from a Tranco ZIP CSV response body.
+     *
+     * @return list<string>
+     */
+    private function extractTrancoUrls(string $zipContent, int $limit): array
+    {
+        $urls = [];
+
+        // Write to temp file, unzip, read CSV
+        $tmpZip = tempnam(sys_get_temp_dir(), 'tranco_');
+        file_put_contents($tmpZip, $zipContent);
+
+        $zip = new \ZipArchive;
+
+        if ($zip->open($tmpZip) !== true) {
+            unlink($tmpZip);
+
+            return $urls;
+        }
+
+        $csvContent = $zip->getFromIndex(0);
+        $zip->close();
+        unlink($tmpZip);
+
+        if (! $csvContent) {
+            return $urls;
+        }
+
+        $lines = explode("\n", $csvContent);
+        $count = 0;
+
+        foreach ($lines as $line) {
+            if ($count >= $limit) {
+                break;
+            }
+
+            $parts = str_getcsv($line);
+
+            if (count($parts) < 2) {
+                continue;
+            }
+
+            $domain = trim($parts[1]);
+
+            if (! $domain) {
+                continue;
+            }
+
+            $url = "https://{$domain}";
+
+            if ($this->isValidExternalUrl($url)) {
+                $urls[] = $url;
+                $count++;
+            }
+        }
+
+        return $urls;
     }
 
     /**

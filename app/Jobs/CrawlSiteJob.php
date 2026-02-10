@@ -281,6 +281,8 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
         if ($next) {
             self::dispatch($next);
+        } else {
+            DiscoverSitesJob::dispatch();
         }
     }
 }
