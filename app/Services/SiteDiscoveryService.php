@@ -3,99 +3,25 @@
 namespace App\Services;
 
 use App\Models\Site;
-use DOMDocument;
-use DOMXPath;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class SiteDiscoveryService
 {
-    /** @var list<string> */
-    private const G2_CATEGORY_URLS = [
-        'https://www.g2.com/categories/ai-writing-assistant',
-        'https://www.g2.com/categories/artificial-intelligence',
-        'https://www.g2.com/categories/ai-chatbots',
-        'https://www.g2.com/categories/ai-code-generation',
-        'https://www.g2.com/categories/ai-image-generator',
-    ];
-
-    private const PRODUCTHUNT_URLS = [
-        'https://www.producthunt.com/topics/artificial-intelligence',
-    ];
-
-    private const HN_URLS = [
-        'https://news.ycombinator.com/best',
-        'https://news.ycombinator.com/',
-    ];
-
-    /** @var list<string> */
-    private const G2_BROAD_CATEGORY_URLS = [
-        'https://www.g2.com/categories/crm',
-        'https://www.g2.com/categories/project-management',
-        'https://www.g2.com/categories/accounting',
-        'https://www.g2.com/categories/email-marketing',
-        'https://www.g2.com/categories/help-desk',
-        'https://www.g2.com/categories/video-conferencing',
-        'https://www.g2.com/categories/e-commerce-platforms',
-        'https://www.g2.com/categories/social-media-management',
-        'https://www.g2.com/categories/hr-management-suites',
-        'https://www.g2.com/categories/website-builder',
-    ];
-
-    private const DOWNDETECTOR_URLS = [
-        'https://downdetector.com/trending/',
-        'https://downdetector.com/companies/',
-    ];
-
     private const TRANCO_LIST_URL = 'https://tranco-list.eu/top-1m.csv.zip';
 
     /** @var list<string> */
-    private const AWWWARDS_URLS = [
-        'https://www.awwwards.com/websites/',
-        'https://www.awwwards.com/websites/sites-of-the-day/',
-        'https://www.awwwards.com/websites/nominees/',
+    private const HN_API_ENDPOINTS = [
+        'https://hacker-news.firebaseio.com/v0/topstories.json',
+        'https://hacker-news.firebaseio.com/v0/beststories.json',
+        'https://hacker-news.firebaseio.com/v0/newstories.json',
     ];
 
-    /** @var list<string> */
-    private const CAPTERRA_CATEGORY_URLS = [
-        'https://www.capterra.com/project-management-software/',
-        'https://www.capterra.com/crm-software/',
-        'https://www.capterra.com/accounting-software/',
-        'https://www.capterra.com/email-marketing-software/',
-        'https://www.capterra.com/help-desk-software/',
-        'https://www.capterra.com/artificial-intelligence-software/',
-        'https://www.capterra.com/video-conferencing-software/',
-        'https://www.capterra.com/learning-management-system-software/',
-    ];
+    private const HN_ITEM_URL = 'https://hacker-news.firebaseio.com/v0/item/%d.json';
 
-    /** @var list<string> */
-    private const ALTERNATIVETO_URLS = [
-        'https://alternativeto.net/browse/popular/',
-        'https://alternativeto.net/browse/trending/',
-        'https://alternativeto.net/category/developer-tools/',
-        'https://alternativeto.net/category/social/',
-        'https://alternativeto.net/category/business-and-commerce/',
-    ];
-
-    /** @var list<string> */
-    private const BUILTWITH_URLS = [
-        'https://builtwith.com/top-sites',
-        'https://builtwith.com/websites/application-framework',
-    ];
-
-    /** @var list<string> */
-    private const SIMILARWEB_URLS = [
-        'https://www.similarweb.com/top-websites/',
-        'https://www.similarweb.com/top-websites/computers-electronics-and-technology/',
-        'https://www.similarweb.com/top-websites/business-and-consumer-services/',
-    ];
-
-    /** @var list<string> */
-    private const STACKSHARE_URLS = [
-        'https://stackshare.io/tools/trending',
-        'https://stackshare.io/tools/top',
-    ];
+    /** How many story IDs to fetch from each HN endpoint. */
+    private const HN_STORIES_PER_ENDPOINT = 50;
 
     /** @var list<string> */
     private const AI_KEYWORDS = [
@@ -886,8 +812,6 @@ class SiteDiscoveryService
         'linkedin.com', 'reddit.com', 'github.com', 'wikipedia.org',
         'news.ycombinator.com', 'g2.com', 'producthunt.com', 'amazonaws.com',
         'cloudfront.net', 'archive.org', 'web.archive.org',
-        'awwwards.com', 'capterra.com', 'alternativeto.net', 'builtwith.com',
-        'similarweb.com', 'stackshare.io',
     ];
 
     /**
@@ -898,18 +822,8 @@ class SiteDiscoveryService
         $total = 0;
 
         $total += $this->discoverPopular()->count();
-        $total += $this->discoverFromG2()->count();
-        $total += $this->discoverFromG2Broad()->count();
-        $total += $this->discoverFromProductHunt()->count();
         $total += $this->discoverFromHackerNews()->count();
-        $total += $this->discoverFromDowndetector()->count();
         $total += $this->discoverFromTrancoList()->count();
-        $total += $this->discoverFromAwwwards()->count();
-        $total += $this->discoverFromCapterra()->count();
-        $total += $this->discoverFromAlternativeTo()->count();
-        $total += $this->discoverFromBuiltWith()->count();
-        $total += $this->discoverFromSimilarWeb()->count();
-        $total += $this->discoverFromStackShare()->count();
 
         return $total;
     }
@@ -952,63 +866,7 @@ class SiteDiscoveryService
     }
 
     /**
-     * Discover AI software sites from G2 category pages.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromG2(): Collection
-    {
-        $urls = [];
-
-        foreach (self::G2_CATEGORY_URLS as $categoryUrl) {
-            try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($categoryUrl);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $urls = array_merge($urls, $this->extractG2ProductUrls($response->body()));
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch G2 page {$categoryUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'g2');
-    }
-
-    /**
-     * Discover AI sites from ProductHunt topics.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromProductHunt(): Collection
-    {
-        $urls = [];
-
-        foreach (self::PRODUCTHUNT_URLS as $topicUrl) {
-            try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($topicUrl);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $urls = array_merge($urls, $this->extractProductHuntUrls($response->body()));
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch ProductHunt page {$topicUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'producthunt');
-    }
-
-    /**
-     * Discover AI-related sites from Hacker News.
+     * Discover AI-related sites from Hacker News via the public Firebase API.
      *
      * @return Collection<int, Site>
      */
@@ -1016,79 +874,63 @@ class SiteDiscoveryService
     {
         $urls = [];
 
-        foreach (self::HN_URLS as $hnUrl) {
+        foreach (self::HN_API_ENDPOINTS as $endpoint) {
             try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($hnUrl);
+                $response = Http::timeout(15)->get($endpoint);
 
                 if (! $response->successful()) {
                     continue;
                 }
 
-                $urls = array_merge($urls, $this->extractHackerNewsUrls($response->body()));
+                /** @var list<int> $storyIds */
+                $storyIds = $response->json();
+
+                if (! is_array($storyIds)) {
+                    continue;
+                }
+
+                $storyIds = array_slice($storyIds, 0, self::HN_STORIES_PER_ENDPOINT);
+
+                foreach ($storyIds as $id) {
+                    try {
+                        $itemResponse = Http::timeout(5)
+                            ->get(sprintf(self::HN_ITEM_URL, $id));
+
+                        if (! $itemResponse->successful()) {
+                            continue;
+                        }
+
+                        $item = $itemResponse->json();
+
+                        if (! is_array($item) || empty($item['url']) || empty($item['title'])) {
+                            continue;
+                        }
+
+                        $title = strtolower($item['title']);
+                        $isAiRelated = false;
+
+                        foreach (self::AI_KEYWORDS as $keyword) {
+                            if (str_contains($title, $keyword)) {
+                                $isAiRelated = true;
+
+                                break;
+                            }
+                        }
+
+                        if ($isAiRelated && $this->isValidExternalUrl($item['url'])) {
+                            $urls[] = $item['url'];
+                        }
+                    } catch (\Throwable $e) {
+                        // Individual story fetch failed, continue with next
+                        continue;
+                    }
+                }
             } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch HN page {$hnUrl}", ['error' => $e->getMessage()]);
+                Log::warning("SiteDiscovery: Failed to fetch HN API endpoint {$endpoint}", ['error' => $e->getMessage()]);
             }
         }
 
         return $this->createSitesFromUrls($urls, 'hackernews');
-    }
-
-    /**
-     * Discover popular software sites from broader G2 categories (not AI-specific).
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromG2Broad(): Collection
-    {
-        $urls = [];
-
-        foreach (self::G2_BROAD_CATEGORY_URLS as $categoryUrl) {
-            try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($categoryUrl);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $urls = array_merge($urls, $this->extractG2ProductUrls($response->body()));
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch G2 broad page {$categoryUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'g2-broad');
-    }
-
-    /**
-     * Discover popular sites from Downdetector trending/company listings.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromDowndetector(): Collection
-    {
-        $urls = [];
-
-        foreach (self::DOWNDETECTOR_URLS as $ddUrl) {
-            try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($ddUrl);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $urls = array_merge($urls, $this->extractDowndetectorUrls($response->body()));
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch Downdetector page {$ddUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'downdetector');
     }
 
     /**
@@ -1099,9 +941,7 @@ class SiteDiscoveryService
     public function discoverFromTrancoList(int $limit = 500): Collection
     {
         try {
-            $response = Http::withHeaders($this->browserHeaders())
-                ->timeout(30)
-                ->get(self::TRANCO_LIST_URL);
+            $response = Http::timeout(30)->get(self::TRANCO_LIST_URL);
 
             if (! $response->successful()) {
                 Log::warning('SiteDiscovery: Failed to download Tranco list', ['status' => $response->status()]);
@@ -1117,214 +957,6 @@ class SiteDiscoveryService
 
             return collect();
         }
-    }
-
-    /**
-     * Discover award-winning sites from Awwwards.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromAwwwards(): Collection
-    {
-        $urls = [];
-
-        foreach (self::AWWWARDS_URLS as $pageUrl) {
-            try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($pageUrl);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $urls = array_merge($urls, $this->extractAwwwardsUrls($response->body()));
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch Awwwards page {$pageUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'awwwards');
-    }
-
-    /**
-     * Discover popular software from Capterra category pages.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromCapterra(): Collection
-    {
-        $urls = [];
-
-        foreach (self::CAPTERRA_CATEGORY_URLS as $categoryUrl) {
-            try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($categoryUrl);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $urls = array_merge($urls, $this->extractCapterraUrls($response->body()));
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch Capterra page {$categoryUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'capterra');
-    }
-
-    /**
-     * Discover popular software alternatives from AlternativeTo.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromAlternativeTo(): Collection
-    {
-        $urls = [];
-
-        foreach (self::ALTERNATIVETO_URLS as $pageUrl) {
-            try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($pageUrl);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $urls = array_merge($urls, $this->extractAlternativeToUrls($response->body()));
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch AlternativeTo page {$pageUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'alternativeto');
-    }
-
-    /**
-     * Discover top sites from BuiltWith technology pages.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromBuiltWith(): Collection
-    {
-        $urls = [];
-
-        foreach (self::BUILTWITH_URLS as $pageUrl) {
-            try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($pageUrl);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $urls = array_merge($urls, $this->extractBuiltWithUrls($response->body()));
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch BuiltWith page {$pageUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'builtwith');
-    }
-
-    /**
-     * Discover top websites from SimilarWeb rankings.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromSimilarWeb(): Collection
-    {
-        $urls = [];
-
-        foreach (self::SIMILARWEB_URLS as $pageUrl) {
-            try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($pageUrl);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $urls = array_merge($urls, $this->extractSimilarWebUrls($response->body()));
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch SimilarWeb page {$pageUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'similarweb');
-    }
-
-    /**
-     * Discover popular developer tools from StackShare.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromStackShare(): Collection
-    {
-        $urls = [];
-
-        foreach (self::STACKSHARE_URLS as $pageUrl) {
-            try {
-                $response = Http::withHeaders($this->browserHeaders())
-                    ->timeout(15)
-                    ->get($pageUrl);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $urls = array_merge($urls, $this->extractStackShareUrls($response->body()));
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch StackShare page {$pageUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'stackshare');
-    }
-
-    /**
-     * Extract site URLs from Downdetector HTML.
-     *
-     * @return list<string>
-     */
-    private function extractDowndetectorUrls(string $html): array
-    {
-        $urls = [];
-        $doc = $this->parseHtml($html);
-
-        if (! $doc) {
-            return $urls;
-        }
-
-        $xpath = new DOMXPath($doc);
-
-        // Downdetector links to company status pages: /status/SLUG/
-        $links = $xpath->query('//a[contains(@href, "/status/")]');
-
-        if ($links) {
-            foreach ($links as $link) {
-                $href = $link->getAttribute('href');
-
-                if (preg_match('#/status/([a-z0-9-]+)#i', $href, $matches)) {
-                    $slug = $matches[1];
-
-                    // Convert slug to a likely base URL
-                    $domain = str_replace('-', '', $slug).'.com';
-                    $url = "https://{$domain}";
-
-                    if ($this->isValidExternalUrl($url)) {
-                        $urls[] = $url;
-                    }
-                }
-            }
-        }
-
-        return $urls;
     }
 
     /**
@@ -1381,388 +1013,6 @@ class SiteDiscoveryService
             if ($this->isValidExternalUrl($url)) {
                 $urls[] = $url;
                 $count++;
-            }
-        }
-
-        return $urls;
-    }
-
-    /**
-     * Extract site URLs from Awwwards HTML.
-     *
-     * Awwwards showcases site entries with outbound links to the actual websites.
-     *
-     * @return list<string>
-     */
-    private function extractAwwwardsUrls(string $html): array
-    {
-        $urls = [];
-        $doc = $this->parseHtml($html);
-
-        if (! $doc) {
-            return $urls;
-        }
-
-        $xpath = new DOMXPath($doc);
-
-        // Awwwards "Visit Site" links and outbound links to showcased websites
-        $links = $xpath->query('//a[contains(@href, "http")]');
-
-        if ($links) {
-            foreach ($links as $link) {
-                $href = $link->getAttribute('href');
-
-                if ($this->isValidExternalUrl($href)) {
-                    $urls[] = $href;
-                }
-            }
-        }
-
-        return $urls;
-    }
-
-    /**
-     * Extract software URLs from Capterra category HTML.
-     *
-     * Capterra lists products with links to their pages and external "visit website" links.
-     *
-     * @return list<string>
-     */
-    private function extractCapterraUrls(string $html): array
-    {
-        $urls = [];
-        $doc = $this->parseHtml($html);
-
-        if (! $doc) {
-            return $urls;
-        }
-
-        $xpath = new DOMXPath($doc);
-
-        // Capterra product links and outbound visit-website links
-        $links = $xpath->query('//a[contains(@href, "http") and (contains(@class, "visit") or contains(@data-action, "visit") or contains(@href, "goto"))]');
-
-        if ($links) {
-            foreach ($links as $link) {
-                $href = $link->getAttribute('href');
-
-                if ($this->isValidExternalUrl($href)) {
-                    $urls[] = $href;
-                }
-            }
-        }
-
-        // Also extract product slugs from Capterra listing links
-        $productLinks = $xpath->query('//a[contains(@href, "/software/") or contains(@href, "/p/")]');
-
-        if ($productLinks) {
-            foreach ($productLinks as $link) {
-                $href = $link->getAttribute('href');
-
-                if (preg_match('#/(?:software|p)/(\d+)/([a-z0-9-]+)#i', $href, $matches)) {
-                    $slug = $matches[2];
-                    $domain = str_replace('-', '', $slug).'.com';
-                    $url = "https://{$domain}";
-
-                    if ($this->isValidExternalUrl($url)) {
-                        $urls[] = $url;
-                    }
-                }
-            }
-        }
-
-        return $urls;
-    }
-
-    /**
-     * Extract site URLs from AlternativeTo HTML.
-     *
-     * AlternativeTo lists software with links to their official websites.
-     *
-     * @return list<string>
-     */
-    private function extractAlternativeToUrls(string $html): array
-    {
-        $urls = [];
-        $doc = $this->parseHtml($html);
-
-        if (! $doc) {
-            return $urls;
-        }
-
-        $xpath = new DOMXPath($doc);
-
-        // AlternativeTo outbound links to software websites
-        $links = $xpath->query('//a[contains(@class, "visit") or contains(@href, "out/")]');
-
-        if ($links) {
-            foreach ($links as $link) {
-                $href = $link->getAttribute('href');
-
-                if ($this->isValidExternalUrl($href)) {
-                    $urls[] = $href;
-                }
-            }
-        }
-
-        // Also grab any external http links from app listing cards
-        $externalLinks = $xpath->query('//a[contains(@href, "http") and not(contains(@href, "alternativeto.net"))]');
-
-        if ($externalLinks) {
-            foreach ($externalLinks as $link) {
-                $href = $link->getAttribute('href');
-
-                if ($this->isValidExternalUrl($href)) {
-                    $urls[] = $href;
-                }
-            }
-        }
-
-        return $urls;
-    }
-
-    /**
-     * Extract site URLs from BuiltWith HTML.
-     *
-     * BuiltWith lists top sites using specific technologies with direct domain links.
-     *
-     * @return list<string>
-     */
-    private function extractBuiltWithUrls(string $html): array
-    {
-        $urls = [];
-        $doc = $this->parseHtml($html);
-
-        if (! $doc) {
-            return $urls;
-        }
-
-        $xpath = new DOMXPath($doc);
-
-        // BuiltWith lists domains directly and links to detailed pages
-        $links = $xpath->query('//a[contains(@href, "http")]');
-
-        if ($links) {
-            foreach ($links as $link) {
-                $href = $link->getAttribute('href');
-
-                if ($this->isValidExternalUrl($href)) {
-                    $urls[] = $href;
-                }
-            }
-        }
-
-        return $urls;
-    }
-
-    /**
-     * Extract site URLs from SimilarWeb HTML.
-     *
-     * SimilarWeb top-sites rankings display domains with links.
-     *
-     * @return list<string>
-     */
-    private function extractSimilarWebUrls(string $html): array
-    {
-        $urls = [];
-        $doc = $this->parseHtml($html);
-
-        if (! $doc) {
-            return $urls;
-        }
-
-        $xpath = new DOMXPath($doc);
-
-        // SimilarWeb shows domains in ranking tables/lists
-        $links = $xpath->query('//a[contains(@href, "/website/")]');
-
-        if ($links) {
-            foreach ($links as $link) {
-                $href = $link->getAttribute('href');
-
-                // Extract domain from SimilarWeb internal links like /website/example.com/
-                if (preg_match('#/website/([a-z0-9.-]+\.[a-z]{2,})#i', $href, $matches)) {
-                    $domain = $matches[1];
-                    $url = "https://{$domain}";
-
-                    if ($this->isValidExternalUrl($url)) {
-                        $urls[] = $url;
-                    }
-                }
-            }
-        }
-
-        // Also grab any direct external links
-        $externalLinks = $xpath->query('//a[contains(@href, "http") and not(contains(@href, "similarweb.com"))]');
-
-        if ($externalLinks) {
-            foreach ($externalLinks as $link) {
-                $href = $link->getAttribute('href');
-
-                if ($this->isValidExternalUrl($href)) {
-                    $urls[] = $href;
-                }
-            }
-        }
-
-        return $urls;
-    }
-
-    /**
-     * Extract tool/site URLs from StackShare HTML.
-     *
-     * StackShare lists developer tools with links to their official websites.
-     *
-     * @return list<string>
-     */
-    private function extractStackShareUrls(string $html): array
-    {
-        $urls = [];
-        $doc = $this->parseHtml($html);
-
-        if (! $doc) {
-            return $urls;
-        }
-
-        $xpath = new DOMXPath($doc);
-
-        // StackShare external links to tool websites
-        $links = $xpath->query('//a[contains(@href, "http") and not(contains(@href, "stackshare.io"))]');
-
-        if ($links) {
-            foreach ($links as $link) {
-                $href = $link->getAttribute('href');
-
-                if ($this->isValidExternalUrl($href)) {
-                    $urls[] = $href;
-                }
-            }
-        }
-
-        return $urls;
-    }
-
-    /**
-     * Extract product website URLs from G2 category HTML.
-     *
-     * @return list<string>
-     */
-    private function extractG2ProductUrls(string $html): array
-    {
-        $urls = [];
-        $doc = $this->parseHtml($html);
-
-        if (! $doc) {
-            return $urls;
-        }
-
-        $xpath = new DOMXPath($doc);
-
-        // G2 product cards link to product pages with data-href or href attributes
-        $links = $xpath->query('//a[contains(@href, "/products/")]');
-
-        if ($links) {
-            foreach ($links as $link) {
-                $href = $link->getAttribute('href');
-
-                if (str_contains($href, '/products/') && ! str_contains($href, '/reviews')) {
-                    // G2 product pages often contain the website URL; for now collect the product name from the URL
-                    // and we'll try to extract the actual website from the product page
-                    $productName = $this->extractG2ProductName($href);
-
-                    if ($productName) {
-                        $urls[] = "https://{$productName}.com";
-                    }
-                }
-            }
-        }
-
-        // Also look for direct outbound links to product websites
-        $outboundLinks = $xpath->query('//a[contains(@class, "website") or contains(@data-action, "visit")]');
-
-        if ($outboundLinks) {
-            foreach ($outboundLinks as $link) {
-                $href = $link->getAttribute('href');
-
-                if ($this->isValidExternalUrl($href)) {
-                    $urls[] = $href;
-                }
-            }
-        }
-
-        return $urls;
-    }
-
-    /**
-     * Extract product URLs from ProductHunt HTML.
-     *
-     * @return list<string>
-     */
-    private function extractProductHuntUrls(string $html): array
-    {
-        $urls = [];
-        $doc = $this->parseHtml($html);
-
-        if (! $doc) {
-            return $urls;
-        }
-
-        $xpath = new DOMXPath($doc);
-
-        // ProductHunt posts have links to external product websites
-        $links = $xpath->query('//a[contains(@href, "http")]');
-
-        if ($links) {
-            foreach ($links as $link) {
-                $href = $link->getAttribute('href');
-
-                if ($this->isValidExternalUrl($href)) {
-                    $urls[] = $href;
-                }
-            }
-        }
-
-        return $urls;
-    }
-
-    /**
-     * Extract AI-related URLs from Hacker News HTML.
-     *
-     * @return list<string>
-     */
-    private function extractHackerNewsUrls(string $html): array
-    {
-        $urls = [];
-        $doc = $this->parseHtml($html);
-
-        if (! $doc) {
-            return $urls;
-        }
-
-        $xpath = new DOMXPath($doc);
-
-        // HN story links are in <span class="titleline"><a href="...">Title</a></span>
-        $storyLinks = $xpath->query('//span[contains(@class, "titleline")]/a');
-
-        if ($storyLinks) {
-            foreach ($storyLinks as $link) {
-                $href = $link->getAttribute('href');
-                $title = strtolower($link->textContent ?? '');
-
-                // Only include links whose titles contain AI-related keywords
-                $isAiRelated = false;
-
-                foreach (self::AI_KEYWORDS as $keyword) {
-                    if (str_contains($title, $keyword)) {
-                        $isAiRelated = true;
-
-                        break;
-                    }
-                }
-
-                if ($isAiRelated && $this->isValidExternalUrl($href)) {
-                    $urls[] = $href;
-                }
             }
         }
 
@@ -1881,18 +1131,6 @@ class SiteDiscoveryService
     }
 
     /**
-     * Extract product name from a G2 product URL.
-     */
-    private function extractG2ProductName(string $href): ?string
-    {
-        if (preg_match('#/products/([a-z0-9-]+)#i', $href, $matches)) {
-            return str_replace('-', '', $matches[1]);
-        }
-
-        return null;
-    }
-
-    /**
      * Convert a domain to a human-readable name.
      */
     private function domainToName(string $domain): string
@@ -1906,33 +1144,5 @@ class SiteDiscoveryService
         $name = str_replace(['-', '.'], ' ', $name);
 
         return ucwords($name);
-    }
-
-    /**
-     * Parse HTML string into a DOMDocument.
-     */
-    private function parseHtml(string $html): ?DOMDocument
-    {
-        if (empty($html)) {
-            return null;
-        }
-
-        $doc = new DOMDocument;
-        libxml_use_internal_errors(true);
-        $doc->loadHTML($html, LIBXML_NOERROR | LIBXML_NOWARNING);
-        libxml_clear_errors();
-
-        return $doc;
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function browserHeaders(): array
-    {
-        return [
-            'User-Agent' => 'Mozilla/5.0 (compatible; MostAIMentions/1.0; +https://mostai.mentions)',
-            'Accept' => 'text/html,application/xhtml+xml',
-        ];
     }
 }

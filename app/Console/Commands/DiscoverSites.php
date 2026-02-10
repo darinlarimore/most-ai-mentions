@@ -17,18 +17,8 @@ class DiscoverSites extends Command
 
         $sources = [
             'Popular AI sites' => fn () => $service->discoverPopular()->count(),
-            'G2 (AI)' => fn () => $service->discoverFromG2()->count(),
-            'G2 (broad)' => fn () => $service->discoverFromG2Broad()->count(),
-            'ProductHunt' => fn () => $service->discoverFromProductHunt()->count(),
-            'Hacker News' => fn () => $service->discoverFromHackerNews()->count(),
-            'Downdetector' => fn () => $service->discoverFromDowndetector()->count(),
+            'Hacker News (API)' => fn () => $service->discoverFromHackerNews()->count(),
             'Tranco Top Sites' => fn () => $service->discoverFromTrancoList()->count(),
-            'Awwwards' => fn () => $service->discoverFromAwwwards()->count(),
-            'Capterra' => fn () => $service->discoverFromCapterra()->count(),
-            'AlternativeTo' => fn () => $service->discoverFromAlternativeTo()->count(),
-            'BuiltWith' => fn () => $service->discoverFromBuiltWith()->count(),
-            'SimilarWeb' => fn () => $service->discoverFromSimilarWeb()->count(),
-            'StackShare' => fn () => $service->discoverFromStackShare()->count(),
         ];
 
         $total = 0;

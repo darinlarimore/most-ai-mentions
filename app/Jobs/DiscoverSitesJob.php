@@ -36,8 +36,8 @@ class DiscoverSitesJob implements ShouldBeUnique, ShouldQueue
 
         Log::info("DiscoverSitesJob: Discovered {$count} new site(s)");
 
-        if ($count > 0) {
-            CrawlSiteJob::dispatchNext();
-        }
+        // Always try to crawl next — even if no new sites were discovered,
+        // existing sites past their cooldown should be re-crawled.
+        CrawlSiteJob::dispatchNext();
     }
 }
