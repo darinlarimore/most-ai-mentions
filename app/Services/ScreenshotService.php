@@ -32,7 +32,7 @@ class ScreenshotService
     {
         return Browsershot::url($url)
             ->setOption('waitUntil', 'domcontentloaded')
-            ->setDelay(2000)
+            ->setDelay(3000)
             ->windowSize(self::VIEWPORT_WIDTH, self::VIEWPORT_HEIGHT)
             ->timeout(self::TIMEOUT)
             ->dismissDialogs()
