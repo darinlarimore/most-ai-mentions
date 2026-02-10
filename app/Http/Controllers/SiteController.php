@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SiteCategory;
+use App\Http\Requests\BatchSubmitSiteRequest;
 use App\Http\Requests\SubmitSiteRequest;
 use App\Jobs\CrawlSiteJob;
 use App\Models\CrawlResult;
@@ -105,5 +106,85 @@ class SiteController extends Controller
         CrawlSiteJob::dispatch($site);
 
         return redirect()->route('sites.show', $site);
+    }
+
+    /**
+     * Batch submit multiple sites from a list of URLs.
+     */
+    public function storeBatch(BatchSubmitSiteRequest $request): RedirectResponse
+    {
+        $urls = preg_split('/[\n,]+/', $request->validated()['urls']);
+        $urls = array_filter(array_map('trim', $urls));
+
+        $domainFilter = app(DomainFilterService::class);
+        $added = 0;
+        $skipped = 0;
+        $invalid = 0;
+
+        foreach ($urls as $rawUrl) {
+            // Add scheme if missing
+            if (! preg_match('#^https?://#i', $rawUrl)) {
+                $rawUrl = 'https://'.$rawUrl;
+            }
+
+            if (! filter_var($rawUrl, FILTER_VALIDATE_URL)) {
+                $invalid++;
+
+                continue;
+            }
+
+            $parsed = parse_url($rawUrl);
+            $host = preg_replace('/^www\./', '', $parsed['host'] ?? '');
+
+            if (! $host || $domainFilter->isBlocked($host)) {
+                $invalid++;
+
+                continue;
+            }
+
+            $normalizedUrl = ($parsed['scheme'] ?? 'https')."://{$host}";
+            $slug = Site::generateSlug($host);
+
+            $existing = Site::where('domain', $host)
+                ->orWhere('domain', "www.{$host}")
+                ->orWhere('slug', $slug)
+                ->exists();
+
+            if ($existing) {
+                $skipped++;
+
+                continue;
+            }
+
+            $site = Site::create([
+                'url' => $normalizedUrl,
+                'domain' => $host,
+                'category' => 'other',
+                'submitted_by' => $request->user()?->id,
+                'status' => 'queued',
+            ]);
+
+            CrawlSiteJob::dispatch($site);
+            $added++;
+        }
+
+        $parts = [];
+        if ($added > 0) {
+            $parts[] = "{$added} site".($added !== 1 ? 's' : '').' added';
+        }
+        if ($skipped > 0) {
+            $parts[] = "{$skipped} duplicate".($skipped !== 1 ? 's' : '').' skipped';
+        }
+        if ($invalid > 0) {
+            $parts[] = "{$invalid} invalid URL".($invalid !== 1 ? 's' : '').' skipped';
+        }
+
+        $message = implode(', ', $parts).'.';
+
+        if ($added === 0) {
+            return back()->withErrors(['urls' => "No new sites were added. {$message}"]);
+        }
+
+        return back()->with('success', $message);
     }
 }

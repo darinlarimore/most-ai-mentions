@@ -27,6 +27,7 @@ Route::get('/newsletter/unsubscribe/{token}', [NewsletterController::class, 'uns
 // Site submission (public)
 Route::get('/submit', [SiteController::class, 'create'])->name('sites.create');
 Route::post('/submit', [SiteController::class, 'store'])->name('sites.store');
+Route::post('/submit/batch', [SiteController::class, 'storeBatch'])->name('sites.store-batch');
 Route::post('/donate/session', [DonationController::class, 'createSession'])->name('donate.session');
 
 // Rating (public, rate limited)
