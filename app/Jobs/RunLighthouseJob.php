@@ -39,7 +39,15 @@ class RunLighthouseJob implements ShouldQueue
     ): void {
         Log::info("Running Lighthouse audit for site: {$this->site->url}");
 
-        $lighthouseScores = $lighthouseService->run($this->site->url);
+        try {
+            $lighthouseScores = $lighthouseService->run($this->site->url);
+        } catch (\Throwable $e) {
+            Log::warning("Lighthouse audit failed for site: {$this->site->url}", [
+                'error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
 
         $this->crawlResult->update([
             'lighthouse_performance' => $lighthouseScores['performance'],
