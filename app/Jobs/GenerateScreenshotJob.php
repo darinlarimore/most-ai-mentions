@@ -18,8 +18,10 @@ class GenerateScreenshotJob implements ShouldQueue
 
     public int $timeout = 90;
 
-    /** Only count actual exceptions, not middleware releases. */
-    public int $maxExceptions = 2;
+    public int $tries = 10;
+
+    /** Only count actual exceptions (not releases) toward permanent failure. */
+    public int $maxExceptions = 3;
 
     public function __construct(
         public readonly Site $site,

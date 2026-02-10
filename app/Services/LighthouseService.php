@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use RuntimeException;
 
 class LighthouseService
 {
@@ -44,16 +45,25 @@ class LighthouseService
             ]);
 
             if (! $result->successful()) {
+                $error = $result->errorOutput();
+
+                // Chrome not available — throw so the job can retry
+                if (str_contains($error, 'Unable to connect to Chrome') || str_contains($error, 'No Chrome installations found')) {
+                    throw new RuntimeException("Chrome unavailable: {$error}");
+                }
+
                 Log::warning('Lighthouse process failed', [
                     'url' => $url,
                     'exit_code' => $result->exitCode(),
-                    'error' => $result->errorOutput(),
+                    'error' => $error,
                 ]);
 
                 return ['performance' => null, 'accessibility' => null];
             }
 
             return $this->parseResults($outputPath);
+        } catch (RuntimeException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             Log::error('Lighthouse audit threw an exception', [
                 'url' => $url,
