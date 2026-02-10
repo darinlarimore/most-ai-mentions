@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MessageSquare, Type, Sparkles, Eye, Gauge, Accessibility, ImageIcon } from 'lucide-vue-next';
+import { MessageSquare, Type, Sparkles, Eye } from 'lucide-vue-next';
 import { computed } from 'vue';
 import type { CrawlResult, ScoreAverages } from '@/types';
 
@@ -44,31 +44,6 @@ const factors = computed<Factor[]>(() => [
         avg: props.averages.visual_effects_score,
         icon: Eye,
         description: `${props.crawlResult.glow_effect_count} glows, ${props.crawlResult.rainbow_border_count} rainbow borders`,
-    },
-    {
-        label: 'AI Images',
-        value: props.crawlResult.ai_image_hype_bonus,
-        avg: props.averages.ai_image_hype_bonus,
-        icon: ImageIcon,
-        description: `${props.crawlResult.ai_image_count} AI images detected (${props.crawlResult.ai_image_score}% confidence)`,
-    },
-    {
-        label: 'Performance Penalty',
-        value: props.crawlResult.lighthouse_perf_bonus,
-        avg: props.averages.lighthouse_perf_bonus,
-        icon: Gauge,
-        description: props.crawlResult.lighthouse_performance !== null
-            ? `Lighthouse: ${props.crawlResult.lighthouse_performance}/100`
-            : 'Not measured',
-    },
-    {
-        label: 'Accessibility Penalty',
-        value: props.crawlResult.lighthouse_a11y_bonus,
-        avg: props.averages.lighthouse_a11y_bonus,
-        icon: Accessibility,
-        description: props.crawlResult.lighthouse_accessibility !== null
-            ? `Lighthouse: ${props.crawlResult.lighthouse_accessibility}/100`
-            : 'Not measured',
     },
 ]);
 

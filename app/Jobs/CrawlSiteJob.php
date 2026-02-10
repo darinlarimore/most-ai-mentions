@@ -9,7 +9,6 @@ use App\Events\QueueUpdated;
 use App\Jobs\Middleware\CheckQueuePaused;
 use App\Models\CrawlResult;
 use App\Models\Site;
-use App\Services\AiImageDetectionService;
 use App\Services\HtmlAnnotationService;
 use App\Services\HypeScoreCalculator;
 use App\Services\ScreenshotService;
@@ -56,7 +55,6 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
     public function handle(
         HypeScoreCalculator $calculator,
         HtmlAnnotationService $annotationService,
-        AiImageDetectionService $imageDetectionService,
         ScreenshotService $screenshotService,
         SiteCategoryDetector $categoryDetector,
     ): void {
@@ -137,30 +135,14 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'rainbow_border_count' => $observer->getRainbowBorderCount(),
         ]);
 
-        // Detect AI images inline from local HTML
-        CrawlProgress::dispatch($this->site->id, 'detecting_images', 'Scanning for AI-generated images...');
-
-        $aiImageData = ['ai_image_count' => 0, 'ai_image_score' => 0, 'ai_image_details' => []];
-        if ($html) {
-            $aiImageData = $imageDetectionService->analyze($html, $this->site->url);
-            Log::info("AI image detection for {$this->site->url}", [
-                'ai_image_count' => $aiImageData['ai_image_count'],
-                'ai_image_score' => $aiImageData['ai_image_score'],
-            ]);
-            $crawlResult->update([
-                'ai_image_count' => $aiImageData['ai_image_count'],
-                'ai_image_score' => $aiImageData['ai_image_score'],
-                'ai_image_details' => $aiImageData['ai_image_details'],
-            ]);
-        } else {
+        if (! $html) {
             Log::warning("No HTML captured for {$this->site->url} — crawler may have been blocked");
         }
 
-        // Calculate scores with AI image data included
+        // Calculate scores
         CrawlProgress::dispatch($this->site->id, 'calculating_score', 'Calculating hype score...', [
             'ai_mention_count' => $crawlResult->ai_mention_count,
             'animation_count' => $crawlResult->animation_count,
-            'ai_image_count' => $aiImageData['ai_image_count'],
         ]);
 
         $scores = $calculator->calculate(
@@ -168,10 +150,6 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             $crawlResult->animation_count ?? 0,
             $crawlResult->glow_effect_count ?? 0,
             $crawlResult->rainbow_border_count ?? 0,
-            $crawlResult->lighthouse_performance,
-            $crawlResult->lighthouse_accessibility,
-            $crawlResult->ai_image_count ?? 0,
-            $crawlResult->ai_image_score ?? 0,
         );
 
         $crawlResult->update([
@@ -180,9 +158,6 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'font_size_score' => $scores['font_size_score'],
             'animation_score' => $scores['animation_score'],
             'visual_effects_score' => $scores['visual_effects_score'],
-            'lighthouse_perf_bonus' => $scores['lighthouse_perf_bonus'],
-            'lighthouse_a11y_bonus' => $scores['lighthouse_a11y_bonus'],
-            'ai_image_hype_bonus' => $scores['ai_image_hype_bonus'] ?? 0,
         ]);
 
         $hypeScore = $scores['total_score'];
@@ -219,16 +194,11 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
                         'font_size_score' => $crawlResult->font_size_score,
                         'animation_score' => $crawlResult->animation_score,
                         'visual_effects_score' => $crawlResult->visual_effects_score,
-                        'lighthouse_perf_bonus' => $crawlResult->lighthouse_perf_bonus,
-                        'lighthouse_a11y_bonus' => $crawlResult->lighthouse_a11y_bonus,
                         'ai_mention_count' => $crawlResult->ai_mention_count,
                         'animation_count' => $crawlResult->animation_count,
                         'glow_effect_count' => $crawlResult->glow_effect_count,
                         'rainbow_border_count' => $crawlResult->rainbow_border_count,
-                        'ai_image_count' => $crawlResult->ai_image_count,
-                        'ai_image_hype_bonus' => $crawlResult->ai_image_hype_bonus,
                     ],
-                    $crawlResult->ai_image_details ?? [],
                 );
 
                 $screenshotPath = $screenshotService->captureHtml($annotatedHtml, $this->site->domain);
@@ -255,7 +225,6 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         ]);
 
         GenerateScreenshotJob::dispatch($this->site);
-        RunLighthouseJob::dispatch($this->site, $crawlResult);
 
         CrawlCompleted::dispatch($this->site->id, $hypeScore, $crawlResult->ai_mention_count);
         QueueUpdated::dispatch(Site::query()->crawlQueue()->count());

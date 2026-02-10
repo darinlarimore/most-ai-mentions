@@ -30,10 +30,6 @@ class RecalculateScores extends Command
                         $crawlResult->animation_count ?? 0,
                         $crawlResult->glow_effect_count ?? 0,
                         $crawlResult->rainbow_border_count ?? 0,
-                        $crawlResult->lighthouse_performance,
-                        $crawlResult->lighthouse_accessibility,
-                        $crawlResult->ai_image_count ?? 0,
-                        $crawlResult->ai_image_score ?? 0,
                     );
 
                     $crawlResult->update([
@@ -42,9 +38,6 @@ class RecalculateScores extends Command
                         'font_size_score' => $scores['font_size_score'],
                         'animation_score' => $scores['animation_score'],
                         'visual_effects_score' => $scores['visual_effects_score'],
-                        'lighthouse_perf_bonus' => $scores['lighthouse_perf_bonus'],
-                        'lighthouse_a11y_bonus' => $scores['lighthouse_a11y_bonus'],
-                        'ai_image_hype_bonus' => $scores['ai_image_hype_bonus'] ?? 0,
                     ]);
 
                     $bar->advance();

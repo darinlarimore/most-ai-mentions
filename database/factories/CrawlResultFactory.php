@@ -17,9 +17,6 @@ class CrawlResultFactory extends Factory
      */
     public function definition(): array
     {
-        $lighthousePerformance = fake()->numberBetween(10, 100);
-        $lighthouseAccessibility = fake()->numberBetween(10, 100);
-
         return [
             'site_id' => Site::factory(),
             'total_score' => fake()->numberBetween(0, 2000),
@@ -29,17 +26,9 @@ class CrawlResultFactory extends Factory
             'font_size_score' => fake()->numberBetween(0, 300),
             'animation_score' => fake()->numberBetween(0, 200),
             'visual_effects_score' => fake()->numberBetween(0, 300),
-            'lighthouse_performance' => $lighthousePerformance,
-            'lighthouse_accessibility' => $lighthouseAccessibility,
-            'lighthouse_perf_bonus' => (int) round($lighthousePerformance * 0.5),
-            'lighthouse_a11y_bonus' => (int) round($lighthouseAccessibility * 0.3),
             'animation_count' => fake()->numberBetween(0, 20),
             'glow_effect_count' => fake()->numberBetween(0, 10),
             'rainbow_border_count' => fake()->numberBetween(0, 5),
-            'ai_image_count' => fake()->numberBetween(0, 8),
-            'ai_image_score' => fake()->numberBetween(0, 100),
-            'ai_image_details' => $this->generateAiImageDetails(),
-            'ai_image_hype_bonus' => fake()->numberBetween(0, 200),
             'status' => 'completed',
         ];
     }
@@ -66,44 +55,6 @@ class CrawlResultFactory extends Factory
         }
 
         return $mentions;
-    }
-
-    /**
-     * Generate a sample array of AI image detail objects.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    private function generateAiImageDetails(): array
-    {
-        $aiTools = ['DALL-E', 'Midjourney', 'Stable Diffusion', 'Flux', 'Leonardo AI', 'Ideogram'];
-        $domains = [
-            'oaidalleapiprodscus.blob.core.windows.net',
-            'cdn.midjourney.com',
-            'replicate.delivery',
-        ];
-        $count = fake()->numberBetween(0, 4);
-        $details = [];
-
-        for ($i = 0; $i < $count; $i++) {
-            $confidence = fake()->numberBetween(20, 95);
-            $details[] = [
-                'url' => 'https://'.fake()->randomElement($domains).'/'.fake()->uuid().'.png',
-                'confidence' => $confidence,
-                'signals' => [
-                    'AI CDN domain: '.fake()->randomElement($domains),
-                    'Context keyword: '.strtolower(fake()->randomElement($aiTools)),
-                ],
-                'breakdown' => [
-                    'url_patterns' => fake()->numberBetween(0, 100),
-                    'metadata' => fake()->numberBetween(0, 100),
-                    'html_context' => fake()->numberBetween(0, 100),
-                    'resolution' => fake()->numberBetween(0, 100),
-                    'format_quirks' => fake()->numberBetween(0, 100),
-                ],
-            ];
-        }
-
-        return $details;
     }
 
     /**

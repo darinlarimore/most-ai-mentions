@@ -9,16 +9,14 @@ class HtmlAnnotationService
      *
      * @param  array<int, array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string}>  $mentionDetails
      * @param  array{total_score: int, mention_score: int, font_size_score: int, animation_score: int, visual_effects_score: int, lighthouse_perf_bonus: int, lighthouse_a11y_bonus: int, ai_mention_count: int, animation_count: int, glow_effect_count: int, rainbow_border_count: int}  $scoreBreakdown
-     * @param  array<int, array{url: string, confidence: int, signals: list<string>, breakdown: array<string, int>}>  $aiImageDetails
      */
-    public function annotate(string $html, array $mentionDetails, array $scoreBreakdown, array $aiImageDetails = []): string
+    public function annotate(string $html, array $mentionDetails, array $scoreBreakdown): string
     {
         if (trim($html) === '') {
             return '';
         }
 
         $html = $this->highlightKeywords($html);
-        $html = $this->highlightAiImages($html, $aiImageDetails);
         $html = $this->injectOverlay($html, $mentionDetails, $scoreBreakdown);
 
         return $html;
@@ -87,47 +85,6 @@ class HtmlAnnotationService
         }
 
         return $result;
-    }
-
-    /**
-     * Wrap detected AI-generated <img> tags with a red border and confidence badge.
-     *
-     * @param  array<int, array{url: string, confidence: int, signals: list<string>, breakdown: array<string, int>}>  $aiImageDetails
-     */
-    private function highlightAiImages(string $html, array $aiImageDetails): string
-    {
-        if (empty($aiImageDetails)) {
-            return $html;
-        }
-
-        // Build a lookup of detected image URLs
-        $detectedUrls = [];
-        foreach ($aiImageDetails as $detail) {
-            $detectedUrls[$detail['url']] = $detail['confidence'];
-        }
-
-        // Find and wrap <img> tags whose src matches detected URLs
-        return preg_replace_callback('/<img\b[^>]*>/is', function ($match) use ($detectedUrls) {
-            $tag = $match[0];
-
-            // Extract src attribute
-            if (preg_match('/\bsrc=["\']([^"\']*)["\']/', $tag, $srcMatch)) {
-                $src = $srcMatch[1];
-
-                foreach ($detectedUrls as $url => $confidence) {
-                    if ($src === $url || str_contains($url, $src) || str_contains($src, basename(parse_url($url, PHP_URL_PATH) ?? ''))) {
-                        $borderColor = $confidence >= 70 ? '#ef4444' : ($confidence >= 40 ? '#f97316' : '#eab308');
-
-                        return '<div class="maim-ai-image-wrapper" style="position:relative;display:inline-block;border:3px solid '.$borderColor.';border-radius:6px;overflow:hidden;">'
-                            .$tag
-                            .'<span style="position:absolute;top:4px;right:4px;background:'.$borderColor.';color:white;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700;font-family:system-ui,sans-serif;z-index:1;">'
-                            .$confidence.'% AI</span></div>';
-                    }
-                }
-            }
-
-            return $tag;
-        }, $html) ?? $html;
     }
 
     /**
@@ -331,14 +288,10 @@ CSS;
         $fontSizeScore = (int) ($scoreBreakdown['font_size_score'] ?? 0);
         $animationScore = (int) ($scoreBreakdown['animation_score'] ?? 0);
         $visualEffectsScore = (int) ($scoreBreakdown['visual_effects_score'] ?? 0);
-        $perfBonus = (int) ($scoreBreakdown['lighthouse_perf_bonus'] ?? 0);
-        $a11yBonus = (int) ($scoreBreakdown['lighthouse_a11y_bonus'] ?? 0);
         $mentionCount = (int) ($scoreBreakdown['ai_mention_count'] ?? count($mentionDetails));
         $animationCount = (int) ($scoreBreakdown['animation_count'] ?? 0);
         $glowCount = (int) ($scoreBreakdown['glow_effect_count'] ?? 0);
         $rainbowCount = (int) ($scoreBreakdown['rainbow_border_count'] ?? 0);
-        $aiImageCount = (int) ($scoreBreakdown['ai_image_count'] ?? 0);
-        $aiImageBonus = (int) ($scoreBreakdown['ai_image_hype_bonus'] ?? 0);
 
         $mentionItems = '';
         foreach (array_slice($mentionDetails, 0, 50) as $mention) {
@@ -395,18 +348,6 @@ HTML;
             <div class="maim-row">
                 <span class="maim-label">Rainbow Borders ({$rainbowCount})</span>
                 <span class="maim-value neutral">(included above)</span>
-            </div>
-            <div class="maim-row">
-                <span class="maim-label">Lighthouse Perf Bonus</span>
-                <span class="maim-value positive">+{$perfBonus}</span>
-            </div>
-            <div class="maim-row">
-                <span class="maim-label">Lighthouse A11y Bonus</span>
-                <span class="maim-value positive">+{$a11yBonus}</span>
-            </div>
-            <div class="maim-row">
-                <span class="maim-label">AI Images ({$aiImageCount})</span>
-                <span class="maim-value positive">+{$aiImageBonus}</span>
             </div>
         </div>
 

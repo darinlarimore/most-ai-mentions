@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
-    Globe, ExternalLink, ArrowLeft, Star, Clock, MessageSquare, User, Highlighter, ImageIcon,
+    Globe, ExternalLink, ArrowLeft, Star, Clock, MessageSquare, User, Highlighter,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
 import HypeOMeter from '@/components/HypeOMeter.vue';
@@ -229,61 +229,6 @@ const formattedCreatedAt = computed(() => {
                                 >
                                     Show More ({{ allMentions.length - mentionLimit }} remaining)
                                 </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <!-- AI Images Detected -->
-                    <Card v-if="site.latest_crawl_result && site.latest_crawl_result.ai_image_details && site.latest_crawl_result.ai_image_details.length > 0">
-                        <CardHeader>
-                            <CardTitle class="flex items-center gap-2">
-                                <ImageIcon class="size-5" />
-                                AI Images Detected
-                            </CardTitle>
-                            <CardDescription>
-                                {{ site.latest_crawl_result.ai_image_count }} AI-generated images found
-                                (max {{ site.latest_crawl_result.ai_image_score }}% confidence)
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                <div
-                                    v-for="(image, i) in site.latest_crawl_result.ai_image_details"
-                                    :key="i"
-                                    class="overflow-hidden rounded-lg border"
-                                >
-                                    <div class="relative aspect-video bg-muted">
-                                        <img
-                                            :src="image.url"
-                                            :alt="`AI image ${i + 1}`"
-                                            class="size-full object-cover"
-                                            loading="lazy"
-                                            @error="($event.target as HTMLImageElement).style.display = 'none'"
-                                        />
-                                        <span
-                                            :class="[
-                                                'absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs font-bold',
-                                                image.confidence >= 70
-                                                    ? 'bg-red-500 text-white'
-                                                    : image.confidence >= 40
-                                                        ? 'bg-orange-500 text-white'
-                                                        : 'bg-yellow-500 text-black',
-                                            ]"
-                                        >
-                                            {{ image.confidence }}%
-                                        </span>
-                                    </div>
-                                    <div class="p-3">
-                                        <div class="flex flex-wrap gap-1">
-                                            <span
-                                                v-for="signal in image.signals.slice(0, 3)"
-                                                :key="signal"
-                                                class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-                                            >
-                                                {{ signal }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </CardContent>
                     </Card>

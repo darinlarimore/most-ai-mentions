@@ -2,7 +2,7 @@
 import { Head, Link, InfiniteScroll, router } from '@inertiajs/vue3';
 import {
     Globe, Radio, ArrowLeft, Scan, Clock,
-    Search, ImageIcon, Calculator, Camera, CheckCircle, Loader2, Sparkles, Tag,
+    Search, Calculator, Camera, CheckCircle, Loader2, Sparkles, Tag,
 } from 'lucide-vue-next';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
@@ -34,13 +34,12 @@ const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
     fetching: { label: 'Fetching Homepage', icon: Globe },
     detecting_category: { label: 'Detecting Category', icon: Tag },
     detecting_mentions: { label: 'Detecting AI Mentions', icon: Search },
-    detecting_images: { label: 'Scanning for AI Images', icon: ImageIcon },
     calculating_score: { label: 'Calculating Hype Score', icon: Calculator },
     generating_screenshot: { label: 'Generating Screenshot', icon: Camera },
     finishing: { label: 'Finishing Up', icon: Sparkles },
 };
 
-const allStepKeys = ['fetching', 'detecting_category', 'detecting_mentions', 'detecting_images', 'calculating_score', 'generating_screenshot', 'finishing'];
+const allStepKeys = ['fetching', 'detecting_category', 'detecting_mentions', 'calculating_score', 'generating_screenshot', 'finishing'];
 
 const initialSite = props.currentSite ?? props.lastCrawledSite;
 
@@ -231,9 +230,6 @@ onUnmounted(() => {
                             <span class="font-medium text-foreground">{{ step.label }}</span>
                             <span v-if="step.data && step.data.ai_mention_count !== undefined" class="ml-auto text-xs text-muted-foreground">
                                 {{ step.data.ai_mention_count }} mentions found
-                            </span>
-                            <span v-else-if="step.data && step.data.ai_image_count !== undefined" class="ml-auto text-xs text-muted-foreground">
-                                {{ step.data.ai_image_count }} AI images
                             </span>
                             <span v-else-if="step.data && step.data.hype_score !== undefined" class="ml-auto text-xs text-muted-foreground">
                                 Score: {{ Math.round(step.data.hype_score as number) }}

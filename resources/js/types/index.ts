@@ -42,9 +42,6 @@ export interface ScoreAverages {
     font_size_score: number;
     animation_score: number;
     visual_effects_score: number;
-    ai_image_hype_bonus: number;
-    lighthouse_perf_bonus: number;
-    lighthouse_a11y_bonus: number;
     total_score: number;
 }
 
@@ -58,17 +55,9 @@ export interface CrawlResult {
     font_size_score: number;
     animation_score: number;
     visual_effects_score: number;
-    lighthouse_performance: number | null;
-    lighthouse_accessibility: number | null;
-    lighthouse_perf_bonus: number;
-    lighthouse_a11y_bonus: number;
     animation_count: number;
     glow_effect_count: number;
     rainbow_border_count: number;
-    ai_image_count: number;
-    ai_image_score: number;
-    ai_image_details: AiImageDetail[] | null;
-    ai_image_hype_bonus: number;
     annotated_screenshot_path: string | null;
     created_at: string;
 }
@@ -81,25 +70,10 @@ export interface MentionDetail {
     context: string;
 }
 
-export interface AiImageDetail {
-    url: string;
-    confidence: number;
-    signals: string[];
-    breakdown: {
-        url_patterns: number;
-        metadata: number;
-        html_context: number;
-        resolution: number;
-        format_quirks: number;
-    };
-}
-
 export interface ScoreHistory {
     id: number;
     hype_score: number;
     ai_mention_count: number;
-    lighthouse_performance: number | null;
-    lighthouse_accessibility: number | null;
     recorded_at: string;
 }
 

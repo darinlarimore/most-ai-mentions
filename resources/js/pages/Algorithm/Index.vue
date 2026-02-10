@@ -2,7 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowLeft, Cpu, MessageSquare, Type, Sparkles, Eye,
-    Gauge, Accessibility, Zap, Brain,
+    Zap, Brain,
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,8 +17,6 @@ const factorIcons: Record<string, typeof MessageSquare> = {
     'Font Size': Type,
     'Animations': Sparkles,
     'Visual Effects': Eye,
-    'Performance': Gauge,
-    'Accessibility': Accessibility,
 };
 
 const getIcon = (name: string) => {
@@ -66,8 +64,7 @@ const getIcon = (name: string) => {
                         <p>
                             Our crawler visits each submitted website and performs a comprehensive analysis.
                             It searches for AI-related buzzwords, measures how prominently they're displayed,
-                            checks for flashy animations and visual effects, and even runs Lighthouse audits
-                            to see if all that hype comes at a performance cost.
+                            and checks for flashy animations and visual effects.
                         </p>
                         <p class="mt-3">
                             The final <strong class="text-foreground">Hype Score</strong> is a combination of all these factors.
@@ -127,13 +124,12 @@ const getIcon = (name: string) => {
                 <CardContent>
                     <div class="overflow-x-auto rounded-lg bg-muted p-6 font-mono text-sm">
                         <code>
-                            Hype Score = Mention Score + Font Size Bonus + Animation Score + Visual Effects Score + Performance Penalty + Accessibility Penalty
+                            Hype Score = Mention Score + Font Size Bonus + Animation Score + Visual Effects Score
                         </code>
                     </div>
                     <p class="mt-3 text-xs text-muted-foreground">
-                        Note: Performance and Accessibility penalties are bonus points for sites that sacrifice
-                        usability in the name of AI hype. Because nothing says "the future" like a 15-second load time
-                        and zero alt text.
+                        Each factor contributes to the overall hype level. More mentions, bigger text,
+                        flashier animations, and glowing effects all push the score higher.
                     </p>
                 </CardContent>
             </Card>
