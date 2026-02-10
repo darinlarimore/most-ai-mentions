@@ -24,6 +24,11 @@ const ratingForm = useForm({
     comment: '',
 });
 
+const mentionLimit = ref(5);
+const allMentions = computed(() => props.site.latest_crawl_result?.mention_details ?? []);
+const visibleMentions = computed(() => allMentions.value.slice(0, mentionLimit.value));
+const hasMoreMentions = computed(() => mentionLimit.value < allMentions.value.length);
+
 const hoveredStar = ref(0);
 const hasRated = ref(false);
 
@@ -195,7 +200,7 @@ const formattedCreatedAt = computed(() => {
                         <CardContent>
                             <div class="flex flex-col gap-3">
                                 <div
-                                    v-for="(mention, i) in site.latest_crawl_result.mention_details"
+                                    v-for="(mention, i) in visibleMentions"
                                     :key="i"
                                     class="rounded-lg border p-3"
                                 >
@@ -216,6 +221,14 @@ const formattedCreatedAt = computed(() => {
                                         Font size: {{ mention.font_size }}px | Context: {{ mention.context }}
                                     </p>
                                 </div>
+                                <Button
+                                    v-if="hasMoreMentions"
+                                    variant="outline"
+                                    class="w-full"
+                                    @click="mentionLimit += 10"
+                                >
+                                    Show More ({{ allMentions.length - mentionLimit }} remaining)
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
