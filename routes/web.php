@@ -7,7 +7,11 @@ use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
+
+// Sitemap
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Public routes
 Route::get('/', [LeaderboardController::class, 'index'])->name('leaderboard');
