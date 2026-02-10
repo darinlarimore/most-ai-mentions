@@ -106,7 +106,7 @@ onMounted(() => {
                         scanCardEntering.value = false;
                     });
                 });
-            }, 400);
+            }, 500);
         } else {
             // Site not in visible queue — remove and show scan card immediately
             removedSiteIds.value.add(e.site_id);
@@ -426,58 +426,54 @@ onUnmounted(() => {
     animation: scan 2s ease-in-out infinite;
 }
 
-/* Queue item standard transitions */
-.queue-item-move,
-.queue-item-enter-active,
-.queue-item-leave-active {
-    transition: all 0.5s ease;
+/* Queue item transitions — use transform/opacity only to stay on compositor */
+.queue-item-move {
+    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-.queue-item-enter-from {
-    opacity: 0;
-    transform: translateX(-30px);
-}
-
-.queue-item-leave-to {
-    opacity: 0;
-    transform: translateX(30px);
+.queue-item-enter-active {
+    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease;
 }
 
 .queue-item-leave-active {
+    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease;
     position: absolute;
     width: 100%;
 }
 
-/* Queue item "promote" — slides out to the left */
+.queue-item-enter-from {
+    opacity: 0;
+    transform: translateX(-20px);
+}
+
+.queue-item-leave-to {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+/* Queue item "promote" — smooth slide-left exit */
 .queue-item-promote {
-    animation: slide-left 0.4s ease forwards;
-    position: relative;
+    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease;
+    transform: translateX(-40px);
+    opacity: 0;
 }
 
-@keyframes slide-left {
-    to {
-        transform: translateX(-60px);
-        opacity: 0;
-    }
-}
-
-/* Active scan card entrance animation */
+/* Active scan card entrance */
 .scan-card-enter-active {
-    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease;
 }
 
 .scan-card-enter-from,
 .scan-card-initial {
     opacity: 0;
-    transform: translateY(24px) scale(0.97);
+    transform: translateY(16px);
 }
 
 .scan-card-leave-active {
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease;
 }
 
 .scan-card-leave-to {
     opacity: 0;
-    transform: scale(0.98);
 }
 </style>
