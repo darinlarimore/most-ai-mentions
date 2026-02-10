@@ -109,8 +109,7 @@ const resetZoom = () => {
             <div v-if="annotatedScreenshotUrl" class="overflow-auto rounded-xl border shadow-lg">
                 <img
                     :src="annotatedScreenshotUrl"
-                    :style="{ transform: `scale(${scale})`, transformOrigin: 'top left' }"
-                    class="max-w-none"
+                    :style="{ width: `${scale * 100}%` }"
                     alt="Annotated screenshot showing highlighted AI keywords"
                 />
             </div>
