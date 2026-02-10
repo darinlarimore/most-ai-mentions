@@ -15,7 +15,7 @@ class ScreenshotService
     private const VIEWPORT_HEIGHT = 800;
 
     /** @var int Timeout in seconds for the headless browser to load the page. */
-    private const TIMEOUT = 30;
+    private const TIMEOUT = 45;
 
     /**
      * Capture a screenshot of the given URL and store it on disk.

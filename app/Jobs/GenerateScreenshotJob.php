@@ -16,7 +16,7 @@ class GenerateScreenshotJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 60;
+    public int $timeout = 90;
 
     /** Only count actual exceptions, not middleware releases. */
     public int $maxExceptions = 2;
@@ -34,12 +34,18 @@ class GenerateScreenshotJob implements ShouldQueue
     {
         Log::info("Generating screenshot for site: {$this->site->url}");
 
-        $screenshotPath = $screenshotService->capture($this->site->url);
+        try {
+            $screenshotPath = $screenshotService->capture($this->site->url);
 
-        $this->site->update([
-            'screenshot_path' => $screenshotPath,
-        ]);
+            $this->site->update([
+                'screenshot_path' => $screenshotPath,
+            ]);
 
-        Log::info("Screenshot saved for site: {$this->site->url} at {$screenshotPath}");
+            Log::info("Screenshot saved for site: {$this->site->url} at {$screenshotPath}");
+        } catch (\Throwable $e) {
+            Log::warning("Screenshot failed for site: {$this->site->url}", [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
