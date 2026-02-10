@@ -91,7 +91,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             RequestOptions::TIMEOUT => 10,
             RequestOptions::ALLOW_REDIRECTS => true,
             RequestOptions::HEADERS => [
-                'User-Agent' => 'Mozilla/5.0 (compatible; MostAIMentions/1.0)',
+                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
             ],
         ])
             ->setCrawlObserver($observer)
