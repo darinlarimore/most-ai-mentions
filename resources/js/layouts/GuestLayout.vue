@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Bot, Menu, X } from 'lucide-vue-next';
+import { Menu, X } from 'lucide-vue-next';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { ref } from 'vue';
 
 const mobileMenuOpen = ref(false);
@@ -12,7 +13,7 @@ const mobileMenuOpen = ref(false);
             <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center gap-2">
                     <Link href="/" class="flex items-center gap-2 font-bold text-lg">
-                        <Bot class="size-7 text-primary" />
+                        <AppLogoIcon class="size-7" />
                         <span>Most AI Mentions</span>
                     </Link>
                 </div>
@@ -72,7 +73,7 @@ const mobileMenuOpen = ref(false);
         <footer class="border-t">
             <div class="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-8 text-center text-sm text-muted-foreground sm:px-6 lg:px-8">
                 <div class="flex items-center gap-2">
-                    <Bot class="size-4" />
+                    <AppLogoIcon class="size-4" />
                     <span>Most AI Mentions</span>
                 </div>
                 <p>Tracking AI hype across the web, so you don't have to.</p>
