@@ -5,19 +5,28 @@ namespace App\Services;
 class HypeScoreCalculator
 {
     /** @var int Base points awarded per AI keyword mention found on the page. */
-    public const MENTION_BASE_POINTS = 10;
+    public const MENTION_BASE_POINTS = 25;
 
     /** @var float Additional points per pixel of font size above the 16px baseline. */
-    public const FONT_SIZE_MULTIPLIER = 0.5;
+    public const FONT_SIZE_MULTIPLIER = 1.5;
 
-    /** @var int Points awarded for each CSS/JS animation detected. */
+    /** @var int Points awarded for each CSS/JS animation detected (after cap). */
     public const ANIMATION_POINTS = 15;
 
-    /** @var int Points awarded for each glow effect (box-shadow, text-shadow with blur). */
+    /** @var int Points awarded for each glow effect (after cap). */
     public const GLOW_EFFECT_POINTS = 25;
 
-    /** @var int Points awarded for each rainbow/gradient border found. */
+    /** @var int Points awarded for each rainbow/gradient border found (after cap). */
     public const RAINBOW_BORDER_POINTS = 30;
+
+    /** @var int Maximum animation count used for scoring. */
+    public const MAX_ANIMATION_COUNT = 100;
+
+    /** @var int Maximum glow effect count used for scoring. */
+    public const MAX_GLOW_COUNT = 100;
+
+    /** @var int Maximum rainbow border count used for scoring. */
+    public const MAX_RAINBOW_COUNT = 50;
 
     /** @var float Weight applied to Lighthouse performance penalty: (100 - score) * weight. */
     public const LIGHTHOUSE_PERF_WEIGHT = 1.0;
@@ -169,8 +178,12 @@ class HypeScoreCalculator
      */
     public function calculateVisualEffectsScore(int $animationCount, int $glowCount, int $rainbowCount): array
     {
-        $animationScore = $animationCount * self::ANIMATION_POINTS;
-        $visualEffectsScore = ($glowCount * self::GLOW_EFFECT_POINTS) + ($rainbowCount * self::RAINBOW_BORDER_POINTS);
+        $cappedAnimations = min($animationCount, self::MAX_ANIMATION_COUNT);
+        $cappedGlows = min($glowCount, self::MAX_GLOW_COUNT);
+        $cappedRainbows = min($rainbowCount, self::MAX_RAINBOW_COUNT);
+
+        $animationScore = $cappedAnimations * self::ANIMATION_POINTS;
+        $visualEffectsScore = ($cappedGlows * self::GLOW_EFFECT_POINTS) + ($cappedRainbows * self::RAINBOW_BORDER_POINTS);
 
         return [(float) $animationScore, (float) $visualEffectsScore];
     }
@@ -257,20 +270,20 @@ class HypeScoreCalculator
             ],
             [
                 'name' => 'Page Animations',
-                'description' => 'Total CSS/JS animations detected on the page contribute to the hype score.',
-                'weight' => self::ANIMATION_POINTS.' points per animation',
+                'description' => 'CSS/JS animations detected on the page contribute to the hype score, capped at '.self::MAX_ANIMATION_COUNT.'.',
+                'weight' => self::ANIMATION_POINTS.' points per animation (max '.self::MAX_ANIMATION_COUNT.')',
                 'example' => 'Floating particles, pulsing buttons, auto-scrolling carousels',
             ],
             [
                 'name' => 'Glow Effects',
-                'description' => 'Glowing box-shadows and text-shadows with visible blur radii signal peak hype.',
-                'weight' => self::GLOW_EFFECT_POINTS.' points per glow effect',
+                'description' => 'Glowing box-shadows and text-shadows with visible blur radii signal peak hype, capped at '.self::MAX_GLOW_COUNT.'.',
+                'weight' => self::GLOW_EFFECT_POINTS.' points per glow effect (max '.self::MAX_GLOW_COUNT.')',
                 'example' => 'Cards with neon box-shadow: 0 0 20px cyan',
             ],
             [
                 'name' => 'Rainbow/Gradient Borders',
-                'description' => 'Gradient or rainbow-colored borders are a hallmark of AI marketing aesthetics.',
-                'weight' => self::RAINBOW_BORDER_POINTS.' points per rainbow border',
+                'description' => 'Gradient or rainbow-colored borders are a hallmark of AI marketing aesthetics, capped at '.self::MAX_RAINBOW_COUNT.'.',
+                'weight' => self::RAINBOW_BORDER_POINTS.' points per rainbow border (max '.self::MAX_RAINBOW_COUNT.')',
                 'example' => 'A card with a rotating conic-gradient border',
             ],
             [
