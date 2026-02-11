@@ -198,9 +198,7 @@ onUnmounted(() => {
                 <CardContent>
                     <Deferred data="termFrequency">
                         <template #fallback>
-                            <div class="space-y-2">
-                                <Skeleton v-for="i in 10" :key="i" class="h-6 w-full" />
-                            </div>
+                            <Skeleton class="h-96 w-full rounded-lg" />
                         </template>
                         <div v-if="termView === 'bar'" :style="{ height: Math.max(300, (termFrequency?.length ?? 0) * 28) + 'px' }">
                             <D3HorizontalBar
@@ -257,9 +255,7 @@ onUnmounted(() => {
                 <CardContent>
                     <Deferred data="techStackDistribution">
                         <template #fallback>
-                            <div class="space-y-2">
-                                <Skeleton v-for="i in 8" :key="i" class="h-6 w-full" />
-                            </div>
+                            <Skeleton class="h-96 w-full rounded-lg" />
                         </template>
                         <template v-if="techStackDistribution?.length">
                             <div
