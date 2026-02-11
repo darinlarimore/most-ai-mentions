@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted, onUnmounted } from 'vue';
 import { Deferred } from '@inertiajs/vue3';
+import { BarChart3, LayoutGrid, GitBranch, ChartPie, Cloud } from 'lucide-vue-next';
+import { reactive, ref, onMounted, onUnmounted } from 'vue';
+import D3DonutChart from '@/components/charts/D3DonutChart.vue';
+import D3HorizontalBar from '@/components/charts/D3HorizontalBar.vue';
+import D3RadialTree from '@/components/charts/D3RadialTree.vue';
+import D3RealtimeHorizon from '@/components/charts/D3RealtimeHorizon.vue';
+import D3ScatterPlot from '@/components/charts/D3ScatterPlot.vue';
+import D3Treemap from '@/components/charts/D3Treemap.vue';
+import D3VerticalBar from '@/components/charts/D3VerticalBar.vue';
+import D3WordCloud from '@/components/charts/D3WordCloud.vue';
+import D3WorldMap from '@/components/charts/D3WorldMap.vue';
+import TickerNumber from '@/components/TickerNumber.vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import GuestLayout from '@/layouts/GuestLayout.vue';
-import { BarChart3, LayoutGrid, GitBranch, ChartPie, Cloud } from 'lucide-vue-next';
-import D3HorizontalBar from '@/components/charts/D3HorizontalBar.vue';
-import D3Treemap from '@/components/charts/D3Treemap.vue';
-import D3RadialTree from '@/components/charts/D3RadialTree.vue';
-import D3DonutChart from '@/components/charts/D3DonutChart.vue';
-import D3VerticalBar from '@/components/charts/D3VerticalBar.vue';
-import D3ScatterPlot from '@/components/charts/D3ScatterPlot.vue';
-import D3WorldMap from '@/components/charts/D3WorldMap.vue';
-import D3WordCloud from '@/components/charts/D3WordCloud.vue';
-import D3RealtimeHorizon from '@/components/charts/D3RealtimeHorizon.vue';
-import TickerNumber from '@/components/TickerNumber.vue';
 
 interface TermFrequencyItem {
     term: string;

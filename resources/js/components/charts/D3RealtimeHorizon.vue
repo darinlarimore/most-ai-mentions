@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useResizeObserver } from '@vueuse/core';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import ChartTooltip from './ChartTooltip.vue';
 
 export interface HorizonDatum {
