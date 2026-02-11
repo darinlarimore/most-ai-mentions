@@ -102,10 +102,14 @@ onMounted(() => {
         };
     });
 
-    echoActivityChannel.listen('.CrawlCompleted', (e: { site_id: number; hype_score: number; ai_mention_count: number }) => {
+    echoActivityChannel.listen('.CrawlCompleted', (e: { site_id: number; hype_score: number; ai_mention_count: number; screenshot_path: string | null }) => {
         if (currentStep.value) {
             completedSteps.value.push({ ...currentStep.value });
             currentStep.value = null;
+        }
+
+        if (activeSite.value && e.screenshot_path) {
+            activeSite.value.screenshot_path = e.screenshot_path;
         }
 
         completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };

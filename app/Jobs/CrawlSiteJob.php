@@ -272,9 +272,10 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'hype_score' => $hypeScore,
         ]);
 
-        GenerateScreenshotJob::dispatch($this->site);
+        GenerateScreenshotJob::dispatchSync($this->site);
+        $this->site->refresh();
 
-        CrawlCompleted::dispatch($this->site->id, $hypeScore, $crawlResult->ai_mention_count);
+        CrawlCompleted::dispatch($this->site->id, $hypeScore, $crawlResult->ai_mention_count, $this->site->screenshot_path);
         QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
 
         Log::info("Completed crawl for site: {$this->site->url}, score: {$hypeScore}");
