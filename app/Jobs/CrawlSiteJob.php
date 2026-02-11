@@ -289,7 +289,24 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         $crawlDurationMs = (int) round((hrtime(true) - $crawlStartedAt) / 1_000_000);
         $crawlResult->update(['crawl_duration_ms' => $crawlDurationMs]);
 
-        CrawlCompleted::dispatch($this->site->id, $hypeScore, $crawlResult->ai_mention_count, $this->site->screenshot_path, $crawlDurationMs);
+        $aiTerms = collect($crawlResult->mention_details ?? [])
+            ->pluck('text')
+            ->map(fn ($t) => mb_strtolower(trim($t)))
+            ->unique()
+            ->values()
+            ->all();
+
+        CrawlCompleted::dispatch(
+            $this->site->id,
+            $hypeScore,
+            $crawlResult->ai_mention_count,
+            $this->site->screenshot_path,
+            $crawlDurationMs,
+            $this->site->domain,
+            $this->site->slug,
+            $this->site->category,
+            $aiTerms,
+        );
         QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
 
         Log::info("Completed crawl for site: {$this->site->url}, score: {$hypeScore}");

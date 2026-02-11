@@ -12,12 +12,19 @@ class CrawlCompleted implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    /**
+     * @param  list<string>  $ai_terms
+     */
     public function __construct(
         public readonly int $site_id,
         public readonly float $hype_score,
         public readonly int $ai_mention_count,
         public readonly ?string $screenshot_path = null,
         public readonly ?int $crawl_duration_ms = null,
+        public readonly ?string $domain = null,
+        public readonly ?string $slug = null,
+        public readonly ?string $category = null,
+        public readonly array $ai_terms = [],
     ) {}
 
     public function broadcastAs(): string
@@ -46,6 +53,10 @@ class CrawlCompleted implements ShouldBroadcastNow
             'ai_mention_count' => $this->ai_mention_count,
             'screenshot_path' => $this->screenshot_path,
             'crawl_duration_ms' => $this->crawl_duration_ms,
+            'domain' => $this->domain,
+            'slug' => $this->slug,
+            'category' => $this->category,
+            'ai_terms' => $this->ai_terms,
         ];
     }
 }

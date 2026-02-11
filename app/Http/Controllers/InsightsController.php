@@ -31,6 +31,83 @@ class InsightsController extends Controller
     }
 
     /**
+     * Return nodes + links for the Sites ↔ AI Terms force graph.
+     *
+     * @return array{nodes: list<array<string, mixed>>, links: list<array<string, mixed>>}
+     */
+    public function network(): JsonResponse
+    {
+        $sites = Site::active()
+            ->whereNotNull('last_crawled_at')
+            ->with(['latestCrawlResult' => fn ($q) => $q->select('crawl_results.id', 'crawl_results.site_id', 'crawl_results.mention_details')])
+            ->select(['id', 'domain', 'slug', 'category', 'hype_score'])
+            ->orderByDesc('last_crawled_at')
+            ->limit(150)
+            ->get()
+            ->filter(fn (Site $site) => ! empty($site->latestCrawlResult?->mention_details));
+
+        // Collect unique terms per site
+        $termCounts = []; // term → number of sites mentioning it
+        $siteTerms = [];  // site_id → [terms]
+
+        foreach ($sites as $site) {
+            $terms = collect($site->latestCrawlResult->mention_details)
+                ->pluck('text')
+                ->map(fn ($t) => mb_strtolower(trim($t)))
+                ->unique()
+                ->values()
+                ->all();
+
+            $siteTerms[$site->id] = $terms;
+
+            foreach ($terms as $term) {
+                $termCounts[$term] = ($termCounts[$term] ?? 0) + 1;
+            }
+        }
+
+        // Keep only terms on 2+ sites
+        $termCounts = array_filter($termCounts, fn ($c) => $c >= 2);
+
+        $nodes = [];
+        $links = [];
+
+        foreach ($sites as $site) {
+            $relevantTerms = array_intersect($siteTerms[$site->id] ?? [], array_keys($termCounts));
+            if (empty($relevantTerms)) {
+                continue;
+            }
+
+            $nodes[] = [
+                'id' => 'site:'.$site->id,
+                'type' => 'site',
+                'label' => $site->domain,
+                'slug' => $site->slug,
+                'category' => $site->category,
+                'score' => $site->hype_score,
+            ];
+
+            foreach ($relevantTerms as $term) {
+                $links[] = [
+                    'source' => 'site:'.$site->id,
+                    'target' => 'term:'.$term,
+                ];
+            }
+        }
+
+        // Add term nodes
+        foreach ($termCounts as $term => $count) {
+            $nodes[] = [
+                'id' => 'term:'.$term,
+                'type' => 'term',
+                'label' => $term,
+                'count' => $count,
+            ];
+        }
+
+        return response()->json(['nodes' => $nodes, 'links' => $links]);
+    }
+
+    /**
      * @return array{total_sites: int, crawled_sites: int, queued_sites: int, total_crawls: int}
      */
     private function getPipelineStats(): array

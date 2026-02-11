@@ -14,6 +14,8 @@ import {
 import { reactive, ref, onMounted, onUnmounted } from 'vue';
 import D3CirclePacking from '@/components/charts/D3CirclePacking.vue';
 import D3DonutChart from '@/components/charts/D3DonutChart.vue';
+import D3ForceGraph from '@/components/charts/D3ForceGraph.vue';
+import type { NetworkData } from '@/components/charts/D3ForceGraph.vue';
 import D3Hexbin from '@/components/charts/D3Hexbin.vue';
 import D3HorizontalBar from '@/components/charts/D3HorizontalBar.vue';
 import D3RadialTree from '@/components/charts/D3RadialTree.vue';
@@ -93,6 +95,10 @@ const categoryView = ref<'donut' | 'sunburst' | 'circle' | 'treemap'>('donut');
 const scoreView = ref<'bar' | 'donut'>('bar');
 const scatterView = ref<'scatter' | 'hexbin'>('scatter');
 
+const forceGraphRef = ref<InstanceType<typeof D3ForceGraph> | null>(null);
+const networkData = ref<NetworkData | null>(null);
+const networkLoading = ref(true);
+
 const liveStats = reactive({ ...props.pipelineStats });
 
 const stats = [
@@ -113,15 +119,32 @@ async function refreshStats() {
     }
 }
 
+async function loadNetworkData() {
+    try {
+        const res = await fetch('/insights/network');
+        if (!res.ok) return;
+        networkData.value = await res.json();
+    } catch {
+        // silently ignore
+    } finally {
+        networkLoading.value = false;
+    }
+}
+
 let activityChannel: ReturnType<typeof window.Echo.channel> | null = null;
 let queueChannel: ReturnType<typeof window.Echo.channel> | null = null;
 
 onMounted(() => {
     activityChannel = window.Echo.channel('crawl-activity');
-    activityChannel.listen('.CrawlCompleted', refreshStats);
+    activityChannel.listen('.CrawlCompleted', (e: Record<string, unknown>) => {
+        refreshStats();
+        forceGraphRef.value?.addSiteNode(e as Parameters<InstanceType<typeof D3ForceGraph>['addSiteNode']>[0]);
+    });
 
     queueChannel = window.Echo.channel('crawl-queue');
     queueChannel.listen('.QueueUpdated', refreshStats);
+
+    loadNetworkData();
 });
 
 onUnmounted(() => {
@@ -156,6 +179,23 @@ onUnmounted(() => {
 
         <!-- Charts Grid -->
         <div class="grid gap-6 lg:grid-cols-2">
+            <!-- Sites ↔ AI Terms Network -->
+            <Card class="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle>Sites &amp; AI Terms Network</CardTitle>
+                    <CardDescription>Force-directed graph of sites linked to the AI terms they mention</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Skeleton v-if="networkLoading" class="h-[32rem] w-full" />
+                    <div v-else-if="networkData?.nodes?.length" class="h-[32rem]">
+                        <D3ForceGraph ref="forceGraphRef" :data="networkData" />
+                    </div>
+                    <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
+                        No network data yet. Data populates after sites are crawled.
+                    </div>
+                </CardContent>
+            </Card>
+
             <!-- Server Hosting Map -->
             <Card class="lg:col-span-2">
                 <CardHeader>
@@ -347,25 +387,25 @@ onUnmounted(() => {
                 <CardContent>
                     <Deferred data="categoryBreakdown">
                         <template #fallback>
-                            <Skeleton class="mx-auto h-64 w-64 rounded-full" />
+                            <Skeleton class="mx-auto h-96 w-96 rounded-full" />
                         </template>
                         <template v-if="categoryBreakdown?.length">
-                            <div v-if="categoryView === 'donut'" class="h-64">
+                            <div v-if="categoryView === 'donut'" class="h-96">
                                 <D3DonutChart
                                     :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
                                 />
                             </div>
-                            <div v-else-if="categoryView === 'sunburst'" class="h-64">
+                            <div v-else-if="categoryView === 'sunburst'" class="h-96">
                                 <D3Sunburst
                                     :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
                                 />
                             </div>
-                            <div v-else-if="categoryView === 'circle'" class="h-64">
+                            <div v-else-if="categoryView === 'circle'" class="h-96">
                                 <D3CirclePacking
                                     :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
                                 />
                             </div>
-                            <div v-else class="h-64">
+                            <div v-else class="h-96">
                                 <D3Treemap
                                     :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
                                 />

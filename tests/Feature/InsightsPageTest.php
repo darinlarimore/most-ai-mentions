@@ -122,6 +122,66 @@ it('broadcasts crawl_duration_ms in CrawlCompleted event', function () {
         ->and($event->broadcastAs())->toBe('CrawlCompleted');
 });
 
+it('broadcasts network fields in CrawlCompleted event', function () {
+    $event = new CrawlCompleted(
+        site_id: 1,
+        hype_score: 100.0,
+        ai_mention_count: 5,
+        screenshot_path: null,
+        crawl_duration_ms: 45000,
+        domain: 'example.com',
+        slug: 'example-com',
+        category: 'tech',
+        ai_terms: ['gpt', 'llm'],
+    );
+
+    $data = $event->broadcastWith();
+
+    expect($data)->toHaveKey('domain', 'example.com')
+        ->and($data)->toHaveKey('slug', 'example-com')
+        ->and($data)->toHaveKey('category', 'tech')
+        ->and($data)->toHaveKey('ai_terms', ['gpt', 'llm']);
+});
+
+it('returns network graph data', function () {
+    $siteA = Site::factory()->create(['last_crawled_at' => now(), 'hype_score' => 100]);
+    $siteB = Site::factory()->create(['last_crawled_at' => now(), 'hype_score' => 200]);
+
+    CrawlResult::factory()->create([
+        'site_id' => $siteA->id,
+        'mention_details' => [
+            ['text' => 'GPT', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test'],
+            ['text' => 'LLM', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test'],
+        ],
+    ]);
+
+    CrawlResult::factory()->create([
+        'site_id' => $siteB->id,
+        'mention_details' => [
+            ['text' => 'GPT', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test'],
+        ],
+    ]);
+
+    $response = $this->getJson('/insights/network');
+
+    $response->assertSuccessful();
+    $response->assertJsonStructure(['nodes', 'links']);
+
+    $nodes = $response->json('nodes');
+    $links = $response->json('links');
+
+    // GPT appears on 2 sites, so it qualifies. LLM only on 1 site, filtered out.
+    $termNodes = collect($nodes)->where('type', 'term');
+    expect($termNodes)->toHaveCount(1)
+        ->and($termNodes->first()['label'])->toBe('gpt');
+
+    $siteNodes = collect($nodes)->where('type', 'site');
+    expect($siteNodes)->toHaveCount(2);
+
+    // Both sites link to GPT
+    expect($links)->toHaveCount(2);
+});
+
 it('defers crawler speed data with individual durations', function () {
     $site = Site::factory()->create(['last_crawled_at' => now()]);
     CrawlResult::factory()->count(3)->create([
