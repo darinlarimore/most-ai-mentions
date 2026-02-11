@@ -40,6 +40,11 @@ let worldDataCache: any = null;
 let usDataCache: any = null;
 
 async function loadMapData() {
+    // Guard with SSR check so Vite tree-shakes atlas JSON from the SSR bundle
+    if (import.meta.env.SSR) {
+        return { world: null, us: null };
+    }
+
     const [world, us] = await Promise.all([
         worldDataCache
             ? Promise.resolve(worldDataCache)
