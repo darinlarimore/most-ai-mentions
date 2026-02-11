@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Site;
 use App\Services\SiteDiscoveryService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 class DiscoverSites extends Command
 {
@@ -14,29 +14,52 @@ class DiscoverSites extends Command
 
     public function handle(SiteDiscoveryService $service): int
     {
-        Log::info('SiteDiscovery: Starting discovery run');
         $this->info('Discovering new sites...');
+        $this->newLine();
 
         $sources = [
-            'Popular AI sites' => fn () => $service->discoverPopular()->count(),
-            'Hacker News (API)' => fn () => $service->discoverFromHackerNews()->count(),
-            'Tranco Top Sites' => fn () => $service->discoverFromTrancoList()->count(),
-            'Reddit' => fn () => $service->discoverFromReddit()->count(),
-            'AlternativeTo' => fn () => $service->discoverFromAlternativeTo()->count(),
-            'New Domains' => fn () => $service->discoverFromNewDomains()->count(),
+            'Popular AI sites' => fn () => $service->discoverPopular(),
+            'Hacker News (API)' => fn () => $service->discoverFromHackerNews(),
+            'Tranco Top Sites' => fn () => $service->discoverFromTrancoList(),
+            'Reddit' => fn () => $service->discoverFromReddit(),
+            'AlternativeTo' => fn () => $service->discoverFromAlternativeTo(),
+            'New Domains' => fn () => $service->discoverFromNewDomains(),
         ];
 
         $total = 0;
+        $allDiscovered = collect();
 
         foreach ($sources as $name => $discover) {
-            $count = $discover();
-            $total += $count;
-            Log::info("SiteDiscovery: {$name} — {$count} new site(s)");
-            $this->line("  {$name}: {$count} new site(s)");
+            $this->components->task($name, function () use ($discover, &$total, &$allDiscovered, $name) {
+                $sites = $discover();
+                $count = $sites->count();
+                $total += $count;
+
+                $sites->each(fn (Site $site) => $allDiscovered->push([
+                    'source' => $name,
+                    'domain' => $site->domain,
+                    'name' => $site->name,
+                ]));
+
+                return $count > 0 ? "{$count} new" : 'no new sites';
+            });
         }
 
-        Log::info("SiteDiscovery: Finished — {$total} new site(s) added");
-        $this->info("Done. {$total} new site(s) added.");
+        $this->newLine();
+
+        $existingCount = Site::count();
+        $this->components->bulletList([
+            "Total sites in database: {$existingCount}",
+            "New sites added: {$total}",
+        ]);
+
+        if ($allDiscovered->isNotEmpty()) {
+            $this->newLine();
+            $this->table(
+                ['Source', 'Domain', 'Name'],
+                $allDiscovered->toArray(),
+            );
+        }
 
         return self::SUCCESS;
     }
