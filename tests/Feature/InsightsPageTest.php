@@ -63,11 +63,9 @@ it('defers metadata group props', function () {
     $response->assertInertia(fn ($page) => $page
         ->missing('categoryBreakdown')
         ->missing('scoreDistribution')
-        ->missing('serverDistribution')
         ->loadDeferredProps(['metadata'], fn ($reload) => $reload
             ->has('categoryBreakdown')
             ->has('scoreDistribution', 6)
-            ->has('serverDistribution')
         )
     );
 });

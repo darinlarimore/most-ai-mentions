@@ -17,7 +17,6 @@ class InsightsController extends Controller
             'pipelineStats' => $this->getPipelineStats(),
             'termFrequency' => Inertia::defer(fn () => $this->getTermFrequency()),
             'techStackDistribution' => Inertia::defer(fn () => $this->getTechStackDistribution()),
-            'serverDistribution' => Inertia::defer(fn () => $this->getServerDistribution(), 'metadata'),
             'categoryBreakdown' => Inertia::defer(fn () => $this->getCategoryBreakdown(), 'metadata'),
             'scoreDistribution' => Inertia::defer(fn () => $this->getScoreDistribution(), 'metadata'),
             'mentionsVsScore' => Inertia::defer(fn () => $this->getMentionsVsScore(), 'scatter'),
@@ -109,24 +108,6 @@ class InsightsController extends Controller
             ->take(20)
             ->map(fn (int $count, string $tech) => ['tech' => $tech, 'count' => $count])
             ->values()
-            ->all();
-    }
-
-    /**
-     * Group active sites by server software.
-     *
-     * @return list<array{server: string, count: int}>
-     */
-    private function getServerDistribution(): array
-    {
-        return Site::active()
-            ->whereNotNull('server_software')
-            ->select('server_software', DB::raw('count(*) as count'))
-            ->groupBy('server_software')
-            ->orderByDesc('count')
-            ->limit(10)
-            ->get()
-            ->map(fn ($row) => ['server' => $row->server_software, 'count' => $row->count])
             ->all();
     }
 

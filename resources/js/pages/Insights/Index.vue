@@ -4,7 +4,7 @@ import { Deferred } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import GuestLayout from '@/layouts/GuestLayout.vue';
-import { BarChart3, LayoutGrid, GitBranch } from 'lucide-vue-next';
+import { BarChart3, LayoutGrid, GitBranch, ChartPie, Cloud } from 'lucide-vue-next';
 import D3HorizontalBar from '@/components/charts/D3HorizontalBar.vue';
 import D3Treemap from '@/components/charts/D3Treemap.vue';
 import D3RadialTree from '@/components/charts/D3RadialTree.vue';
@@ -12,6 +12,7 @@ import D3DonutChart from '@/components/charts/D3DonutChart.vue';
 import D3VerticalBar from '@/components/charts/D3VerticalBar.vue';
 import D3ScatterPlot from '@/components/charts/D3ScatterPlot.vue';
 import D3WorldMap from '@/components/charts/D3WorldMap.vue';
+import D3WordCloud from '@/components/charts/D3WordCloud.vue';
 import D3RealtimeHorizon from '@/components/charts/D3RealtimeHorizon.vue';
 import TickerNumber from '@/components/TickerNumber.vue';
 
@@ -22,11 +23,6 @@ interface TermFrequencyItem {
 
 interface TechStackItem {
     tech: string;
-    count: number;
-}
-
-interface ServerItem {
-    server: string;
     count: number;
 }
 
@@ -71,7 +67,6 @@ const props = defineProps<{
     };
     termFrequency: TermFrequencyItem[];
     techStackDistribution: TechStackItem[];
-    serverDistribution: ServerItem[];
     categoryBreakdown: CategoryItem[];
     scoreDistribution: ScoreDistItem[];
     mentionsVsScore: ScatterItem[];
@@ -80,7 +75,7 @@ const props = defineProps<{
 }>();
 
 const termView = ref<'bar' | 'treemap'>('bar');
-const techView = ref<'bar' | 'radial'>('bar');
+const techView = ref<'bar' | 'radial' | 'donut' | 'cloud'>('bar');
 
 const liveStats = reactive({ ...props.pipelineStats });
 
@@ -238,6 +233,20 @@ onUnmounted(() => {
                         </button>
                         <button
                             class="rounded-md p-1.5 transition-colors"
+                            :class="techView === 'donut' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="techView = 'donut'"
+                        >
+                            <ChartPie class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="techView === 'cloud' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="techView = 'cloud'"
+                        >
+                            <Cloud class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
                             :class="techView === 'radial' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
                             @click="techView = 'radial'"
                         >
@@ -262,6 +271,16 @@ onUnmounted(() => {
                                     color="var(--chart-2)"
                                 />
                             </div>
+                            <div v-else-if="techView === 'donut'" class="h-72">
+                                <D3DonutChart
+                                    :data="(techStackDistribution ?? []).map((t) => ({ label: t.tech, value: t.count }))"
+                                />
+                            </div>
+                            <div v-else-if="techView === 'cloud'" class="h-96">
+                                <D3WordCloud
+                                    :data="(techStackDistribution ?? []).map((t) => ({ label: t.tech, value: t.count }))"
+                                />
+                            </div>
                             <div v-else class="h-[500px]">
                                 <D3RadialTree
                                     :data="(techStackDistribution ?? []).map((t) => ({ label: t.tech, value: t.count }))"
@@ -270,29 +289,6 @@ onUnmounted(() => {
                         </template>
                         <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
                             No tech stack data yet. Data populates after the next crawl cycle.
-                        </div>
-                    </Deferred>
-                </CardContent>
-            </Card>
-
-            <!-- Server Software -->
-            <Card>
-                <CardHeader>
-                    <CardTitle>Server Software</CardTitle>
-                    <CardDescription>Distribution of web servers</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Deferred data="serverDistribution">
-                        <template #fallback>
-                            <Skeleton class="mx-auto h-64 w-64 rounded-full" />
-                        </template>
-                        <div v-if="serverDistribution?.length" class="h-64">
-                            <D3DonutChart
-                                :data="(serverDistribution ?? []).map((s) => ({ label: s.server, value: s.count }))"
-                            />
-                        </div>
-                        <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
-                            No server data yet.
                         </div>
                     </Deferred>
                 </CardContent>
