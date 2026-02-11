@@ -17,6 +17,7 @@ class CrawlCompleted implements ShouldBroadcastNow
         public readonly float $hype_score,
         public readonly int $ai_mention_count,
         public readonly ?string $screenshot_path = null,
+        public readonly ?int $crawl_duration_ms = null,
     ) {}
 
     public function broadcastAs(): string
@@ -44,6 +45,7 @@ class CrawlCompleted implements ShouldBroadcastNow
             'hype_score' => $this->hype_score,
             'ai_mention_count' => $this->ai_mention_count,
             'screenshot_path' => $this->screenshot_path,
+            'crawl_duration_ms' => $this->crawl_duration_ms,
         ];
     }
 }

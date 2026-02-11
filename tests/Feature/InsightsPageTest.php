@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\CrawlCompleted;
 use App\Models\CrawlResult;
 use App\Models\Site;
 
@@ -107,10 +108,27 @@ it('defers hosting map data', function () {
     );
 });
 
-it('defers crawler speed data', function () {
+it('broadcasts crawl_duration_ms in CrawlCompleted event', function () {
+    $event = new CrawlCompleted(
+        site_id: 1,
+        hype_score: 100.0,
+        ai_mention_count: 5,
+        screenshot_path: null,
+        crawl_duration_ms: 45000,
+    );
+
+    $data = $event->broadcastWith();
+
+    expect($data)->toHaveKey('crawl_duration_ms', 45000)
+        ->and($data)->toHaveKey('site_id', 1)
+        ->and($event->broadcastAs())->toBe('CrawlCompleted');
+});
+
+it('defers crawler speed data with individual durations', function () {
     $site = Site::factory()->create(['last_crawled_at' => now()]);
     CrawlResult::factory()->count(3)->create([
         'site_id' => $site->id,
+        'crawl_duration_ms' => 5000,
         'created_at' => now()->subDay(),
     ]);
 
@@ -120,8 +138,9 @@ it('defers crawler speed data', function () {
     $response->assertInertia(fn ($page) => $page
         ->missing('crawlerSpeed')
         ->loadDeferredProps(['timeline'], fn ($reload) => $reload
-            ->has('crawlerSpeed', 1)
-            ->where('crawlerSpeed.0.value', 3)
+            ->has('crawlerSpeed', 3)
+            ->where('crawlerSpeed.0.duration_ms', 5000)
+            ->has('crawlerSpeed.0.timestamp')
         )
     );
 });

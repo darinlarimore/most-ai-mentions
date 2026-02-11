@@ -236,28 +236,22 @@ class InsightsController extends Controller
     }
 
     /**
-     * Daily crawl counts over the last 7 days for the horizon chart.
+     * Last 200 individual crawl durations for the real-time horizon chart.
      *
-     * @return list<array{date: string, value: int}>
+     * @return list<array{timestamp: string, duration_ms: int}>
      */
     private function getCrawlerSpeed(): array
     {
-        $driver = DB::connection()->getDriverName();
-
-        $dateExpr = $driver === 'sqlite'
-            ? 'date(created_at) as day'
-            : 'DATE(created_at) as day';
-
         return CrawlResult::query()
-            ->where('created_at', '>=', now()->subDays(7))
-            ->selectRaw("{$dateExpr}, COUNT(*) as crawl_count")
-            ->groupByRaw($driver === 'sqlite' ? 'date(created_at)' : 'DATE(created_at)')
-            ->orderBy('day')
+            ->whereNotNull('crawl_duration_ms')
+            ->orderByDesc('created_at')
+            ->limit(200)
+            ->select(['created_at', 'crawl_duration_ms', 'site_id'])
             ->get()
             ->map(fn ($row) => [
-                'date' => $row->day,
-                'value' => (int) $row->crawl_count,
+                'timestamp' => $row->created_at->toISOString(),
+                'duration_ms' => $row->crawl_duration_ms,
             ])
-            ->all();
+            ->reverse()->values()->all();
     }
 }

@@ -12,7 +12,7 @@ import D3DonutChart from '@/components/charts/D3DonutChart.vue';
 import D3VerticalBar from '@/components/charts/D3VerticalBar.vue';
 import D3ScatterPlot from '@/components/charts/D3ScatterPlot.vue';
 import D3WorldMap from '@/components/charts/D3WorldMap.vue';
-import D3HorizonChart from '@/components/charts/D3HorizonChart.vue';
+import D3RealtimeHorizon from '@/components/charts/D3RealtimeHorizon.vue';
 import TickerNumber from '@/components/TickerNumber.vue';
 
 interface TermFrequencyItem {
@@ -56,8 +56,8 @@ interface HostingMapItem {
 }
 
 interface CrawlerSpeedItem {
-    date: string;
-    value: number;
+    timestamp: string;
+    duration_ms: number;
 }
 
 defineOptions({ layout: GuestLayout });
@@ -370,11 +370,11 @@ onUnmounted(() => {
                 </CardContent>
             </Card>
 
-            <!-- Crawler Speed -->
+            <!-- Crawl Duration -->
             <Card class="lg:col-span-2">
                 <CardHeader>
-                    <CardTitle>Crawler Speed</CardTitle>
-                    <CardDescription>Sites crawled per day over the last 7 days</CardDescription>
+                    <CardTitle>Crawl Duration</CardTitle>
+                    <CardDescription>Individual crawl durations in real-time</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Deferred data="crawlerSpeed">
@@ -382,10 +382,10 @@ onUnmounted(() => {
                             <Skeleton class="h-40 w-full" />
                         </template>
                         <div v-if="crawlerSpeed?.length" class="h-40">
-                            <D3HorizonChart :data="crawlerSpeed ?? []" label="Crawls per Day" />
+                            <D3RealtimeHorizon :initial-data="crawlerSpeed ?? []" />
                         </div>
                         <div v-else class="flex h-40 items-center justify-center text-muted-foreground">
-                            No crawl data yet. Data populates after sites are crawled.
+                            No crawl duration data yet. Data populates after sites are crawled.
                         </div>
                     </Deferred>
                 </CardContent>

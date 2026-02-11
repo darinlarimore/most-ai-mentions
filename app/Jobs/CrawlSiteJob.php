@@ -89,6 +89,8 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
         $this->site->update(['status' => 'crawling']);
 
+        $crawlStartedAt = hrtime(true);
+
         CrawlStarted::dispatch($this->site->id, $this->site->url, $this->site->name, $this->site->slug);
         CrawlProgress::dispatch($this->site->id, 'fetching', 'Fetching homepage...');
 
@@ -284,7 +286,10 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         GenerateScreenshotJob::dispatchSync($this->site);
         $this->site->refresh();
 
-        CrawlCompleted::dispatch($this->site->id, $hypeScore, $crawlResult->ai_mention_count, $this->site->screenshot_path);
+        $crawlDurationMs = (int) round((hrtime(true) - $crawlStartedAt) / 1_000_000);
+        $crawlResult->update(['crawl_duration_ms' => $crawlDurationMs]);
+
+        CrawlCompleted::dispatch($this->site->id, $hypeScore, $crawlResult->ai_mention_count, $this->site->screenshot_path, $crawlDurationMs);
         QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
 
         Log::info("Completed crawl for site: {$this->site->url}, score: {$hypeScore}");

@@ -34,6 +34,7 @@ class CrawlResultFactory extends Factory
             'final_url' => null,
             'response_time_ms' => null,
             'html_size_bytes' => null,
+            'crawl_duration_ms' => fake()->numberBetween(3000, 120000),
             'detected_tech_stack' => null,
         ];
     }
