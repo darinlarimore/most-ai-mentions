@@ -10,11 +10,9 @@ import {
     Hexagon,
     LayoutGrid,
     Lollipop,
-    Orbit,
     Sun,
 } from 'lucide-vue-next';
 import { reactive, ref, onMounted, onUnmounted } from 'vue';
-import D3BubbleForce from '@/components/charts/D3BubbleForce.vue';
 import D3CirclePacking from '@/components/charts/D3CirclePacking.vue';
 import D3DonutChart from '@/components/charts/D3DonutChart.vue';
 import D3Hexbin from '@/components/charts/D3Hexbin.vue';
@@ -95,7 +93,7 @@ const termView = ref<'bar' | 'treemap'>('treemap');
 const techView = ref<'bar' | 'radial' | 'donut' | 'cloud'>('cloud');
 const categoryView = ref<'donut' | 'sunburst' | 'circle' | 'treemap'>('donut');
 const scoreView = ref<'bar' | 'lollipop' | 'horizontal' | 'donut'>('bar');
-const scatterView = ref<'scatter' | 'hexbin' | 'bubble'>('scatter');
+const scatterView = ref<'scatter' | 'hexbin'>('scatter');
 
 const liveStats = reactive({ ...props.pipelineStats });
 
@@ -474,13 +472,6 @@ onUnmounted(() => {
                         >
                             <Hexagon class="size-4" />
                         </button>
-                        <button
-                            class="rounded-md p-1.5 transition-colors"
-                            :class="scatterView === 'bubble' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
-                            @click="scatterView = 'bubble'"
-                        >
-                            <Orbit class="size-4" />
-                        </button>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -514,18 +505,6 @@ onUnmounted(() => {
                                 "
                                 x-label="AI Mentions"
                                 y-label="Hype Score"
-                            />
-                        </div>
-                        <div v-else class="h-80">
-                            <D3BubbleForce
-                                :data="
-                                    (mentionsVsScore ?? []).map((s) => ({
-                                        label: s.domain,
-                                        x: s.mentions,
-                                        y: s.score,
-                                        slug: s.slug,
-                                    }))
-                                "
                             />
                         </div>
                     </Deferred>
