@@ -5,6 +5,9 @@ import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+    build: {
+        chunkSizeWarningLimit: 800,
+    },
     plugins: [
         laravel({
             input: ['resources/js/app.ts'],
