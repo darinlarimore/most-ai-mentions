@@ -14,6 +14,9 @@ class ScreenshotService
     /** @var int Default viewport height in pixels. */
     private const VIEWPORT_HEIGHT = 800;
 
+    /** @var int Max viewport height for annotated screenshots (captures most content without timeout). */
+    private const MAX_SCREENSHOT_HEIGHT = 4000;
+
     /** @var int Timeout in seconds for the headless browser process (includes page load + delay). */
     private const TIMEOUT = 90;
 
@@ -97,9 +100,8 @@ class ScreenshotService
             return Browsershot::html($html)
                 ->setOption('waitUntil', 'domcontentloaded')
                 ->setDelay(3000)
-                ->dismissDialogs()
-                ->fullPage();
-        });
+                ->dismissDialogs();
+        }, height: self::MAX_SCREENSHOT_HEIGHT);
     }
 
     /**
@@ -108,7 +110,7 @@ class ScreenshotService
      * @param  string  $filename  The relative filename for the public disk.
      * @param  \Closure(): Browsershot  $factory  A closure that returns a configured Browsershot instance.
      */
-    private function renderAndStore(string $filename, \Closure $factory): string
+    private function renderAndStore(string $filename, \Closure $factory, int $height = self::VIEWPORT_HEIGHT): string
     {
         $tempPath = storage_path('app/private/'.$filename);
 
@@ -118,7 +120,7 @@ class ScreenshotService
         }
 
         $factory()
-            ->windowSize(self::VIEWPORT_WIDTH, self::VIEWPORT_HEIGHT)
+            ->windowSize(self::VIEWPORT_WIDTH, $height)
             ->timeout(self::TIMEOUT)
             ->setScreenshotType('jpeg', 80)
             ->noSandbox()
