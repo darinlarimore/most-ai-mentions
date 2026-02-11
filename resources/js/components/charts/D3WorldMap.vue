@@ -170,7 +170,7 @@ async function draw() {
         .attr('text-anchor', 'middle')
         .attr('dy', '0.35em')
         .attr('fill', mutedTextColor)
-        .attr('font-size', '6px')
+        .attr('font-size', '10px')
         .attr('font-weight', '500')
         .attr('pointer-events', 'none')
         .attr('opacity', 0)
@@ -191,8 +191,8 @@ async function draw() {
         .attr('text-anchor', 'middle')
         .attr('dy', '0.35em')
         .attr('fill', mutedTextColor)
-        .attr('font-size', '3px')
-        .attr('font-weight', '400')
+        .attr('font-size', '10px')
+        .attr('font-weight', '500')
         .attr('pointer-events', 'none')
         .attr('opacity', 0)
         .text((d: any) => d.properties.name);
@@ -220,8 +220,8 @@ async function draw() {
             g.select('.states').selectAll('path').attr('stroke-width', 0.3 / k);
 
             // Show/hide labels based on zoom level
-            countryLabels.attr('opacity', k >= 2 ? 0.8 : 0).attr('font-size', `${6 / k}px`);
-            stateLabels.attr('opacity', k >= 4 ? 0.7 : 0).attr('font-size', `${3 / k}px`);
+            countryLabels.attr('opacity', k >= 2 ? 0.8 : 0).attr('font-size', `${10 / k}px`);
+            stateLabels.attr('opacity', k >= 4 ? 0.7 : 0).attr('font-size', `${10 / k}px`);
 
             renderClusters(event.transform);
         });
