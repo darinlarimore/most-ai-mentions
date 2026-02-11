@@ -181,17 +181,17 @@ onUnmounted(() => {
                     <div class="flex gap-1 rounded-lg border p-0.5">
                         <button
                             class="rounded-md p-1.5 transition-colors"
-                            :class="termView === 'bar' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
-                            @click="termView = 'bar'"
-                        >
-                            <BarChart3 class="size-4" />
-                        </button>
-                        <button
-                            class="rounded-md p-1.5 transition-colors"
                             :class="termView === 'treemap' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
                             @click="termView = 'treemap'"
                         >
                             <LayoutGrid class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="termView === 'bar' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="termView = 'bar'"
+                        >
+                            <BarChart3 class="size-4" />
                         </button>
                     </div>
                 </CardHeader>
@@ -224,6 +224,13 @@ onUnmounted(() => {
                     <div class="flex gap-1 rounded-lg border p-0.5">
                         <button
                             class="rounded-md p-1.5 transition-colors"
+                            :class="techView === 'cloud' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="techView = 'cloud'"
+                        >
+                            <Cloud class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
                             :class="techView === 'bar' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
                             @click="techView = 'bar'"
                         >
@@ -235,13 +242,6 @@ onUnmounted(() => {
                             @click="techView = 'donut'"
                         >
                             <ChartPie class="size-4" />
-                        </button>
-                        <button
-                            class="rounded-md p-1.5 transition-colors"
-                            :class="techView === 'cloud' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
-                            @click="techView = 'cloud'"
-                        >
-                            <Cloud class="size-4" />
                         </button>
                         <button
                             class="rounded-md p-1.5 transition-colors"
