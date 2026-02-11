@@ -7,16 +7,6 @@ import { router } from '@inertiajs/vue3';
 import { useD3Chart } from '@/composables/useD3Chart';
 import ChartTooltip from './ChartTooltip.vue';
 
-let worldDataCache: any = null;
-async function loadWorldData() {
-    if (!worldDataCache) {
-        // @ts-expect-error — world-atlas ships JSON without TS declarations
-        const mod = await import('world-atlas/countries-50m.json');
-        worldDataCache = mod.default;
-    }
-    return worldDataCache;
-}
-
 export interface MapDatum {
     domain: string;
     slug: string;
@@ -46,7 +36,30 @@ const { width, height, createSvg, getColor, onResize } = useD3Chart(containerRef
     left: 0,
 });
 
-/** Grid-based clustering: group projected points into cells of `radius` px. */
+let worldDataCache: any = null;
+let usDataCache: any = null;
+
+async function loadMapData() {
+    const [world, us] = await Promise.all([
+        worldDataCache
+            ? Promise.resolve(worldDataCache)
+            : // @ts-expect-error — world-atlas ships JSON without TS declarations
+              import('world-atlas/countries-50m.json').then((m) => {
+                  worldDataCache = m.default;
+                  return m.default;
+              }),
+        usDataCache
+            ? Promise.resolve(usDataCache)
+            : // @ts-expect-error — us-atlas ships JSON without TS declarations
+              import('us-atlas/states-10m.json').then((m) => {
+                  usDataCache = m.default;
+                  return m.default;
+              }),
+    ]);
+    return { world, us };
+}
+
+/** Grid-based clustering with co-location ring spread. */
 function clusterPoints(
     data: MapDatum[],
     projection: d3.GeoProjection,
@@ -54,7 +67,6 @@ function clusterPoints(
     radius: number,
 ): Cluster[] {
     const grid = new Map<string, Cluster>();
-    // Shrink the grid cell with zoom so clusters split apart
     const effectiveRadius = radius / transform.k;
 
     for (const d of data) {
@@ -73,7 +85,6 @@ function clusterPoints(
         cluster.totalScore += d.hypeScore;
     }
 
-    // Average position for each cluster (in projection coords)
     for (const cluster of grid.values()) {
         let sx = 0;
         let sy = 0;
@@ -99,10 +110,15 @@ async function draw() {
     const borderColor = getColor('--border');
     const dotColor = getColor('--chart-1');
     const textColor = getColor('--foreground');
+    const mutedTextColor = getColor('--muted-foreground');
 
-    const worldData = await loadWorldData();
-    const topology = worldData as unknown as Topology<{ countries: GeometryCollection; land: GeometryCollection }>;
-    const countries = feature(topology, topology.objects.countries);
+    const { world, us } = await loadMapData();
+
+    const worldTopology = world as unknown as Topology<{ countries: GeometryCollection }>;
+    const countries = feature(worldTopology, worldTopology.objects.countries);
+
+    const usTopology = us as unknown as Topology<{ states: GeometryCollection }>;
+    const states = feature(usTopology, usTopology.objects.states);
 
     const projection = d3
         .geoNaturalEarth1()
@@ -126,129 +142,246 @@ async function draw() {
         .attr('stroke', borderColor)
         .attr('stroke-width', 0.5);
 
-    // Cluster layer (redrawn on zoom)
+    // Draw US state borders (on top of US country fill)
+    g.append('g')
+        .attr('class', 'states')
+        .selectAll('path')
+        .data(states.features)
+        .enter()
+        .append('path')
+        .attr('d', path as any)
+        .attr('fill', 'none')
+        .attr('stroke', borderColor)
+        .attr('stroke-width', 0.3)
+        .attr('stroke-opacity', 0.6);
+
+    // Country labels (hidden initially, shown on zoom)
+    const countryLabels = g
+        .append('g')
+        .attr('class', 'country-labels')
+        .selectAll('text')
+        .data(countries.features.filter((f: any) => f.properties?.name))
+        .enter()
+        .append('text')
+        .attr('transform', (d: any) => {
+            const centroid = path.centroid(d);
+            return `translate(${centroid[0]},${centroid[1]})`;
+        })
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.35em')
+        .attr('fill', mutedTextColor)
+        .attr('font-size', '6px')
+        .attr('font-weight', '500')
+        .attr('pointer-events', 'none')
+        .attr('opacity', 0)
+        .text((d: any) => d.properties.name);
+
+    // US state labels (shown at higher zoom)
+    const stateLabels = g
+        .append('g')
+        .attr('class', 'state-labels')
+        .selectAll('text')
+        .data(states.features.filter((f: any) => f.properties?.name))
+        .enter()
+        .append('text')
+        .attr('transform', (d: any) => {
+            const centroid = path.centroid(d);
+            return `translate(${centroid[0]},${centroid[1]})`;
+        })
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.35em')
+        .attr('fill', mutedTextColor)
+        .attr('font-size', '3px')
+        .attr('font-weight', '400')
+        .attr('pointer-events', 'none')
+        .attr('opacity', 0)
+        .text((d: any) => d.properties.name);
+
+    // Cluster layer
     const clusterLayer = g.append('g').attr('class', 'clusters');
 
     const maxScore = d3.max(props.data, (d) => d.hypeScore) ?? 1;
     const radiusScale = d3.scaleSqrt().domain([0, maxScore]).range([3, 12]);
-    const clusterRadius = 28; // px grid cell size at 1x zoom
+    const clusterRadius = 28;
 
     let currentTransform = d3.zoomIdentity;
 
-    // Zoom behavior (declared early so renderClusters can reference it)
     const zoom = d3
         .zoom<SVGSVGElement, unknown>()
-        .scaleExtent([1, 12])
+        .scaleExtent([1, 16])
         .on('zoom', (event) => {
             currentTransform = event.transform;
             g.attr('transform', event.transform.toString());
-            g.select('.countries').selectAll('path').attr('stroke-width', 0.5 / event.transform.k);
+
+            const k = event.transform.k;
+
+            // Scale stroke widths
+            g.select('.countries').selectAll('path').attr('stroke-width', 0.5 / k);
+            g.select('.states').selectAll('path').attr('stroke-width', 0.3 / k);
+
+            // Show/hide labels based on zoom level
+            countryLabels.attr('opacity', k >= 2 ? 0.8 : 0).attr('font-size', `${6 / k}px`);
+            stateLabels.attr('opacity', k >= 4 ? 0.7 : 0).attr('font-size', `${3 / k}px`);
+
             renderClusters(event.transform);
         });
 
     function renderClusters(transform: d3.ZoomTransform) {
+        const k = transform.k;
         const clusters = clusterPoints(props.data, projection, transform, clusterRadius);
 
         clusterLayer.selectAll('*').remove();
 
+        // For high zoom, spread co-located points into a ring
+        const spreadThreshold = 6;
+        const expandedClusters: { x: number; y: number; point: MapDatum; isCluster: false }[] = [];
+        const keptClusters: Cluster[] = [];
+
+        for (const cluster of clusters) {
+            if (cluster.points.length > 1 && k >= spreadThreshold) {
+                // Spread into ring
+                const ringRadius = (8 + cluster.points.length * 2) / k;
+                cluster.points.forEach((p, i) => {
+                    const angle = (2 * Math.PI * i) / cluster.points.length - Math.PI / 2;
+                    expandedClusters.push({
+                        x: cluster.x + Math.cos(angle) * ringRadius,
+                        y: cluster.y + Math.sin(angle) * ringRadius,
+                        point: p,
+                        isCluster: false,
+                    });
+                });
+            } else {
+                keptClusters.push(cluster);
+            }
+        }
+
+        // Render kept clusters (single or multi at low zoom)
         const groups = clusterLayer
             .selectAll('.cluster')
-            .data(clusters)
+            .data(keptClusters)
             .enter()
             .append('g')
             .attr('class', 'cluster')
             .attr('transform', (c) => `translate(${c.x},${c.y})`)
             .style('cursor', 'pointer');
 
-        // Single-point clusters: individual dot
         groups
             .filter((c) => c.points.length === 1)
             .append('circle')
-            .attr('r', (c) => radiusScale(c.points[0].hypeScore) / transform.k)
+            .attr('r', (c) => radiusScale(c.points[0].hypeScore) / k)
             .attr('fill', dotColor)
             .attr('fill-opacity', 0.7)
             .attr('stroke', dotColor)
-            .attr('stroke-width', 1 / transform.k)
+            .attr('stroke-width', 1 / k)
             .attr('stroke-opacity', 0.9);
 
-        // Multi-point clusters: larger circle with count
         const multi = groups.filter((c) => c.points.length > 1);
-
         multi
             .append('circle')
-            .attr('r', (c) => Math.min(24, 10 + Math.sqrt(c.points.length) * 4) / transform.k)
+            .attr('r', (c) => Math.min(24, 10 + Math.sqrt(c.points.length) * 4) / k)
             .attr('fill', dotColor)
             .attr('fill-opacity', 0.6)
             .attr('stroke', dotColor)
-            .attr('stroke-width', 1.5 / transform.k)
+            .attr('stroke-width', 1.5 / k)
             .attr('stroke-opacity', 0.9);
-
         multi
             .append('text')
             .attr('text-anchor', 'middle')
             .attr('dy', '0.35em')
             .attr('fill', textColor)
-            .attr('font-size', `${Math.max(8, 11 / transform.k)}px`)
+            .attr('font-size', `${Math.max(8, 11 / k)}px`)
             .attr('font-weight', '600')
             .attr('pointer-events', 'none')
             .text((c) => c.points.length);
 
-        // Interactions
+        // Render expanded (ring-spread) individual dots
+        const ringDots = clusterLayer
+            .selectAll('.ring-dot')
+            .data(expandedClusters)
+            .enter()
+            .append('circle')
+            .attr('class', 'ring-dot')
+            .attr('cx', (d) => d.x)
+            .attr('cy', (d) => d.y)
+            .attr('r', (d) => radiusScale(d.point.hypeScore) / k)
+            .attr('fill', dotColor)
+            .attr('fill-opacity', 0.7)
+            .attr('stroke', dotColor)
+            .attr('stroke-width', 1 / k)
+            .attr('stroke-opacity', 0.9)
+            .style('cursor', 'pointer');
+
+        // Cluster interactions
         groups
             .on('mouseenter', function (event: MouseEvent, c) {
                 d3.select(this).select('circle').transition().duration(150).attr('fill-opacity', 1);
-                groups
-                    .filter((other) => other !== c)
-                    .select('circle')
-                    .transition()
-                    .duration(150)
-                    .attr('fill-opacity', 0.2);
-
-                const label =
-                    c.points.length === 1 ? c.points[0].domain : `${c.points.length} sites`;
-                const detail =
-                    c.points.length === 1
-                        ? `Score ${c.points[0].hypeScore}`
-                        : c.points
-                              .slice(0, 5)
-                              .map((p) => p.domain)
-                              .join(', ') + (c.points.length > 5 ? ` +${c.points.length - 5} more` : '');
-
-                tooltip.value = {
-                    visible: true,
-                    x: event.clientX + 12,
-                    y: event.clientY - 10,
-                    label,
-                    detail,
-                };
+                dimOthers(this);
+                showTooltip(event, c.points);
             })
-            .on('mousemove', function (event: MouseEvent) {
-                tooltip.value.x = event.clientX + 12;
-                tooltip.value.y = event.clientY - 10;
-            })
+            .on('mousemove', moveTooltip)
             .on('mouseleave', function () {
-                groups.select('circle').transition().duration(200).attr('fill-opacity', (c: Cluster) => (c.points.length === 1 ? 0.7 : 0.6));
-                tooltip.value.visible = false;
+                restoreAll(groups, ringDots);
             })
             .on('click', function (event, c) {
                 if (c.points.length === 1) {
                     router.visit(`/sites/${c.points[0].slug}`);
                 } else {
-                    // Zoom into the cluster
                     event.stopPropagation();
-                    const nextK = Math.min(12, currentTransform.k * 2.5);
+                    const nextK = Math.min(16, currentTransform.k * 2.5);
                     const tx = width.value / 2 - c.x * nextK;
                     const ty = height.value / 2 - c.y * nextK;
-                    svg.transition()
-                        .duration(500)
-                        .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(nextK));
+                    svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(nextK));
                 }
             });
+
+        // Ring dot interactions
+        ringDots
+            .on('mouseenter', function (event: MouseEvent, d) {
+                d3.select(this).transition().duration(150).attr('fill-opacity', 1).attr('r', radiusScale(d.point.hypeScore) / k + 2 / k);
+                dimOthers(this);
+                showTooltip(event, [d.point]);
+            })
+            .on('mousemove', moveTooltip)
+            .on('mouseleave', function () {
+                restoreAll(groups, ringDots);
+            })
+            .on('click', function (_, d) {
+                router.visit(`/sites/${d.point.slug}`);
+            });
+
+        function dimOthers(active: any) {
+            groups.filter(function () { return this !== active; }).select('circle').transition().duration(150).attr('fill-opacity', 0.15);
+            ringDots.filter(function () { return this !== active; }).transition().duration(150).attr('fill-opacity', 0.15);
+        }
+
+        function restoreAll(
+            grps: d3.Selection<SVGGElement, Cluster, SVGGElement, unknown>,
+            dots: d3.Selection<SVGCircleElement, { x: number; y: number; point: MapDatum; isCluster: false }, SVGGElement, unknown>,
+        ) {
+            grps.select('circle').transition().duration(200).attr('fill-opacity', (c: Cluster) => (c.points.length === 1 ? 0.7 : 0.6));
+            dots.transition().duration(200).attr('fill-opacity', 0.7).attr('r', (d) => radiusScale(d.point.hypeScore) / k);
+            tooltip.value.visible = false;
+        }
+
+        function showTooltip(event: MouseEvent, points: MapDatum[]) {
+            const label = points.length === 1 ? points[0].domain : `${points.length} sites`;
+            const detail =
+                points.length === 1
+                    ? `Score ${points[0].hypeScore}`
+                    : points
+                          .slice(0, 5)
+                          .map((p) => p.domain)
+                          .join(', ') + (points.length > 5 ? ` +${points.length - 5} more` : '');
+            tooltip.value = { visible: true, x: event.clientX + 12, y: event.clientY - 10, label, detail };
+        }
+
+        function moveTooltip(event: MouseEvent) {
+            tooltip.value.x = event.clientX + 12;
+            tooltip.value.y = event.clientY - 10;
+        }
     }
 
-    // Initial render
     renderClusters(d3.zoomIdentity);
-
     svg.call(zoom);
 }
 
