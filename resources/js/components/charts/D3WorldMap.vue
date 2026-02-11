@@ -155,7 +155,30 @@ async function draw() {
         .attr('stroke-width', 0.3)
         .attr('stroke-opacity', 0.6);
 
-    // Country labels (hidden initially, shown on zoom)
+    // Compute projected area for each country to size labels proportionally
+    const countryAreas = new Map<string, number>();
+    for (const f of countries.features) {
+        const a = path.area(f as any);
+        if (f.properties?.name) countryAreas.set(f.properties.name, a);
+    }
+    const maxArea = d3.max([...countryAreas.values()]) ?? 1;
+    // Large countries (>1% of max): show at zoom 2, font 3–8px
+    // Medium countries (0.1–1%): show at zoom 3, font 2.5–4px
+    // Small countries (<0.1%): show at zoom 5, font 2–3px
+    function countryFontSize(name: string): number {
+        const ratio = (countryAreas.get(name) ?? 0) / maxArea;
+        if (ratio > 0.01) return 3 + Math.sqrt(ratio) * 5;
+        if (ratio > 0.001) return 2.5 + ratio * 150;
+        return 2;
+    }
+    function countryMinZoom(name: string): number {
+        const ratio = (countryAreas.get(name) ?? 0) / maxArea;
+        if (ratio > 0.01) return 2;
+        if (ratio > 0.001) return 3;
+        return 5;
+    }
+
+    // Country labels (hidden initially, shown on zoom based on size)
     const countryLabels = g
         .append('g')
         .attr('class', 'country-labels')
@@ -170,7 +193,7 @@ async function draw() {
         .attr('text-anchor', 'middle')
         .attr('dy', '0.35em')
         .attr('fill', mutedTextColor)
-        .attr('font-size', '10px')
+        .attr('font-size', (d: any) => `${countryFontSize(d.properties.name)}px`)
         .attr('font-weight', '500')
         .attr('pointer-events', 'none')
         .attr('opacity', 0)
@@ -191,7 +214,7 @@ async function draw() {
         .attr('text-anchor', 'middle')
         .attr('dy', '0.35em')
         .attr('fill', mutedTextColor)
-        .attr('font-size', '10px')
+        .attr('font-size', '2px')
         .attr('font-weight', '500')
         .attr('pointer-events', 'none')
         .attr('opacity', 0)
@@ -219,9 +242,9 @@ async function draw() {
             g.select('.countries').selectAll('path').attr('stroke-width', 0.5 / k);
             g.select('.states').selectAll('path').attr('stroke-width', 0.3 / k);
 
-            // Show/hide labels based on zoom level
-            countryLabels.attr('opacity', k >= 2 ? 0.8 : 0).attr('font-size', `${10 / k}px`);
-            stateLabels.attr('opacity', k >= 4 ? 0.7 : 0).attr('font-size', `${10 / k}px`);
+            // Show/hide labels based on zoom level and country size
+            countryLabels.attr('opacity', (d: any) => k >= countryMinZoom(d.properties.name) ? 0.8 : 0);
+            stateLabels.attr('opacity', k >= 4 ? 0.7 : 0);
 
             renderClusters(event.transform);
         });
