@@ -21,9 +21,9 @@ class DiscoverSites extends Command
             'Popular AI sites' => fn () => $service->discoverPopular(),
             'Hacker News (API)' => fn () => $service->discoverFromHackerNews(),
             'Tranco Top Sites' => fn () => $service->discoverFromTrancoList(),
-            'Reddit' => fn () => $service->discoverFromReddit(),
-            'AlternativeTo' => fn () => $service->discoverFromAlternativeTo(),
-            'New Domains' => fn () => $service->discoverFromNewDomains(),
+            'HN Algolia Search' => fn () => $service->discoverFromHackerNewsSearch(),
+            'GitHub Repos' => fn () => $service->discoverFromGitHub(),
+            'Dev.to Articles' => fn () => $service->discoverFromDevTo(),
         ];
 
         $total = 0;

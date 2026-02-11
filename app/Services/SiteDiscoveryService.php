@@ -21,7 +21,7 @@ class SiteDiscoveryService
     private const HN_ITEM_URL = 'https://hacker-news.firebaseio.com/v0/item/%d.json';
 
     /** How many story IDs to fetch from each HN endpoint. */
-    private const HN_STORIES_PER_ENDPOINT = 50;
+    private const HN_STORIES_PER_ENDPOINT = 100;
 
     /** @var list<string> */
     private const AI_KEYWORDS = [
@@ -806,28 +806,22 @@ class SiteDiscoveryService
         'https://electronjs.org' => 'Electron',
     ];
 
-    /** @var list<string> Subreddits to scan for AI-related external links. */
-    private const REDDIT_SUBREDDITS = ['artificial', 'MachineLearning', 'LocalLLaMA', 'SideProject'];
+    /** @var list<string> Search queries for the HN Algolia API. */
+    private const HN_SEARCH_QUERIES = ['ai tool', 'llm', 'artificial intelligence', 'gpt', 'machine learning startup'];
 
-    /** @var list<string> AlternativeTo seed pages (popular AI tools). */
-    private const ALTERNATIVETO_SEEDS = [
-        'https://alternativeto.net/software/chatgpt/',
-        'https://alternativeto.net/software/github-copilot/',
-        'https://alternativeto.net/software/midjourney/',
-        'https://alternativeto.net/software/claude-ai/',
-        'https://alternativeto.net/software/cursor/',
-        'https://alternativeto.net/software/stable-diffusion/',
-    ];
+    /** @var list<string> Search queries for GitHub repository discovery. */
+    private const GITHUB_SEARCH_QUERIES = ['ai tool', 'llm framework', 'gpt', 'ai agent', 'machine learning'];
 
-    /** @var list<string> Keywords to filter newly registered domains by. */
-    private const NEW_DOMAIN_KEYWORDS = ['ai', 'gpt', 'llm', 'neural', 'deeplearn', 'copilot', 'chatbot', 'genai'];
+    /** @var list<string> Dev.to tags to scan for AI-related articles. */
+    private const DEVTO_TAGS = ['ai', 'machinelearning', 'llm', 'gpt', 'openai'];
 
     /** @var list<string> Domains to skip (social media, generic, etc.) */
     private const EXCLUDED_DOMAINS = [
         'google.com', 'youtube.com', 'twitter.com', 'x.com', 'facebook.com',
         'linkedin.com', 'reddit.com', 'github.com', 'wikipedia.org',
         'news.ycombinator.com', 'g2.com', 'producthunt.com', 'amazonaws.com',
-        'cloudfront.net', 'archive.org', 'web.archive.org', 'alternativeto.net',
+        'cloudfront.net', 'archive.org', 'web.archive.org', 'dev.to',
+        'medium.com', 'npmjs.com', 'pypi.org',
     ];
 
     /**
@@ -840,9 +834,9 @@ class SiteDiscoveryService
         $total += $this->discoverPopular()->count();
         $total += $this->discoverFromHackerNews()->count();
         $total += $this->discoverFromTrancoList()->count();
-        $total += $this->discoverFromReddit()->count();
-        $total += $this->discoverFromAlternativeTo()->count();
-        $total += $this->discoverFromNewDomains()->count();
+        $total += $this->discoverFromHackerNewsSearch()->count();
+        $total += $this->discoverFromGitHub()->count();
+        $total += $this->discoverFromDevTo()->count();
 
         return $total;
     }
@@ -1039,171 +1033,128 @@ class SiteDiscoveryService
     }
 
     /**
-     * Discover AI-related sites from Reddit public JSON API.
+     * Discover AI-related sites from the Hacker News Algolia search API.
      *
      * @return Collection<int, Site>
      */
-    public function discoverFromReddit(): Collection
+    public function discoverFromHackerNewsSearch(): Collection
     {
         $urls = [];
 
-        foreach (self::REDDIT_SUBREDDITS as $subreddit) {
+        foreach (self::HN_SEARCH_QUERIES as $query) {
             try {
                 $response = Http::timeout(15)
-                    ->withHeaders(['User-Agent' => 'MostAIMentions/1.0'])
-                    ->get("https://www.reddit.com/r/{$subreddit}/hot.json", ['limit' => 50]);
+                    ->get('https://hn.algolia.com/api/v1/search', [
+                        'query' => $query,
+                        'tags' => 'story',
+                        'hitsPerPage' => 50,
+                        'numericFilters' => 'points>5',
+                    ]);
 
                 if (! $response->successful()) {
-                    Log::warning("SiteDiscovery: Reddit /r/{$subreddit} returned HTTP {$response->status()}");
-
                     continue;
                 }
 
-                $posts = $response->json('data.children', []);
+                $hits = $response->json('hits', []);
 
-                foreach ($posts as $post) {
-                    $data = $post['data'] ?? [];
+                foreach ($hits as $hit) {
+                    $url = $hit['url'] ?? null;
 
-                    if (($data['is_self'] ?? true) || empty($data['url'])) {
-                        continue;
-                    }
-
-                    if ($this->isValidExternalUrl($data['url'])) {
-                        $urls[] = $data['url'];
-                    }
-                }
-
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch Reddit /r/{$subreddit}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'reddit');
-    }
-
-    /**
-     * Discover AI-related sites from AlternativeTo seed pages.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromAlternativeTo(): Collection
-    {
-        $urls = [];
-
-        foreach (self::ALTERNATIVETO_SEEDS as $seedUrl) {
-            try {
-                $response = Http::timeout(15)
-                    ->withHeaders(['User-Agent' => 'MostAIMentions/1.0'])
-                    ->get($seedUrl);
-
-                if (! $response->successful()) {
-                    Log::warning("SiteDiscovery: AlternativeTo {$seedUrl} returned HTTP {$response->status()}");
-
-                    continue;
-                }
-
-                $html = $response->body();
-
-                // Extract external URLs from href attributes
-                if (preg_match_all('/href=["\']?(https?:\/\/[^"\'>\s]+)/i', $html, $matches)) {
-                    foreach ($matches[1] as $url) {
-                        if ($this->isValidExternalUrl($url)) {
-                            $urls[] = $url;
-                        }
-                    }
-                }
-
-            } catch (\Throwable $e) {
-                Log::warning("SiteDiscovery: Failed to fetch AlternativeTo page {$seedUrl}", ['error' => $e->getMessage()]);
-            }
-        }
-
-        return $this->createSitesFromUrls($urls, 'alternativeto');
-    }
-
-    /**
-     * Discover newly registered domains containing AI-related keywords.
-     *
-     * @return Collection<int, Site>
-     */
-    public function discoverFromNewDomains(): Collection
-    {
-        try {
-            $date = now()->subDay()->format('Y-m-d');
-            $feedUrl = "https://whoisds.com/newly-registered-domains/{$date}/nrd";
-
-            $response = Http::timeout(30)->get($feedUrl);
-
-            if (! $response->successful()) {
-                Log::warning('SiteDiscovery: New domains feed returned HTTP '.$response->status(), ['url' => $feedUrl]);
-
-                return collect();
-            }
-
-            $urls = $this->extractNewDomainUrls($response->body());
-
-            return $this->createSitesFromUrls($urls, 'newdomains');
-        } catch (\Throwable $e) {
-            Log::warning('SiteDiscovery: Failed to fetch new domains feed', ['error' => $e->getMessage()]);
-
-            return collect();
-        }
-    }
-
-    /**
-     * Extract AI-keyword domains from a WhoisDS ZIP response body.
-     *
-     * @return list<string>
-     */
-    private function extractNewDomainUrls(string $zipContent): array
-    {
-        $urls = [];
-
-        $tmpZip = tempnam(sys_get_temp_dir(), 'nrd_');
-        file_put_contents($tmpZip, $zipContent);
-
-        $zip = new \ZipArchive;
-
-        if ($zip->open($tmpZip) !== true) {
-            unlink($tmpZip);
-
-            return $urls;
-        }
-
-        $content = $zip->getFromIndex(0);
-        $zip->close();
-        unlink($tmpZip);
-
-        if (! $content) {
-            return $urls;
-        }
-
-        $domains = preg_split('/[\r\n]+/', $content);
-
-        foreach ($domains as $domain) {
-            $domain = trim(strtolower($domain));
-
-            if (! $domain) {
-                continue;
-            }
-
-            // Check if domain contains any AI keywords
-            $nameWithoutTld = preg_replace('/\.[a-z]{2,}$/i', '', $domain);
-
-            foreach (self::NEW_DOMAIN_KEYWORDS as $keyword) {
-                if (str_contains($nameWithoutTld, $keyword)) {
-                    $url = "https://{$domain}";
-
-                    if ($this->isValidExternalUrl($url)) {
+                    if ($url && $this->isValidExternalUrl($url)) {
                         $urls[] = $url;
                     }
-
-                    break;
                 }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed HN Algolia search for '{$query}'", ['error' => $e->getMessage()]);
             }
         }
 
-        return $urls;
+        return $this->createSitesFromUrls($urls, 'hackernews');
+    }
+
+    /**
+     * Discover AI-related sites from GitHub repository homepages.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromGitHub(): Collection
+    {
+        $urls = [];
+
+        foreach (self::GITHUB_SEARCH_QUERIES as $query) {
+            try {
+                $response = Http::timeout(15)
+                    ->withHeaders(['Accept' => 'application/vnd.github.v3+json'])
+                    ->get('https://api.github.com/search/repositories', [
+                        'q' => $query,
+                        'sort' => 'stars',
+                        'order' => 'desc',
+                        'per_page' => 30,
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $items = $response->json('items', []);
+
+                foreach ($items as $repo) {
+                    $homepage = $repo['homepage'] ?? null;
+
+                    if ($homepage && $this->isValidExternalUrl($homepage)) {
+                        $urls[] = $homepage;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed GitHub search for '{$query}'", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'github');
+    }
+
+    /**
+     * Discover AI-related sites from Dev.to article links.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromDevTo(): Collection
+    {
+        $urls = [];
+
+        foreach (self::DEVTO_TAGS as $tag) {
+            try {
+                $response = Http::timeout(15)
+                    ->get('https://dev.to/api/articles', [
+                        'tag' => $tag,
+                        'per_page' => 30,
+                        'top' => 7,
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $articles = $response->json();
+
+                if (! is_array($articles)) {
+                    continue;
+                }
+
+                foreach ($articles as $article) {
+                    $url = $article['canonical_url'] ?? $article['url'] ?? null;
+
+                    // Only collect articles hosted on external domains (not dev.to itself)
+                    if ($url && $this->isValidExternalUrl($url)) {
+                        $urls[] = $url;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed Dev.to fetch for tag '{$tag}'", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'devto');
     }
 
     /**

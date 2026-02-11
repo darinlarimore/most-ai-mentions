@@ -156,94 +156,59 @@ it('sets source and status correctly on discovered sites', function () {
     expect($sites->first()->status)->toBe('queued');
 });
 
-it('discovers external links from reddit', function () {
+it('discovers sites from hn algolia search', function () {
     Http::fake([
-        'www.reddit.com/r/artificial/hot.json*' => Http::response([
-            'data' => [
-                'children' => [
-                    ['data' => ['is_self' => false, 'url' => 'https://cool-ai-tool.example.com']],
-                    ['data' => ['is_self' => true, 'url' => 'https://reddit.com/r/artificial/self']],
-                    ['data' => ['is_self' => false, 'url' => 'https://another-ai.example.com']],
-                ],
+        'hn.algolia.com/*' => Http::response([
+            'hits' => [
+                ['url' => 'https://cool-ai-tool.example.com', 'title' => 'Cool AI Tool', 'points' => 50],
+                ['url' => null, 'title' => 'Ask HN: no url', 'points' => 20],
+                ['url' => 'https://another-ai.example.com', 'title' => 'Another AI', 'points' => 10],
             ],
         ]),
-        'www.reddit.com/r/MachineLearning/hot.json*' => Http::response(['data' => ['children' => []]]),
-        'www.reddit.com/r/LocalLLaMA/hot.json*' => Http::response(['data' => ['children' => []]]),
-        'www.reddit.com/r/SideProject/hot.json*' => Http::response(['data' => ['children' => []]]),
     ]);
 
     $service = new SiteDiscoveryService;
-    $sites = $service->discoverFromReddit();
+    $sites = $service->discoverFromHackerNewsSearch();
 
-    expect($sites)->toHaveCount(2);
     expect($sites->pluck('domain')->toArray())->toContain('cool-ai-tool.example.com');
     expect($sites->pluck('domain')->toArray())->toContain('another-ai.example.com');
-    expect($sites->pluck('source')->unique()->toArray())->toBe(['reddit']);
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['hackernews']);
 });
 
-it('skips self-posts from reddit', function () {
+it('discovers sites from github repo homepages', function () {
     Http::fake([
-        'www.reddit.com/r/artificial/hot.json*' => Http::response([
-            'data' => [
-                'children' => [
-                    ['data' => ['is_self' => true, 'url' => 'https://reddit.com/r/artificial/comments/abc']],
-                ],
+        'api.github.com/*' => Http::response([
+            'items' => [
+                ['homepage' => 'https://ai-framework.example.com', 'full_name' => 'org/ai-framework'],
+                ['homepage' => '', 'full_name' => 'org/no-homepage'],
+                ['homepage' => 'https://ml-tool.example.com', 'full_name' => 'org/ml-tool'],
             ],
         ]),
-        'www.reddit.com/r/MachineLearning/hot.json*' => Http::response(['data' => ['children' => []]]),
-        'www.reddit.com/r/LocalLLaMA/hot.json*' => Http::response(['data' => ['children' => []]]),
-        'www.reddit.com/r/SideProject/hot.json*' => Http::response(['data' => ['children' => []]]),
     ]);
 
     $service = new SiteDiscoveryService;
-    $sites = $service->discoverFromReddit();
+    $sites = $service->discoverFromGitHub();
 
-    expect($sites)->toHaveCount(0);
+    expect($sites->pluck('domain')->toArray())->toContain('ai-framework.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('ml-tool.example.com');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['github']);
 });
 
-it('extracts urls from alternativeto html', function () {
-    $html = '<html><body>
-        <a href="https://cool-alternative.example.com">Cool Tool</a>
-        <a href="https://another-tool.example.com/page">Another</a>
-        <a href="https://alternativeto.net/software/test/">Internal</a>
-    </body></html>';
-
+it('discovers sites from devto articles', function () {
     Http::fake([
-        'alternativeto.net/*' => Http::response($html),
+        'dev.to/*' => Http::response([
+            ['canonical_url' => 'https://ai-blog.example.com/post', 'title' => 'AI Tools'],
+            ['url' => 'https://dev.to/user/post', 'title' => 'Dev.to hosted'],
+            ['canonical_url' => 'https://ml-site.example.com/article', 'title' => 'ML Guide'],
+        ]),
     ]);
 
     $service = new SiteDiscoveryService;
-    $sites = $service->discoverFromAlternativeTo();
+    $sites = $service->discoverFromDevTo();
 
-    expect($sites->pluck('domain')->toArray())->toContain('cool-alternative.example.com');
-    expect($sites->pluck('domain')->toArray())->toContain('another-tool.example.com');
-    // alternativeto.net is excluded
-    expect($sites->pluck('domain')->toArray())->not->toContain('alternativeto.net');
-    expect($sites->pluck('source')->unique()->toArray())->toBe(['alternativeto']);
-});
-
-it('filters ai-keyword domains from new domains zip', function () {
-    $domainList = "normalsite.com\ncoolai-tools.com\nmygpt-app.io\nrandomshop.net\ndeeplearn-lab.ai\n";
-    $tmpZip = tempnam(sys_get_temp_dir(), 'test_nrd_');
-    $zip = new ZipArchive;
-    $zip->open($tmpZip, ZipArchive::CREATE);
-    $zip->addFromString('domains.txt', $domainList);
-    $zip->close();
-    $zipContent = file_get_contents($tmpZip);
-    unlink($tmpZip);
-
-    Http::fake([
-        'whoisds.com/*' => Http::response($zipContent),
-    ]);
-
-    $service = new SiteDiscoveryService;
-    $sites = $service->discoverFromNewDomains();
-
-    // coolai-tools.com (ai), mygpt-app.io (gpt), deeplearn-lab.ai (deeplearn)
-    expect($sites)->toHaveCount(3);
-    expect($sites->pluck('domain')->toArray())->toContain('coolai-tools.com');
-    expect($sites->pluck('domain')->toArray())->toContain('mygpt-app.io');
-    expect($sites->pluck('domain')->toArray())->toContain('deeplearn-lab.ai');
-    expect($sites->pluck('domain')->toArray())->not->toContain('normalsite.com');
-    expect($sites->pluck('source')->unique()->toArray())->toBe(['newdomains']);
+    expect($sites->pluck('domain')->toArray())->toContain('ai-blog.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('ml-site.example.com');
+    // dev.to is excluded
+    expect($sites->pluck('domain')->toArray())->not->toContain('dev.to');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['devto']);
 });
