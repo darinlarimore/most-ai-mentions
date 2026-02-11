@@ -38,6 +38,7 @@ class SiteFactory extends Factory
             'last_crawled_at' => fake()->dateTimeBetween('-30 days'),
             'last_attempted_at' => fake()->dateTimeBetween('-30 days'),
             'cooldown_hours' => 24,
+            'consecutive_failures' => 0,
             'is_active' => true,
             'submitted_by' => User::factory(),
             'tech_stack' => null,

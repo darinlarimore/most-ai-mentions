@@ -75,6 +75,7 @@ it('excludes recently attempted sites from needsBackfill', function () {
         'category' => 'other',
         'last_crawled_at' => now()->subDay(),
         'last_attempted_at' => now()->subHour(),
+        'consecutive_failures' => 2,
         'status' => 'completed',
     ]);
 

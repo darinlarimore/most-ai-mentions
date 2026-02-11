@@ -806,12 +806,28 @@ class SiteDiscoveryService
         'https://electronjs.org' => 'Electron',
     ];
 
+    /** @var list<string> Subreddits to scan for AI-related external links. */
+    private const REDDIT_SUBREDDITS = ['artificial', 'MachineLearning', 'LocalLLaMA', 'SideProject'];
+
+    /** @var list<string> AlternativeTo seed pages (popular AI tools). */
+    private const ALTERNATIVETO_SEEDS = [
+        'https://alternativeto.net/software/chatgpt/',
+        'https://alternativeto.net/software/github-copilot/',
+        'https://alternativeto.net/software/midjourney/',
+        'https://alternativeto.net/software/claude-ai/',
+        'https://alternativeto.net/software/cursor/',
+        'https://alternativeto.net/software/stable-diffusion/',
+    ];
+
+    /** @var list<string> Keywords to filter newly registered domains by. */
+    private const NEW_DOMAIN_KEYWORDS = ['ai', 'gpt', 'llm', 'neural', 'deeplearn', 'copilot', 'chatbot', 'genai'];
+
     /** @var list<string> Domains to skip (social media, generic, etc.) */
     private const EXCLUDED_DOMAINS = [
         'google.com', 'youtube.com', 'twitter.com', 'x.com', 'facebook.com',
         'linkedin.com', 'reddit.com', 'github.com', 'wikipedia.org',
         'news.ycombinator.com', 'g2.com', 'producthunt.com', 'amazonaws.com',
-        'cloudfront.net', 'archive.org', 'web.archive.org',
+        'cloudfront.net', 'archive.org', 'web.archive.org', 'alternativeto.net',
     ];
 
     /**
@@ -824,6 +840,9 @@ class SiteDiscoveryService
         $total += $this->discoverPopular()->count();
         $total += $this->discoverFromHackerNews()->count();
         $total += $this->discoverFromTrancoList()->count();
+        $total += $this->discoverFromReddit()->count();
+        $total += $this->discoverFromAlternativeTo()->count();
+        $total += $this->discoverFromNewDomains()->count();
 
         return $total;
     }
@@ -1013,6 +1032,167 @@ class SiteDiscoveryService
             if ($this->isValidExternalUrl($url)) {
                 $urls[] = $url;
                 $count++;
+            }
+        }
+
+        return $urls;
+    }
+
+    /**
+     * Discover AI-related sites from Reddit public JSON API.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromReddit(): Collection
+    {
+        $urls = [];
+
+        foreach (self::REDDIT_SUBREDDITS as $subreddit) {
+            try {
+                $response = Http::timeout(15)
+                    ->withHeaders(['User-Agent' => 'MostAIMentions/1.0'])
+                    ->get("https://www.reddit.com/r/{$subreddit}/hot.json", ['limit' => 50]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $posts = $response->json('data.children', []);
+
+                foreach ($posts as $post) {
+                    $data = $post['data'] ?? [];
+
+                    if (($data['is_self'] ?? true) || empty($data['url'])) {
+                        continue;
+                    }
+
+                    if ($this->isValidExternalUrl($data['url'])) {
+                        $urls[] = $data['url'];
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed to fetch Reddit /r/{$subreddit}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'reddit');
+    }
+
+    /**
+     * Discover AI-related sites from AlternativeTo seed pages.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromAlternativeTo(): Collection
+    {
+        $urls = [];
+
+        foreach (self::ALTERNATIVETO_SEEDS as $seedUrl) {
+            try {
+                $response = Http::timeout(15)
+                    ->withHeaders(['User-Agent' => 'MostAIMentions/1.0'])
+                    ->get($seedUrl);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $html = $response->body();
+
+                // Extract external URLs from href attributes
+                if (preg_match_all('/href=["\']?(https?:\/\/[^"\'>\s]+)/i', $html, $matches)) {
+                    foreach ($matches[1] as $url) {
+                        if ($this->isValidExternalUrl($url)) {
+                            $urls[] = $url;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed to fetch AlternativeTo page {$seedUrl}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'alternativeto');
+    }
+
+    /**
+     * Discover newly registered domains containing AI-related keywords.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromNewDomains(): Collection
+    {
+        try {
+            $date = now()->subDay()->format('Y-m-d');
+            $response = Http::timeout(30)
+                ->get("https://whoisds.com/newly-registered-domains/{$date}/nrd");
+
+            if (! $response->successful()) {
+                Log::warning('SiteDiscovery: Failed to download new domains feed', ['status' => $response->status()]);
+
+                return collect();
+            }
+
+            $urls = $this->extractNewDomainUrls($response->body());
+
+            return $this->createSitesFromUrls($urls, 'newdomains');
+        } catch (\Throwable $e) {
+            Log::warning('SiteDiscovery: Failed to fetch new domains feed', ['error' => $e->getMessage()]);
+
+            return collect();
+        }
+    }
+
+    /**
+     * Extract AI-keyword domains from a WhoisDS ZIP response body.
+     *
+     * @return list<string>
+     */
+    private function extractNewDomainUrls(string $zipContent): array
+    {
+        $urls = [];
+
+        $tmpZip = tempnam(sys_get_temp_dir(), 'nrd_');
+        file_put_contents($tmpZip, $zipContent);
+
+        $zip = new \ZipArchive;
+
+        if ($zip->open($tmpZip) !== true) {
+            unlink($tmpZip);
+
+            return $urls;
+        }
+
+        $content = $zip->getFromIndex(0);
+        $zip->close();
+        unlink($tmpZip);
+
+        if (! $content) {
+            return $urls;
+        }
+
+        $domains = preg_split('/[\r\n]+/', $content);
+
+        foreach ($domains as $domain) {
+            $domain = trim(strtolower($domain));
+
+            if (! $domain) {
+                continue;
+            }
+
+            // Check if domain contains any AI keywords
+            $nameWithoutTld = preg_replace('/\.[a-z]{2,}$/i', '', $domain);
+
+            foreach (self::NEW_DOMAIN_KEYWORDS as $keyword) {
+                if (str_contains($nameWithoutTld, $keyword)) {
+                    $url = "https://{$domain}";
+
+                    if ($this->isValidExternalUrl($url)) {
+                        $urls[] = $url;
+                    }
+
+                    break;
+                }
             }
         }
 

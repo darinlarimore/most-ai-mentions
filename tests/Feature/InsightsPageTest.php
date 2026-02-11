@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\CrawlResult;
-use App\Models\ScoreHistory;
 use App\Models\Site;
 
 it('renders the insights page', function () {
@@ -108,26 +107,21 @@ it('defers hosting map data', function () {
     );
 });
 
-it('defers score timeline data', function () {
+it('defers crawler speed data', function () {
     $site = Site::factory()->create(['last_crawled_at' => now()]);
-    $crawl = CrawlResult::factory()->create(['site_id' => $site->id]);
-
-    ScoreHistory::create([
+    CrawlResult::factory()->count(3)->create([
         'site_id' => $site->id,
-        'crawl_result_id' => $crawl->id,
-        'hype_score' => 500,
-        'ai_mention_count' => 10,
-        'recorded_at' => now()->subDays(3),
+        'created_at' => now()->subDay(),
     ]);
 
     $response = $this->get('/insights');
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->missing('scoreTimeline')
+        ->missing('crawlerSpeed')
         ->loadDeferredProps(['timeline'], fn ($reload) => $reload
-            ->has('scoreTimeline', 1)
-            ->where('scoreTimeline.0.value', fn ($value) => $value == 500)
+            ->has('crawlerSpeed', 1)
+            ->where('crawlerSpeed.0.value', 3)
         )
     );
 });

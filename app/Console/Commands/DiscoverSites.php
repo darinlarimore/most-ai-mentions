@@ -19,6 +19,9 @@ class DiscoverSites extends Command
             'Popular AI sites' => fn () => $service->discoverPopular()->count(),
             'Hacker News (API)' => fn () => $service->discoverFromHackerNews()->count(),
             'Tranco Top Sites' => fn () => $service->discoverFromTrancoList()->count(),
+            'Reddit' => fn () => $service->discoverFromReddit()->count(),
+            'AlternativeTo' => fn () => $service->discoverFromAlternativeTo()->count(),
+            'New Domains' => fn () => $service->discoverFromNewDomains()->count(),
         ];
 
         $total = 0;

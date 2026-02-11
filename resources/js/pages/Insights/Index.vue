@@ -55,7 +55,7 @@ interface HostingMapItem {
     hype_score: number;
 }
 
-interface ScoreTimelineItem {
+interface CrawlerSpeedItem {
     date: string;
     value: number;
 }
@@ -76,7 +76,7 @@ const props = defineProps<{
     scoreDistribution: ScoreDistItem[];
     mentionsVsScore: ScatterItem[];
     hostingMap: HostingMapItem[];
-    scoreTimeline: ScoreTimelineItem[];
+    crawlerSpeed: CrawlerSpeedItem[];
 }>();
 
 const termView = ref<'bar' | 'treemap'>('bar');
@@ -363,22 +363,22 @@ onUnmounted(() => {
                 </CardContent>
             </Card>
 
-            <!-- Score Timeline -->
+            <!-- Crawler Speed -->
             <Card class="lg:col-span-2">
                 <CardHeader>
-                    <CardTitle>Score Timeline</CardTitle>
-                    <CardDescription>Average hype score trend over the last 60 days</CardDescription>
+                    <CardTitle>Crawler Speed</CardTitle>
+                    <CardDescription>Sites crawled per day over the last 7 days</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Deferred data="scoreTimeline">
+                    <Deferred data="crawlerSpeed">
                         <template #fallback>
                             <Skeleton class="h-40 w-full" />
                         </template>
-                        <div v-if="scoreTimeline?.length" class="h-40">
-                            <D3HorizonChart :data="scoreTimeline ?? []" label="Avg Hype Score" />
+                        <div v-if="crawlerSpeed?.length" class="h-40">
+                            <D3HorizonChart :data="crawlerSpeed ?? []" label="Crawls per Day" />
                         </div>
                         <div v-else class="flex h-40 items-center justify-center text-muted-foreground">
-                            No score history yet. Data populates after daily snapshots.
+                            No crawl data yet. Data populates after sites are crawled.
                         </div>
                     </Deferred>
                 </CardContent>

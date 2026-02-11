@@ -209,10 +209,18 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
                 'has_html' => $html !== null,
             ]);
 
+            $failures = $this->site->consecutive_failures + 1;
+
             $this->site->update([
                 'last_attempted_at' => now(),
                 'status' => 'pending',
+                'consecutive_failures' => $failures,
+                'is_active' => $failures < Site::MAX_CONSECUTIVE_FAILURES,
             ]);
+
+            if ($failures >= Site::MAX_CONSECUTIVE_FAILURES) {
+                Log::info("Deactivated {$this->site->url} after {$failures} consecutive failures");
+            }
 
             QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
             self::dispatchNext();
@@ -258,6 +266,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'last_crawled_at' => now(),
             'last_attempted_at' => now(),
             'status' => 'completed',
+            'consecutive_failures' => 0,
             'tech_stack' => $techStack ?: null,
             'server_ip' => $httpMetadata['server_ip'] ?? null,
             'server_software' => $httpMetadata['server_software'] ?? null,
@@ -292,10 +301,18 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'error' => $exception?->getMessage(),
         ]);
 
+        $failures = $this->site->consecutive_failures + 1;
+
         $this->site->update([
             'status' => 'pending',
             'last_attempted_at' => now(),
+            'consecutive_failures' => $failures,
+            'is_active' => $failures < Site::MAX_CONSECUTIVE_FAILURES,
         ]);
+
+        if ($failures >= Site::MAX_CONSECUTIVE_FAILURES) {
+            Log::info("Deactivated {$this->site->url} after {$failures} consecutive failures");
+        }
 
         try {
             QueueUpdated::dispatch(Site::query()->crawlQueue()->count());

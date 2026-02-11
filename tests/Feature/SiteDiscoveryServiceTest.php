@@ -155,3 +155,95 @@ it('sets source and status correctly on discovered sites', function () {
     expect($sites->first()->source)->toBe('hackernews');
     expect($sites->first()->status)->toBe('queued');
 });
+
+it('discovers external links from reddit', function () {
+    Http::fake([
+        'www.reddit.com/r/artificial/hot.json*' => Http::response([
+            'data' => [
+                'children' => [
+                    ['data' => ['is_self' => false, 'url' => 'https://cool-ai-tool.example.com']],
+                    ['data' => ['is_self' => true, 'url' => 'https://reddit.com/r/artificial/self']],
+                    ['data' => ['is_self' => false, 'url' => 'https://another-ai.example.com']],
+                ],
+            ],
+        ]),
+        'www.reddit.com/r/MachineLearning/hot.json*' => Http::response(['data' => ['children' => []]]),
+        'www.reddit.com/r/LocalLLaMA/hot.json*' => Http::response(['data' => ['children' => []]]),
+        'www.reddit.com/r/SideProject/hot.json*' => Http::response(['data' => ['children' => []]]),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromReddit();
+
+    expect($sites)->toHaveCount(2);
+    expect($sites->pluck('domain')->toArray())->toContain('cool-ai-tool.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('another-ai.example.com');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['reddit']);
+});
+
+it('skips self-posts from reddit', function () {
+    Http::fake([
+        'www.reddit.com/r/artificial/hot.json*' => Http::response([
+            'data' => [
+                'children' => [
+                    ['data' => ['is_self' => true, 'url' => 'https://reddit.com/r/artificial/comments/abc']],
+                ],
+            ],
+        ]),
+        'www.reddit.com/r/MachineLearning/hot.json*' => Http::response(['data' => ['children' => []]]),
+        'www.reddit.com/r/LocalLLaMA/hot.json*' => Http::response(['data' => ['children' => []]]),
+        'www.reddit.com/r/SideProject/hot.json*' => Http::response(['data' => ['children' => []]]),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromReddit();
+
+    expect($sites)->toHaveCount(0);
+});
+
+it('extracts urls from alternativeto html', function () {
+    $html = '<html><body>
+        <a href="https://cool-alternative.example.com">Cool Tool</a>
+        <a href="https://another-tool.example.com/page">Another</a>
+        <a href="https://alternativeto.net/software/test/">Internal</a>
+    </body></html>';
+
+    Http::fake([
+        'alternativeto.net/*' => Http::response($html),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromAlternativeTo();
+
+    expect($sites->pluck('domain')->toArray())->toContain('cool-alternative.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('another-tool.example.com');
+    // alternativeto.net is excluded
+    expect($sites->pluck('domain')->toArray())->not->toContain('alternativeto.net');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['alternativeto']);
+});
+
+it('filters ai-keyword domains from new domains zip', function () {
+    $domainList = "normalsite.com\ncoolai-tools.com\nmygpt-app.io\nrandomshop.net\ndeeplearn-lab.ai\n";
+    $tmpZip = tempnam(sys_get_temp_dir(), 'test_nrd_');
+    $zip = new ZipArchive;
+    $zip->open($tmpZip, ZipArchive::CREATE);
+    $zip->addFromString('domains.txt', $domainList);
+    $zip->close();
+    $zipContent = file_get_contents($tmpZip);
+    unlink($tmpZip);
+
+    Http::fake([
+        'whoisds.com/*' => Http::response($zipContent),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromNewDomains();
+
+    // coolai-tools.com (ai), mygpt-app.io (gpt), deeplearn-lab.ai (deeplearn)
+    expect($sites)->toHaveCount(3);
+    expect($sites->pluck('domain')->toArray())->toContain('coolai-tools.com');
+    expect($sites->pluck('domain')->toArray())->toContain('mygpt-app.io');
+    expect($sites->pluck('domain')->toArray())->toContain('deeplearn-lab.ai');
+    expect($sites->pluck('domain')->toArray())->not->toContain('normalsite.com');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['newdomains']);
+});

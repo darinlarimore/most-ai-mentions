@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\CrawlResult;
-use App\Models\ScoreHistory;
 use App\Models\Site;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +22,7 @@ class InsightsController extends Controller
             'scoreDistribution' => Inertia::defer(fn () => $this->getScoreDistribution(), 'metadata'),
             'mentionsVsScore' => Inertia::defer(fn () => $this->getMentionsVsScore(), 'scatter'),
             'hostingMap' => Inertia::defer(fn () => $this->getHostingMapData(), 'map'),
-            'scoreTimeline' => Inertia::defer(fn () => $this->getScoreTimeline(), 'timeline'),
+            'crawlerSpeed' => Inertia::defer(fn () => $this->getCrawlerSpeed(), 'timeline'),
         ]);
     }
 
@@ -237,27 +236,27 @@ class InsightsController extends Controller
     }
 
     /**
-     * Daily average hype scores over the last 60 days for the horizon chart.
+     * Daily crawl counts over the last 7 days for the horizon chart.
      *
-     * @return list<array{date: string, value: float}>
+     * @return list<array{date: string, value: int}>
      */
-    private function getScoreTimeline(): array
+    private function getCrawlerSpeed(): array
     {
         $driver = DB::connection()->getDriverName();
 
         $dateExpr = $driver === 'sqlite'
-            ? 'date(recorded_at) as day'
-            : 'DATE(recorded_at) as day';
+            ? 'date(created_at) as day'
+            : 'DATE(created_at) as day';
 
-        return ScoreHistory::query()
-            ->where('recorded_at', '>=', now()->subDays(60))
-            ->selectRaw("{$dateExpr}, AVG(hype_score) as avg_score")
-            ->groupByRaw($driver === 'sqlite' ? 'date(recorded_at)' : 'DATE(recorded_at)')
+        return CrawlResult::query()
+            ->where('created_at', '>=', now()->subDays(7))
+            ->selectRaw("{$dateExpr}, COUNT(*) as crawl_count")
+            ->groupByRaw($driver === 'sqlite' ? 'date(created_at)' : 'DATE(created_at)')
             ->orderBy('day')
             ->get()
             ->map(fn ($row) => [
                 'date' => $row->day,
-                'value' => round((float) $row->avg_score, 1),
+                'value' => (int) $row->crawl_count,
             ])
             ->all();
     }

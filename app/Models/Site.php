@@ -16,6 +16,9 @@ class Site extends Model
 {
     use HasFactory;
 
+    /** Maximum consecutive failures before a site is auto-deactivated. */
+    public const MAX_CONSECUTIVE_FAILURES = 6;
+
     /** @var list<string> */
     protected $guarded = [];
 
@@ -52,6 +55,7 @@ class Site extends Model
             'last_attempted_at' => 'datetime',
             'is_active' => 'boolean',
             'tech_stack' => 'array',
+            'consecutive_failures' => 'integer',
             'latitude' => 'float',
             'longitude' => 'float',
         ];
@@ -99,6 +103,9 @@ class Site extends Model
 
     /**
      * Scope a query to only include sites ready to crawl.
+     *
+     * Uses exponential backoff based on consecutive_failures:
+     * 0 failures = 0hr, 1 = 1hr, 2 = 6hr, 3 = 24hr, 4 = 72hr, 5 = 168hr, 6+ = deactivated.
      */
     public function scopeReadyToCrawl(Builder $query): void
     {
@@ -108,17 +115,36 @@ class Site extends Model
             ? "last_crawled_at <= datetime('now', '-' || cooldown_hours || ' hours')"
             : 'last_crawled_at <= NOW() - INTERVAL cooldown_hours HOUR';
 
-        $attemptExpr = $driver === 'sqlite'
-            ? "last_attempted_at <= datetime('now', '-24 hours')"
-            : 'last_attempted_at <= NOW() - INTERVAL 24 HOUR';
+        $backoffExpr = self::attemptBackoffExpression($driver);
 
-        $query->where(function (Builder $query) use ($cooldownExpr) {
-            $query->whereNull('last_crawled_at')
-                ->orWhereRaw($cooldownExpr);
-        })->where(function (Builder $query) use ($attemptExpr) {
-            $query->whereNull('last_attempted_at')
-                ->orWhereRaw($attemptExpr);
-        });
+        $attemptExpr = $driver === 'sqlite'
+            ? "last_attempted_at <= datetime('now', '-' || ({$backoffExpr}) || ' hours')"
+            : "last_attempted_at <= NOW() - INTERVAL ({$backoffExpr}) HOUR";
+
+        $query->where('consecutive_failures', '<', self::MAX_CONSECUTIVE_FAILURES)
+            ->where(function (Builder $query) use ($cooldownExpr) {
+                $query->whereNull('last_crawled_at')
+                    ->orWhereRaw($cooldownExpr);
+            })->where(function (Builder $query) use ($attemptExpr) {
+                $query->whereNull('last_attempted_at')
+                    ->orWhereRaw($attemptExpr);
+            });
+    }
+
+    /**
+     * SQL CASE expression returning backoff hours based on consecutive_failures.
+     */
+    private static function attemptBackoffExpression(string $driver): string
+    {
+        return 'CASE consecutive_failures
+            WHEN 0 THEN 0
+            WHEN 1 THEN 1
+            WHEN 2 THEN 6
+            WHEN 3 THEN 24
+            WHEN 4 THEN 72
+            WHEN 5 THEN 168
+            ELSE 9999
+        END';
     }
 
     /**
@@ -146,11 +172,14 @@ class Site extends Model
     {
         $driver = $query->getConnection()->getDriverName();
 
+        $backoffExpr = self::attemptBackoffExpression($driver);
+
         $attemptExpr = $driver === 'sqlite'
-            ? "last_attempted_at <= datetime('now', '-24 hours')"
-            : 'last_attempted_at <= NOW() - INTERVAL 24 HOUR';
+            ? "last_attempted_at <= datetime('now', '-' || ({$backoffExpr}) || ' hours')"
+            : "last_attempted_at <= NOW() - INTERVAL ({$backoffExpr}) HOUR";
 
         $query->active()
+            ->where('consecutive_failures', '<', self::MAX_CONSECUTIVE_FAILURES)
             ->where('status', '!=', 'crawling')
             ->whereNotNull('last_crawled_at')
             ->where(function (Builder $query) {
