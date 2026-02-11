@@ -11,10 +11,9 @@ export interface HorizonDatum {
 const props = withDefaults(
     defineProps<{
         initialData: HorizonDatum[];
-        bands?: number;
         label?: string;
     }>(),
-    { bands: 4, label: 'Crawl Duration' },
+    { label: 'Crawl Duration' },
 );
 
 const CAPACITY = 600;
@@ -77,11 +76,10 @@ function draw() {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
-    const bands = props.bands;
     const baseHex = resolveColor('--chart-1');
     const [br, bg, bb] = hexToRgb(baseHex);
 
-    // Compute max value for band scaling
+    // Compute max value for scaling
     let maxVal = 0;
     for (let i = 0; i < count; i++) {
         const v = getDatum(i).value;
@@ -89,28 +87,20 @@ function draw() {
     }
     if (maxVal === 0) maxVal = 1;
 
-    const step = maxVal / bands;
     const barWidth = Math.max(1, w / Math.max(count, 1));
     const margin = { bottom: 20, top: 4 };
     const chartH = h - margin.top - margin.bottom;
 
-    // Draw horizon bands (bottom to top layering)
-    for (let band = 0; band < bands; band++) {
-        const bandMin = band * step;
-        const alpha = 0.15 + (band / (bands - 1)) * 0.85;
+    // Draw bars — single color, height encodes duration
+    ctx.fillStyle = `rgba(${br}, ${bg}, ${bb}, 0.75)`;
+    for (let i = 0; i < count; i++) {
+        const v = getDatum(i).value;
+        const barH = (v / maxVal) * chartH;
+        if (barH <= 0) continue;
 
-        ctx.fillStyle = `rgba(${br}, ${bg}, ${bb}, ${alpha})`;
-
-        for (let i = 0; i < count; i++) {
-            const v = getDatum(i).value;
-            const clamped = Math.max(0, Math.min(step, v - bandMin));
-            const barH = (clamped / step) * chartH;
-            if (barH <= 0) continue;
-
-            const x = i * barWidth;
-            const y = margin.top + chartH - barH;
-            ctx.fillRect(x, y, Math.max(barWidth - 0.5, 1), barH);
-        }
+        const x = i * barWidth;
+        const y = margin.top + chartH - barH;
+        ctx.fillRect(x, y, Math.max(barWidth - 0.5, 1), barH);
     }
 
     // Time labels along bottom — measure text width to avoid overlap
