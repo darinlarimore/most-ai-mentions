@@ -102,16 +102,23 @@ async function refreshStats() {
     }
 }
 
-let echoChannel: ReturnType<typeof window.Echo.channel> | null = null;
+let activityChannel: ReturnType<typeof window.Echo.channel> | null = null;
+let queueChannel: ReturnType<typeof window.Echo.channel> | null = null;
 
 onMounted(() => {
-    echoChannel = window.Echo.channel('crawl-activity');
-    echoChannel.listen('.CrawlCompleted', refreshStats);
+    activityChannel = window.Echo.channel('crawl-activity');
+    activityChannel.listen('.CrawlCompleted', refreshStats);
+
+    queueChannel = window.Echo.channel('crawl-queue');
+    queueChannel.listen('.QueueUpdated', refreshStats);
 });
 
 onUnmounted(() => {
-    if (echoChannel) {
+    if (activityChannel) {
         window.Echo.leave('crawl-activity');
+    }
+    if (queueChannel) {
+        window.Echo.leave('crawl-queue');
     }
 });
 </script>
