@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CrawlResult;
 use App\Models\ScoreHistory;
 use App\Models\Site;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,18 +14,8 @@ class InsightsController extends Controller
 {
     public function index(): Response
     {
-        $totalSites = Site::active()->count();
-        $crawledSites = Site::active()->whereNotNull('last_crawled_at')->count();
-        $pendingSites = Site::active()->whereNull('last_crawled_at')->count();
-        $totalCrawls = CrawlResult::count();
-
         return Inertia::render('Insights/Index', [
-            'pipelineStats' => [
-                'total_sites' => $totalSites,
-                'crawled_sites' => $crawledSites,
-                'pending_sites' => $pendingSites,
-                'total_crawls' => $totalCrawls,
-            ],
+            'pipelineStats' => $this->getPipelineStats(),
             'termFrequency' => Inertia::defer(fn () => $this->getTermFrequency()),
             'techStackDistribution' => Inertia::defer(fn () => $this->getTechStackDistribution()),
             'serverDistribution' => Inertia::defer(fn () => $this->getServerDistribution(), 'metadata'),
@@ -34,6 +25,24 @@ class InsightsController extends Controller
             'hostingMap' => Inertia::defer(fn () => $this->getHostingMapData(), 'map'),
             'scoreTimeline' => Inertia::defer(fn () => $this->getScoreTimeline(), 'timeline'),
         ]);
+    }
+
+    public function stats(): JsonResponse
+    {
+        return response()->json($this->getPipelineStats());
+    }
+
+    /**
+     * @return array{total_sites: int, crawled_sites: int, pending_sites: int, total_crawls: int}
+     */
+    private function getPipelineStats(): array
+    {
+        return [
+            'total_sites' => Site::active()->count(),
+            'crawled_sites' => Site::active()->whereNotNull('last_crawled_at')->count(),
+            'pending_sites' => Site::active()->whereNull('last_crawled_at')->count(),
+            'total_crawls' => CrawlResult::count(),
+        ];
     }
 
     /**

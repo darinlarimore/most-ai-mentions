@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { Deferred, router } from '@inertiajs/vue3';
+import { reactive, ref, onMounted, onUnmounted } from 'vue';
+import { Deferred } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import GuestLayout from '@/layouts/GuestLayout.vue';
@@ -82,6 +82,8 @@ const props = defineProps<{
 const termView = ref<'bar' | 'treemap'>('bar');
 const techView = ref<'bar' | 'radial'>('bar');
 
+const liveStats = reactive({ ...props.pipelineStats });
+
 const stats = [
     { label: 'Total Sites', key: 'total_sites' as const },
     { label: 'Crawled', key: 'crawled_sites' as const },
@@ -89,13 +91,22 @@ const stats = [
     { label: 'Total Crawls', key: 'total_crawls' as const },
 ];
 
+async function refreshStats() {
+    try {
+        const res = await fetch('/insights/stats');
+        if (!res.ok) return;
+        const data = await res.json();
+        Object.assign(liveStats, data);
+    } catch {
+        // silently ignore
+    }
+}
+
 let echoChannel: ReturnType<typeof window.Echo.channel> | null = null;
 
 onMounted(() => {
     echoChannel = window.Echo.channel('crawl-activity');
-    echoChannel.listen('.CrawlCompleted', () => {
-        router.reload({ only: ['pipelineStats'] });
-    });
+    echoChannel.listen('.CrawlCompleted', refreshStats);
 });
 
 onUnmounted(() => {
@@ -119,7 +130,7 @@ onUnmounted(() => {
                 <CardContent class="pt-6">
                     <p class="text-sm font-medium text-muted-foreground">{{ stat.label }}</p>
                     <p class="text-3xl font-bold">
-                        <TickerNumber :value="pipelineStats[stat.key]" />
+                        <TickerNumber :value="liveStats[stat.key]" />
                     </p>
                 </CardContent>
             </Card>
