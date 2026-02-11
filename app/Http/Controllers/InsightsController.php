@@ -33,14 +33,14 @@ class InsightsController extends Controller
     }
 
     /**
-     * @return array{total_sites: int, crawled_sites: int, pending_sites: int, total_crawls: int}
+     * @return array{total_sites: int, crawled_sites: int, queued_sites: int, total_crawls: int}
      */
     private function getPipelineStats(): array
     {
         return [
             'total_sites' => Site::active()->count(),
             'crawled_sites' => Site::active()->whereNotNull('last_crawled_at')->count(),
-            'pending_sites' => Site::active()->whereNull('last_crawled_at')->count(),
+            'queued_sites' => Site::query()->crawlQueue()->count(),
             'total_crawls' => CrawlResult::count(),
         ];
     }

@@ -66,7 +66,7 @@ const props = defineProps<{
     pipelineStats: {
         total_sites: number;
         crawled_sites: number;
-        pending_sites: number;
+        queued_sites: number;
         total_crawls: number;
     };
     termFrequency: TermFrequencyItem[];
@@ -87,7 +87,7 @@ const liveStats = reactive({ ...props.pipelineStats });
 const stats = [
     { label: 'Total Sites', key: 'total_sites' as const },
     { label: 'Crawled', key: 'crawled_sites' as const },
-    { label: 'Pending', key: 'pending_sites' as const },
+    { label: 'In Queue', key: 'queued_sites' as const },
     { label: 'Total Crawls', key: 'total_crawls' as const },
 ];
 

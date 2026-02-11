@@ -25,7 +25,7 @@ it('includes pipeline stats', function () {
     $response->assertInertia(fn ($page) => $page
         ->where('pipelineStats.total_sites', 4)
         ->where('pipelineStats.crawled_sites', 3)
-        ->where('pipelineStats.pending_sites', 1)
+        ->where('pipelineStats.queued_sites', 1)
     );
 });
 
