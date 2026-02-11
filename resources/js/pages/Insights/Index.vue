@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Deferred } from '@inertiajs/vue3';
+import { ref, onMounted, onUnmounted } from 'vue';
+import { Deferred, router } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import GuestLayout from '@/layouts/GuestLayout.vue';
@@ -13,6 +13,7 @@ import D3VerticalBar from '@/components/charts/D3VerticalBar.vue';
 import D3ScatterPlot from '@/components/charts/D3ScatterPlot.vue';
 import D3WorldMap from '@/components/charts/D3WorldMap.vue';
 import D3HorizonChart from '@/components/charts/D3HorizonChart.vue';
+import TickerNumber from '@/components/TickerNumber.vue';
 
 interface TermFrequencyItem {
     term: string;
@@ -87,6 +88,21 @@ const stats = [
     { label: 'Pending', key: 'pending_sites' as const },
     { label: 'Total Crawls', key: 'total_crawls' as const },
 ];
+
+let echoChannel: ReturnType<typeof window.Echo.channel> | null = null;
+
+onMounted(() => {
+    echoChannel = window.Echo.channel('crawl-activity');
+    echoChannel.listen('.CrawlCompleted', () => {
+        router.reload({ only: ['pipelineStats'] });
+    });
+});
+
+onUnmounted(() => {
+    if (echoChannel) {
+        window.Echo.leave('crawl-activity');
+    }
+});
 </script>
 
 <template>
@@ -102,7 +118,9 @@ const stats = [
             <Card v-for="stat in stats" :key="stat.key">
                 <CardContent class="pt-6">
                     <p class="text-sm font-medium text-muted-foreground">{{ stat.label }}</p>
-                    <p class="text-3xl font-bold tabular-nums">{{ pipelineStats[stat.key].toLocaleString() }}</p>
+                    <p class="text-3xl font-bold">
+                        <TickerNumber :value="pipelineStats[stat.key]" />
+                    </p>
                 </CardContent>
             </Card>
         </div>
