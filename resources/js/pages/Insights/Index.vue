@@ -9,7 +9,6 @@ import {
     GitBranch,
     Hexagon,
     LayoutGrid,
-    Lollipop,
     Sun,
 } from 'lucide-vue-next';
 import { reactive, ref, onMounted, onUnmounted } from 'vue';
@@ -17,7 +16,6 @@ import D3CirclePacking from '@/components/charts/D3CirclePacking.vue';
 import D3DonutChart from '@/components/charts/D3DonutChart.vue';
 import D3Hexbin from '@/components/charts/D3Hexbin.vue';
 import D3HorizontalBar from '@/components/charts/D3HorizontalBar.vue';
-import D3Lollipop from '@/components/charts/D3Lollipop.vue';
 import D3RadialTree from '@/components/charts/D3RadialTree.vue';
 import D3RealtimeHorizon from '@/components/charts/D3RealtimeHorizon.vue';
 import D3ScatterPlot from '@/components/charts/D3ScatterPlot.vue';
@@ -92,7 +90,7 @@ const props = defineProps<{
 const termView = ref<'bar' | 'treemap'>('treemap');
 const techView = ref<'bar' | 'radial' | 'donut' | 'cloud'>('cloud');
 const categoryView = ref<'donut' | 'sunburst' | 'circle' | 'treemap'>('donut');
-const scoreView = ref<'bar' | 'lollipop' | 'horizontal' | 'donut'>('bar');
+const scoreView = ref<'bar' | 'donut'>('bar');
 const scatterView = ref<'scatter' | 'hexbin'>('scatter');
 
 const liveStats = reactive({ ...props.pipelineStats });
@@ -309,7 +307,7 @@ onUnmounted(() => {
             </Card>
 
             <!-- Category Distribution -->
-            <Card>
+            <Card class="lg:col-span-2">
                 <CardHeader class="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>Site Categories</CardTitle>
@@ -381,7 +379,7 @@ onUnmounted(() => {
             </Card>
 
             <!-- Score Distribution Histogram -->
-            <Card>
+            <Card class="lg:col-span-2">
                 <CardHeader class="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>Score Distribution</CardTitle>
@@ -394,20 +392,6 @@ onUnmounted(() => {
                             @click="scoreView = 'bar'"
                         >
                             <BarChart3 class="size-4" />
-                        </button>
-                        <button
-                            class="rounded-md p-1.5 transition-colors"
-                            :class="scoreView === 'lollipop' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
-                            @click="scoreView = 'lollipop'"
-                        >
-                            <Lollipop class="size-4" />
-                        </button>
-                        <button
-                            class="rounded-md p-1.5 transition-colors"
-                            :class="scoreView === 'horizontal' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
-                            @click="scoreView = 'horizontal'"
-                        >
-                            <BarChart3 class="size-4 rotate-90" />
                         </button>
                         <button
                             class="rounded-md p-1.5 transition-colors"
@@ -425,19 +409,6 @@ onUnmounted(() => {
                         </template>
                         <div v-if="scoreView === 'bar'" class="h-64">
                             <D3VerticalBar
-                                :data="(scoreDistribution ?? []).map((s) => ({ label: s.range, value: s.count }))"
-                            />
-                        </div>
-                        <div v-else-if="scoreView === 'lollipop'" class="h-64">
-                            <D3Lollipop
-                                :data="(scoreDistribution ?? []).map((s) => ({ label: s.range, value: s.count }))"
-                            />
-                        </div>
-                        <div
-                            v-else-if="scoreView === 'horizontal'"
-                            :style="{ height: Math.max(200, (scoreDistribution?.length ?? 0) * 28) + 'px' }"
-                        >
-                            <D3HorizontalBar
                                 :data="(scoreDistribution ?? []).map((s) => ({ label: s.range, value: s.count }))"
                             />
                         </div>
