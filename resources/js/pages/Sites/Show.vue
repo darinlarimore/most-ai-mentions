@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
     Globe, ExternalLink, ArrowLeft, Star, Clock, MessageSquare, User, Highlighter,
+    Server, Shield, Cpu,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
 import HypeOMeter from '@/components/HypeOMeter.vue';
@@ -342,6 +343,50 @@ const formattedCreatedAt = computed(() => {
                                         <User class="size-3" />
                                         {{ site.submitter.name }}
                                     </dd>
+                                </div>
+                            </dl>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Tech & Server Info -->
+                    <Card v-if="site.tech_stack?.length || site.server_software || site.tls_issuer">
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2">
+                                <Cpu class="size-5" />
+                                Site Details
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <dl class="flex flex-col gap-3">
+                                <div v-if="site.tech_stack?.length">
+                                    <dt class="mb-1.5 text-sm text-muted-foreground">Tech Stack</dt>
+                                    <dd class="flex flex-wrap gap-1.5">
+                                        <span
+                                            v-for="tech in site.tech_stack"
+                                            :key="tech"
+                                            class="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                                        >
+                                            {{ tech }}
+                                        </span>
+                                    </dd>
+                                </div>
+                                <div v-if="site.server_software" class="flex items-center justify-between">
+                                    <dt class="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <Server class="size-3" />
+                                        Server
+                                    </dt>
+                                    <dd class="text-sm font-medium">{{ site.server_software }}</dd>
+                                </div>
+                                <div v-if="site.tls_issuer" class="flex items-center justify-between">
+                                    <dt class="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <Shield class="size-3" />
+                                        TLS Issuer
+                                    </dt>
+                                    <dd class="text-sm font-medium">{{ site.tls_issuer }}</dd>
+                                </div>
+                                <div v-if="site.server_ip" class="flex items-center justify-between">
+                                    <dt class="text-sm text-muted-foreground">Server IP</dt>
+                                    <dd class="text-sm font-medium font-mono">{{ site.server_ip }}</dd>
                                 </div>
                             </dl>
                         </CardContent>

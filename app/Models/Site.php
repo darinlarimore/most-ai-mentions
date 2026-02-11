@@ -51,6 +51,9 @@ class Site extends Model
             'last_crawled_at' => 'datetime',
             'last_attempted_at' => 'datetime',
             'is_active' => 'boolean',
+            'tech_stack' => 'array',
+            'latitude' => 'float',
+            'longitude' => 'float',
         ];
     }
 
@@ -152,7 +155,8 @@ class Site extends Model
             ->whereNotNull('last_crawled_at')
             ->where(function (Builder $query) {
                 $query->where('category', 'other')
-                    ->orWhereNull('screenshot_path');
+                    ->orWhereNull('screenshot_path')
+                    ->orWhere(fn (Builder $q) => $q->whereNotNull('server_ip')->whereNull('latitude'));
             })
             ->where(function (Builder $query) use ($attemptExpr) {
                 $query->whereNull('last_attempted_at')

@@ -19,6 +19,7 @@ it('includes static pages', function () {
     $response->assertSee('<loc>'.url('/user-rated').'</loc>', escape: false);
     $response->assertSee('<loc>'.url('/algorithm').'</loc>', escape: false);
     $response->assertSee('<loc>'.url('/crawl/live').'</loc>', escape: false);
+    $response->assertSee('<loc>'.url('/insights').'</loc>', escape: false);
     $response->assertSee('<loc>'.url('/submit').'</loc>', escape: false);
     $response->assertSee('<loc>'.url('/donate').'</loc>', escape: false);
 });

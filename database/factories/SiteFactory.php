@@ -40,7 +40,26 @@ class SiteFactory extends Factory
             'cooldown_hours' => 24,
             'is_active' => true,
             'submitted_by' => User::factory(),
+            'tech_stack' => null,
+            'server_ip' => null,
+            'server_software' => null,
+            'tls_issuer' => null,
+            'page_title' => null,
+            'meta_description' => null,
+            'latitude' => null,
+            'longitude' => null,
         ];
+    }
+
+    /**
+     * Indicate that the site has geocoded coordinates.
+     */
+    public function withCoordinates(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'latitude' => fake()->latitude(),
+            'longitude' => fake()->longitude(),
+        ]);
     }
 
     /**

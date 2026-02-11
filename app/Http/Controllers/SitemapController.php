@@ -21,6 +21,7 @@ class SitemapController extends Controller
             ['loc' => url('/user-rated'), 'changefreq' => 'hourly', 'priority' => '0.8'],
             ['loc' => url('/algorithm'), 'changefreq' => 'monthly', 'priority' => '0.5'],
             ['loc' => url('/crawl/live'), 'changefreq' => 'always', 'priority' => '0.7'],
+            ['loc' => url('/insights'), 'changefreq' => 'daily', 'priority' => '0.7'],
             ['loc' => url('/submit'), 'changefreq' => 'monthly', 'priority' => '0.6'],
             ['loc' => url('/donate'), 'changefreq' => 'monthly', 'priority' => '0.4'],
         ]);

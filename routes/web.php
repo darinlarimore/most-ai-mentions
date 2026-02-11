@@ -3,6 +3,7 @@
 use App\Http\Controllers\AlgorithmController;
 use App\Http\Controllers\CrawlQueueController;
 use App\Http\Controllers\DonationController;
+use App\Http\Controllers\InsightsController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\RatingController;
@@ -19,6 +20,7 @@ Route::get('/user-rated', [LeaderboardController::class, 'userRated'])->name('le
 Route::get('/sites/{site}', [SiteController::class, 'show'])->name('sites.show');
 Route::get('/sites/{site}/annotated', [SiteController::class, 'annotated'])->name('sites.annotated');
 Route::get('/algorithm', [AlgorithmController::class, 'index'])->name('algorithm');
+Route::get('/insights', [InsightsController::class, 'index'])->name('insights');
 Route::get('/crawl/queue', [CrawlQueueController::class, 'index'])->name('crawl.queue');
 Route::get('/crawl/live', [CrawlQueueController::class, 'live'])->name('crawl.live');
 Route::get('/donate', [DonationController::class, 'index'])->name('donate');

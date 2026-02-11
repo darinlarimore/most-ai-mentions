@@ -31,6 +31,14 @@ export interface Site {
     last_crawled_at: string | null;
     submitted_by: number | null;
     created_at: string;
+    tech_stack: string[] | null;
+    server_ip: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    server_software: string | null;
+    tls_issuer: string | null;
+    page_title: string | null;
+    meta_description: string | null;
     latest_crawl_result?: CrawlResult;
     score_histories?: ScoreHistory[];
     ratings?: Rating[];
@@ -59,6 +67,11 @@ export interface CrawlResult {
     glow_effect_count: number;
     rainbow_border_count: number;
     annotated_screenshot_path: string | null;
+    redirect_chain: Array<{ url: string; status: number }> | null;
+    final_url: string | null;
+    response_time_ms: number | null;
+    html_size_bytes: number | null;
+    detected_tech_stack: string[] | null;
     created_at: string;
 }
 

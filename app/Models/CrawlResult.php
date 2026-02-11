@@ -25,6 +25,8 @@ class CrawlResult extends Model
         return [
             'mention_details' => 'array',
             'computed_styles' => 'array',
+            'redirect_chain' => 'array',
+            'detected_tech_stack' => 'array',
         ];
     }
 

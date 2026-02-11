@@ -10,7 +10,7 @@ class CheckQueuePaused
     public function handle(object $job, Closure $next): void
     {
         if (Cache::get('queue:paused')) {
-            $job->release(10);
+            $job->release(60);
 
             return;
         }

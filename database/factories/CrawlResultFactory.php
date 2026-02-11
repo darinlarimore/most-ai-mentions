@@ -30,6 +30,11 @@ class CrawlResultFactory extends Factory
             'glow_effect_count' => fake()->numberBetween(0, 10),
             'rainbow_border_count' => fake()->numberBetween(0, 5),
             'status' => 'completed',
+            'redirect_chain' => null,
+            'final_url' => null,
+            'response_time_ms' => null,
+            'html_size_bytes' => null,
+            'detected_tech_stack' => null,
         ];
     }
 

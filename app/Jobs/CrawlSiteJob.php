@@ -10,9 +10,13 @@ use App\Jobs\Middleware\CheckQueuePaused;
 use App\Models\CrawlResult;
 use App\Models\Site;
 use App\Services\HtmlAnnotationService;
+use App\Services\HttpMetadataCollector;
 use App\Services\HypeScoreCalculator;
+use App\Services\IpGeolocationService;
+use App\Services\PageMetadataExtractor;
 use App\Services\ScreenshotService;
 use App\Services\SiteCategoryDetector;
+use App\Services\TechStackDetector;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,6 +28,9 @@ use Illuminate\Support\Facades\Log;
 class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /** Allow enough attempts to survive queue pauses during deploys. */
+    public int $tries = 25;
 
     /** Only count actual exceptions, not middleware releases. */
     public int $maxExceptions = 3;
@@ -56,6 +63,10 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         HtmlAnnotationService $annotationService,
         ScreenshotService $screenshotService,
         SiteCategoryDetector $categoryDetector,
+        HttpMetadataCollector $httpMetadataCollector,
+        TechStackDetector $techStackDetector,
+        PageMetadataExtractor $pageMetadataExtractor,
+        IpGeolocationService $ipGeolocationService,
     ): void {
         // Guard: skip if this site was already crawled recently (duplicate job protection)
         // Backfill crawls bypass cooldown since they target sites missing data
@@ -95,6 +106,35 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             $observer->analyzeHtml($html);
         }
 
+        // Collect HTTP metadata (server info, redirects, TLS)
+        $httpMetadata = null;
+        try {
+            CrawlProgress::dispatch($this->site->id, 'collecting_metadata', 'Collecting server metadata...');
+            $httpMetadata = $httpMetadataCollector->collect($this->site->url);
+        } catch (\Throwable $e) {
+            Log::warning("Failed to collect HTTP metadata for {$this->site->url}: {$e->getMessage()}");
+        }
+
+        // Geolocate server IP
+        $coordinates = null;
+        if ($httpMetadata['server_ip'] ?? null) {
+            try {
+                $coordinates = $ipGeolocationService->geolocate($httpMetadata['server_ip']);
+            } catch (\Throwable $e) {
+                Log::warning("Failed to geolocate IP for {$this->site->url}: {$e->getMessage()}");
+            }
+        }
+
+        // Detect tech stack and extract page metadata
+        $techStack = [];
+        $pageTitle = null;
+        $metaDescription = null;
+        if ($html) {
+            $techStack = $techStackDetector->detect($html, $httpMetadata['headers'] ?? []);
+            $pageTitle = $pageMetadataExtractor->extractTitle($html);
+            $metaDescription = $pageMetadataExtractor->extractDescription($html);
+        }
+
         // Auto-detect category from metadata (only if currently 'other')
         if ($html && $this->site->category === 'other') {
             CrawlProgress::dispatch($this->site->id, 'detecting_category', 'Detecting site category...');
@@ -128,6 +168,11 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'animation_count' => $observer->getAnimationCount(),
             'glow_effect_count' => $observer->getGlowEffectCount(),
             'rainbow_border_count' => $observer->getRainbowBorderCount(),
+            'redirect_chain' => $httpMetadata['redirect_chain'] ?? null,
+            'final_url' => $httpMetadata['final_url'] ?? null,
+            'response_time_ms' => $httpMetadata['response_time_ms'] ?? null,
+            'html_size_bytes' => $html ? strlen($html) : null,
+            'detected_tech_stack' => $techStack ?: null,
         ]);
 
         if (! $html) {
@@ -213,6 +258,14 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'last_crawled_at' => now(),
             'last_attempted_at' => now(),
             'status' => 'completed',
+            'tech_stack' => $techStack ?: null,
+            'server_ip' => $httpMetadata['server_ip'] ?? null,
+            'server_software' => $httpMetadata['server_software'] ?? null,
+            'tls_issuer' => $httpMetadata['tls_issuer'] ?? null,
+            'page_title' => $pageTitle,
+            'meta_description' => $metaDescription,
+            'latitude' => $coordinates['latitude'] ?? null,
+            'longitude' => $coordinates['longitude'] ?? null,
         ]);
 
         CrawlProgress::dispatch($this->site->id, 'finishing', 'Running final checks...', [

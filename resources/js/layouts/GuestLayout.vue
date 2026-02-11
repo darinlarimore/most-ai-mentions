@@ -23,6 +23,9 @@ const mobileMenuOpen = ref(false);
                     <Link href="/algorithm" class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                         Algorithm
                     </Link>
+                    <Link href="/insights" class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+                        Insights
+                    </Link>
                     <Link href="/crawl/live" class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                         Live Crawl
                     </Link>
@@ -51,6 +54,9 @@ const mobileMenuOpen = ref(false);
                     <Link href="/algorithm" class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
                         Algorithm
                     </Link>
+                    <Link href="/insights" class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
+                        Insights
+                    </Link>
                     <Link href="/crawl/live" class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
                         Live Crawl
                     </Link>
@@ -77,6 +83,7 @@ const mobileMenuOpen = ref(false);
                 <div class="flex gap-4">
                     <Link href="/" class="hover:text-foreground">Leaderboard</Link>
                     <Link href="/algorithm" class="hover:text-foreground">Algorithm</Link>
+                    <Link href="/insights" class="hover:text-foreground">Insights</Link>
                     <Link href="/donate" class="hover:text-foreground">Donate</Link>
                 </div>
             </div>
