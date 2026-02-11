@@ -74,8 +74,8 @@ const props = defineProps<{
     crawlerSpeed: CrawlerSpeedItem[];
 }>();
 
-const termView = ref<'bar' | 'treemap'>('bar');
-const techView = ref<'bar' | 'radial' | 'donut' | 'cloud'>('bar');
+const termView = ref<'bar' | 'treemap'>('treemap');
+const techView = ref<'bar' | 'radial' | 'donut' | 'cloud'>('cloud');
 
 const liveStats = reactive({ ...props.pipelineStats });
 
