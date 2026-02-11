@@ -1054,10 +1054,13 @@ class SiteDiscoveryService
                     ->get("https://www.reddit.com/r/{$subreddit}/hot.json", ['limit' => 50]);
 
                 if (! $response->successful()) {
+                    Log::warning("SiteDiscovery: Reddit /r/{$subreddit} returned HTTP {$response->status()}");
+
                     continue;
                 }
 
                 $posts = $response->json('data.children', []);
+                $found = 0;
 
                 foreach ($posts as $post) {
                     $data = $post['data'] ?? [];
@@ -1068,12 +1071,17 @@ class SiteDiscoveryService
 
                     if ($this->isValidExternalUrl($data['url'])) {
                         $urls[] = $data['url'];
+                        $found++;
                     }
                 }
+
+                Log::info("SiteDiscovery: Reddit /r/{$subreddit} — {$found} candidate URLs from ".count($posts).' posts');
             } catch (\Throwable $e) {
                 Log::warning("SiteDiscovery: Failed to fetch Reddit /r/{$subreddit}", ['error' => $e->getMessage()]);
             }
         }
+
+        Log::info('SiteDiscovery: Reddit total candidate URLs: '.count($urls));
 
         return $this->createSitesFromUrls($urls, 'reddit');
     }
@@ -1094,23 +1102,31 @@ class SiteDiscoveryService
                     ->get($seedUrl);
 
                 if (! $response->successful()) {
+                    Log::warning("SiteDiscovery: AlternativeTo {$seedUrl} returned HTTP {$response->status()}");
+
                     continue;
                 }
 
                 $html = $response->body();
+                $found = 0;
 
                 // Extract external URLs from href attributes
                 if (preg_match_all('/href=["\']?(https?:\/\/[^"\'>\s]+)/i', $html, $matches)) {
                     foreach ($matches[1] as $url) {
                         if ($this->isValidExternalUrl($url)) {
                             $urls[] = $url;
+                            $found++;
                         }
                     }
                 }
+
+                Log::info("SiteDiscovery: AlternativeTo {$seedUrl} — {$found} candidate URLs");
             } catch (\Throwable $e) {
                 Log::warning("SiteDiscovery: Failed to fetch AlternativeTo page {$seedUrl}", ['error' => $e->getMessage()]);
             }
         }
+
+        Log::info('SiteDiscovery: AlternativeTo total candidate URLs: '.count($urls));
 
         return $this->createSitesFromUrls($urls, 'alternativeto');
     }
@@ -1124,16 +1140,23 @@ class SiteDiscoveryService
     {
         try {
             $date = now()->subDay()->format('Y-m-d');
-            $response = Http::timeout(30)
-                ->get("https://whoisds.com/newly-registered-domains/{$date}/nrd");
+            $feedUrl = "https://whoisds.com/newly-registered-domains/{$date}/nrd";
+
+            Log::info("SiteDiscovery: Fetching new domains feed for {$date}");
+
+            $response = Http::timeout(30)->get($feedUrl);
 
             if (! $response->successful()) {
-                Log::warning('SiteDiscovery: Failed to download new domains feed', ['status' => $response->status()]);
+                Log::warning('SiteDiscovery: New domains feed returned HTTP '.$response->status(), ['url' => $feedUrl]);
 
                 return collect();
             }
 
+            Log::info('SiteDiscovery: New domains feed downloaded — '.strlen($response->body()).' bytes');
+
             $urls = $this->extractNewDomainUrls($response->body());
+
+            Log::info('SiteDiscovery: New domains — '.count($urls).' AI-keyword candidate URLs');
 
             return $this->createSitesFromUrls($urls, 'newdomains');
         } catch (\Throwable $e) {

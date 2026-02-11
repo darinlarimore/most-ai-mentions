@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\SiteDiscoveryService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class DiscoverSites extends Command
 {
@@ -13,6 +14,7 @@ class DiscoverSites extends Command
 
     public function handle(SiteDiscoveryService $service): int
     {
+        Log::info('SiteDiscovery: Starting discovery run');
         $this->info('Discovering new sites...');
 
         $sources = [
@@ -29,9 +31,11 @@ class DiscoverSites extends Command
         foreach ($sources as $name => $discover) {
             $count = $discover();
             $total += $count;
+            Log::info("SiteDiscovery: {$name} — {$count} new site(s)");
             $this->line("  {$name}: {$count} new site(s)");
         }
 
+        Log::info("SiteDiscovery: Finished — {$total} new site(s) added");
         $this->info("Done. {$total} new site(s) added.");
 
         return self::SUCCESS;
