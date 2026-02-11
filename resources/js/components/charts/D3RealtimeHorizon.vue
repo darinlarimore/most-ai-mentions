@@ -90,7 +90,7 @@ function draw() {
     if (maxVal === 0) maxVal = 1;
 
     const step = maxVal / bands;
-    const barWidth = Math.max(1, w / CAPACITY);
+    const barWidth = Math.max(1, w / Math.max(count, 1));
     const margin = { bottom: 20, top: 4 };
     const chartH = h - margin.top - margin.bottom;
 
@@ -107,23 +107,25 @@ function draw() {
             const barH = (clamped / step) * chartH;
             if (barH <= 0) continue;
 
-            const x = (CAPACITY - count + i) * barWidth;
+            const x = i * barWidth;
             const y = margin.top + chartH - barH;
             ctx.fillRect(x, y, Math.max(barWidth - 0.5, 1), barH);
         }
     }
 
-    // Time labels along bottom
+    // Time labels along bottom — measure text width to avoid overlap
     const textColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)';
     ctx.fillStyle = textColor;
     ctx.font = '10px system-ui, sans-serif';
     ctx.textAlign = 'center';
 
-    const labelInterval = Math.max(1, Math.floor(count / 5));
+    const sampleWidth = ctx.measureText('00:00 AM').width + 16;
+    const maxLabels = Math.max(1, Math.floor(w / sampleWidth));
+    const labelInterval = Math.max(1, Math.ceil(count / maxLabels));
     for (let i = 0; i < count; i += labelInterval) {
         const d = getDatum(i);
         if (!d.ts) continue;
-        const x = (CAPACITY - count + i) * barWidth + barWidth / 2;
+        const x = i * barWidth + barWidth / 2;
         const label = d.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         ctx.fillText(label, x, h - 4);
     }
@@ -144,8 +146,8 @@ function handleMouseMove(event: MouseEvent) {
 
     const rect = canvas.getBoundingClientRect();
     const mx = event.clientX - rect.left;
-    const barWidth = rect.width / CAPACITY;
-    const idx = Math.floor(mx / barWidth) - (CAPACITY - count);
+    const barWidth = rect.width / Math.max(count, 1);
+    const idx = Math.floor(mx / barWidth);
 
     if (idx < 0 || idx >= count) {
         tooltip.value.visible = false;
