@@ -1,12 +1,29 @@
 <script setup lang="ts">
 import { Deferred } from '@inertiajs/vue3';
-import { BarChart3, LayoutGrid, GitBranch, ChartPie, Cloud } from 'lucide-vue-next';
+import {
+    BarChart3,
+    ChartPie,
+    ChartScatter,
+    CircleDot,
+    Cloud,
+    GitBranch,
+    Hexagon,
+    LayoutGrid,
+    Lollipop,
+    Orbit,
+    Sun,
+} from 'lucide-vue-next';
 import { reactive, ref, onMounted, onUnmounted } from 'vue';
+import D3BubbleForce from '@/components/charts/D3BubbleForce.vue';
+import D3CirclePacking from '@/components/charts/D3CirclePacking.vue';
 import D3DonutChart from '@/components/charts/D3DonutChart.vue';
+import D3Hexbin from '@/components/charts/D3Hexbin.vue';
 import D3HorizontalBar from '@/components/charts/D3HorizontalBar.vue';
+import D3Lollipop from '@/components/charts/D3Lollipop.vue';
 import D3RadialTree from '@/components/charts/D3RadialTree.vue';
 import D3RealtimeHorizon from '@/components/charts/D3RealtimeHorizon.vue';
 import D3ScatterPlot from '@/components/charts/D3ScatterPlot.vue';
+import D3Sunburst from '@/components/charts/D3Sunburst.vue';
 import D3Treemap from '@/components/charts/D3Treemap.vue';
 import D3VerticalBar from '@/components/charts/D3VerticalBar.vue';
 import D3WordCloud from '@/components/charts/D3WordCloud.vue';
@@ -76,6 +93,9 @@ const props = defineProps<{
 
 const termView = ref<'bar' | 'treemap'>('treemap');
 const techView = ref<'bar' | 'radial' | 'donut' | 'cloud'>('cloud');
+const categoryView = ref<'donut' | 'sunburst' | 'circle' | 'treemap'>('donut');
+const scoreView = ref<'bar' | 'lollipop' | 'horizontal' | 'donut'>('bar');
+const scatterView = ref<'scatter' | 'hexbin' | 'bubble'>('scatter');
 
 const liveStats = reactive({ ...props.pipelineStats });
 
@@ -292,20 +312,69 @@ onUnmounted(() => {
 
             <!-- Category Distribution -->
             <Card>
-                <CardHeader>
-                    <CardTitle>Site Categories</CardTitle>
-                    <CardDescription>Distribution by detected category</CardDescription>
+                <CardHeader class="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Site Categories</CardTitle>
+                        <CardDescription>Distribution by detected category</CardDescription>
+                    </div>
+                    <div class="flex gap-1 rounded-lg border p-0.5">
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="categoryView === 'donut' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="categoryView = 'donut'"
+                        >
+                            <ChartPie class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="categoryView === 'sunburst' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="categoryView = 'sunburst'"
+                        >
+                            <Sun class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="categoryView === 'circle' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="categoryView = 'circle'"
+                        >
+                            <CircleDot class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="categoryView === 'treemap' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="categoryView = 'treemap'"
+                        >
+                            <LayoutGrid class="size-4" />
+                        </button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Deferred data="categoryBreakdown">
                         <template #fallback>
                             <Skeleton class="mx-auto h-64 w-64 rounded-full" />
                         </template>
-                        <div v-if="categoryBreakdown?.length" class="h-64">
-                            <D3DonutChart
-                                :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
-                            />
-                        </div>
+                        <template v-if="categoryBreakdown?.length">
+                            <div v-if="categoryView === 'donut'" class="h-64">
+                                <D3DonutChart
+                                    :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
+                                />
+                            </div>
+                            <div v-else-if="categoryView === 'sunburst'" class="h-64">
+                                <D3Sunburst
+                                    :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
+                                />
+                            </div>
+                            <div v-else-if="categoryView === 'circle'" class="h-64">
+                                <D3CirclePacking
+                                    :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
+                                />
+                            </div>
+                            <div v-else class="h-64">
+                                <D3Treemap
+                                    :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
+                                />
+                            </div>
+                        </template>
                         <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
                             No category data yet.
                         </div>
@@ -315,17 +384,67 @@ onUnmounted(() => {
 
             <!-- Score Distribution Histogram -->
             <Card>
-                <CardHeader>
-                    <CardTitle>Score Distribution</CardTitle>
-                    <CardDescription>Hype score ranges across all sites</CardDescription>
+                <CardHeader class="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Score Distribution</CardTitle>
+                        <CardDescription>Hype score ranges across all sites</CardDescription>
+                    </div>
+                    <div class="flex gap-1 rounded-lg border p-0.5">
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="scoreView === 'bar' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="scoreView = 'bar'"
+                        >
+                            <BarChart3 class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="scoreView === 'lollipop' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="scoreView = 'lollipop'"
+                        >
+                            <Lollipop class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="scoreView === 'horizontal' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="scoreView = 'horizontal'"
+                        >
+                            <BarChart3 class="size-4 rotate-90" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="scoreView === 'donut' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="scoreView = 'donut'"
+                        >
+                            <ChartPie class="size-4" />
+                        </button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Deferred data="scoreDistribution">
                         <template #fallback>
                             <Skeleton class="h-64 w-full" />
                         </template>
-                        <div class="h-64">
+                        <div v-if="scoreView === 'bar'" class="h-64">
                             <D3VerticalBar
+                                :data="(scoreDistribution ?? []).map((s) => ({ label: s.range, value: s.count }))"
+                            />
+                        </div>
+                        <div v-else-if="scoreView === 'lollipop'" class="h-64">
+                            <D3Lollipop
+                                :data="(scoreDistribution ?? []).map((s) => ({ label: s.range, value: s.count }))"
+                            />
+                        </div>
+                        <div
+                            v-else-if="scoreView === 'horizontal'"
+                            :style="{ height: Math.max(200, (scoreDistribution?.length ?? 0) * 28) + 'px' }"
+                        >
+                            <D3HorizontalBar
+                                :data="(scoreDistribution ?? []).map((s) => ({ label: s.range, value: s.count }))"
+                            />
+                        </div>
+                        <div v-else class="h-64">
+                            <D3DonutChart
                                 :data="(scoreDistribution ?? []).map((s) => ({ label: s.range, value: s.count }))"
                             />
                         </div>
@@ -334,17 +453,42 @@ onUnmounted(() => {
             </Card>
 
             <!-- Mentions vs Score Scatter -->
-            <Card>
-                <CardHeader>
-                    <CardTitle>Mentions vs Score</CardTitle>
-                    <CardDescription>Relationship between AI mention count and hype score</CardDescription>
+            <Card class="lg:col-span-2">
+                <CardHeader class="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Mentions vs Score</CardTitle>
+                        <CardDescription>Relationship between AI mention count and hype score</CardDescription>
+                    </div>
+                    <div class="flex gap-1 rounded-lg border p-0.5">
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="scatterView === 'scatter' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="scatterView = 'scatter'"
+                        >
+                            <ChartScatter class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="scatterView === 'hexbin' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="scatterView = 'hexbin'"
+                        >
+                            <Hexagon class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="scatterView === 'bubble' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="scatterView = 'bubble'"
+                        >
+                            <Orbit class="size-4" />
+                        </button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Deferred data="mentionsVsScore">
                         <template #fallback>
-                            <Skeleton class="h-64 w-full" />
+                            <Skeleton class="h-80 w-full" />
                         </template>
-                        <div class="h-64">
+                        <div v-if="scatterView === 'scatter'" class="h-80">
                             <D3ScatterPlot
                                 :data="
                                     (mentionsVsScore ?? []).map((s) => ({
@@ -356,6 +500,32 @@ onUnmounted(() => {
                                 "
                                 x-label="AI Mentions"
                                 y-label="Hype Score"
+                            />
+                        </div>
+                        <div v-else-if="scatterView === 'hexbin'" class="h-80">
+                            <D3Hexbin
+                                :data="
+                                    (mentionsVsScore ?? []).map((s) => ({
+                                        label: s.domain,
+                                        x: s.mentions,
+                                        y: s.score,
+                                        slug: s.slug,
+                                    }))
+                                "
+                                x-label="AI Mentions"
+                                y-label="Hype Score"
+                            />
+                        </div>
+                        <div v-else class="h-80">
+                            <D3BubbleForce
+                                :data="
+                                    (mentionsVsScore ?? []).map((s) => ({
+                                        label: s.domain,
+                                        x: s.mentions,
+                                        y: s.score,
+                                        slug: s.slug,
+                                    }))
+                                "
                             />
                         </div>
                     </Deferred>
