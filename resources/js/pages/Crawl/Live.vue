@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, InfiniteScroll, router } from '@inertiajs/vue3';
 import {
-    Globe, Radio, ArrowLeft, Scan, Clock,
+    Globe, Radio, ArrowLeft, Scan, Clock, Server,
     Search, Calculator, Camera, CheckCircle, Loader2, Sparkles, Tag,
 } from 'lucide-vue-next';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
@@ -32,6 +32,7 @@ const props = defineProps<{
 
 const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
     fetching: { label: 'Fetching Homepage', icon: Globe },
+    collecting_metadata: { label: 'Collecting Metadata', icon: Server },
     detecting_category: { label: 'Detecting Category', icon: Tag },
     detecting_mentions: { label: 'Detecting AI Mentions', icon: Search },
     calculating_score: { label: 'Calculating Hype Score', icon: Calculator },
@@ -39,7 +40,7 @@ const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
     finishing: { label: 'Finishing Up', icon: Sparkles },
 };
 
-const allStepKeys = ['fetching', 'detecting_category', 'detecting_mentions', 'calculating_score', 'generating_screenshot', 'finishing'];
+const allStepKeys = ['fetching', 'collecting_metadata', 'detecting_category', 'detecting_mentions', 'calculating_score', 'generating_screenshot', 'finishing'];
 
 const initialSite = props.currentSite ?? props.lastCrawledSite;
 
