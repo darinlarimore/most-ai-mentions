@@ -118,9 +118,9 @@ const stats = [
                 <CardContent>
                     <Deferred data="hostingMap">
                         <template #fallback>
-                            <Skeleton class="h-80 w-full" />
+                            <Skeleton class="h-[28rem] w-full" />
                         </template>
-                        <div v-if="hostingMap?.length" class="h-80">
+                        <div v-if="hostingMap?.length" class="h-[28rem]">
                             <D3WorldMap
                                 :data="
                                     (hostingMap ?? []).map((s) => ({

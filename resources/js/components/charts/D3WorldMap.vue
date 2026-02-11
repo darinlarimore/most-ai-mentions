@@ -7,8 +7,15 @@ import { router } from '@inertiajs/vue3';
 import { useD3Chart } from '@/composables/useD3Chart';
 import ChartTooltip from './ChartTooltip.vue';
 
-// @ts-expect-error — world-atlas ships JSON without TS declarations
-import worldData from 'world-atlas/countries-110m.json';
+let worldDataCache: any = null;
+async function loadWorldData() {
+    if (!worldDataCache) {
+        // @ts-expect-error — world-atlas ships JSON without TS declarations
+        const mod = await import('world-atlas/countries-50m.json');
+        worldDataCache = mod.default;
+    }
+    return worldDataCache;
+}
 
 export interface MapDatum {
     domain: string;
@@ -33,10 +40,10 @@ const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, label: '', detail: '' });
 
 const { width, height, createSvg, getColor, onResize } = useD3Chart(containerRef, {
-    top: 5,
-    right: 5,
-    bottom: 5,
-    left: 5,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
 });
 
 /** Grid-based clustering: group projected points into cells of `radius` px. */
@@ -47,14 +54,15 @@ function clusterPoints(
     radius: number,
 ): Cluster[] {
     const grid = new Map<string, Cluster>();
+    // Shrink the grid cell with zoom so clusters split apart
+    const effectiveRadius = radius / transform.k;
 
     for (const d of data) {
         const raw = projection([d.longitude, d.latitude]);
         if (!raw) continue;
 
-        const [px, py] = transform.apply(raw as [number, number]);
-        const cellX = Math.floor(px / radius);
-        const cellY = Math.floor(py / radius);
+        const cellX = Math.floor(raw[0] / effectiveRadius);
+        const cellY = Math.floor(raw[1] / effectiveRadius);
         const key = `${cellX},${cellY}`;
 
         if (!grid.has(key)) {
@@ -65,7 +73,7 @@ function clusterPoints(
         cluster.totalScore += d.hypeScore;
     }
 
-    // Average position for each cluster (in untransformed coords)
+    // Average position for each cluster (in projection coords)
     for (const cluster of grid.values()) {
         let sx = 0;
         let sy = 0;
@@ -81,7 +89,7 @@ function clusterPoints(
     return [...grid.values()];
 }
 
-function draw() {
+async function draw() {
     if (!containerRef.value || !props.data?.length) return;
 
     const svg = createSvg();
@@ -92,12 +100,13 @@ function draw() {
     const dotColor = getColor('--chart-1');
     const textColor = getColor('--foreground');
 
+    const worldData = await loadWorldData();
     const topology = worldData as unknown as Topology<{ countries: GeometryCollection; land: GeometryCollection }>;
     const countries = feature(topology, topology.objects.countries);
 
     const projection = d3
         .geoNaturalEarth1()
-        .fitSize([width.value - 10, height.value - 10], countries)
+        .fitSize([width.value, height.value], countries)
         .translate([width.value / 2, height.value / 2]);
 
     const path = d3.geoPath(projection);
@@ -122,7 +131,20 @@ function draw() {
 
     const maxScore = d3.max(props.data, (d) => d.hypeScore) ?? 1;
     const radiusScale = d3.scaleSqrt().domain([0, maxScore]).range([3, 12]);
-    const clusterRadius = 40; // px grid cell size
+    const clusterRadius = 28; // px grid cell size at 1x zoom
+
+    let currentTransform = d3.zoomIdentity;
+
+    // Zoom behavior (declared early so renderClusters can reference it)
+    const zoom = d3
+        .zoom<SVGSVGElement, unknown>()
+        .scaleExtent([1, 12])
+        .on('zoom', (event) => {
+            currentTransform = event.transform;
+            g.attr('transform', event.transform.toString());
+            g.select('.countries').selectAll('path').attr('stroke-width', 0.5 / event.transform.k);
+            renderClusters(event.transform);
+        });
 
     function renderClusters(transform: d3.ZoomTransform) {
         const clusters = clusterPoints(props.data, projection, transform, clusterRadius);
@@ -142,7 +164,7 @@ function draw() {
         groups
             .filter((c) => c.points.length === 1)
             .append('circle')
-            .attr('r', (c) => radiusScale(c.points[0].hypeScore))
+            .attr('r', (c) => radiusScale(c.points[0].hypeScore) / transform.k)
             .attr('fill', dotColor)
             .attr('fill-opacity', 0.7)
             .attr('stroke', dotColor)
@@ -154,7 +176,7 @@ function draw() {
 
         multi
             .append('circle')
-            .attr('r', (c) => Math.min(24, 10 + Math.sqrt(c.points.length) * 4))
+            .attr('r', (c) => Math.min(24, 10 + Math.sqrt(c.points.length) * 4) / transform.k)
             .attr('fill', dotColor)
             .attr('fill-opacity', 0.6)
             .attr('stroke', dotColor)
@@ -166,7 +188,7 @@ function draw() {
             .attr('text-anchor', 'middle')
             .attr('dy', '0.35em')
             .attr('fill', textColor)
-            .attr('font-size', `${Math.max(9, 11 / transform.k)}px`)
+            .attr('font-size', `${Math.max(8, 11 / transform.k)}px`)
             .attr('font-weight', '600')
             .attr('pointer-events', 'none')
             .text((c) => c.points.length);
@@ -183,9 +205,7 @@ function draw() {
                     .attr('fill-opacity', 0.2);
 
                 const label =
-                    c.points.length === 1
-                        ? c.points[0].domain
-                        : `${c.points.length} sites`;
+                    c.points.length === 1 ? c.points[0].domain : `${c.points.length} sites`;
                 const detail =
                     c.points.length === 1
                         ? `Score ${c.points[0].hypeScore}`
@@ -210,25 +230,24 @@ function draw() {
                 groups.select('circle').transition().duration(200).attr('fill-opacity', (c: Cluster) => (c.points.length === 1 ? 0.7 : 0.6));
                 tooltip.value.visible = false;
             })
-            .on('click', function (_, c) {
+            .on('click', function (event, c) {
                 if (c.points.length === 1) {
                     router.visit(`/sites/${c.points[0].slug}`);
+                } else {
+                    // Zoom into the cluster
+                    event.stopPropagation();
+                    const nextK = Math.min(12, currentTransform.k * 2.5);
+                    const tx = width.value / 2 - c.x * nextK;
+                    const ty = height.value / 2 - c.y * nextK;
+                    svg.transition()
+                        .duration(500)
+                        .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(nextK));
                 }
             });
     }
 
     // Initial render
     renderClusters(d3.zoomIdentity);
-
-    // Zoom & pan
-    const zoom = d3
-        .zoom<SVGSVGElement, unknown>()
-        .scaleExtent([1, 8])
-        .on('zoom', (event) => {
-            g.attr('transform', event.transform);
-            g.select('.countries').selectAll('path').attr('stroke-width', 0.5 / event.transform.k);
-            renderClusters(event.transform);
-        });
 
     svg.call(zoom);
 }
