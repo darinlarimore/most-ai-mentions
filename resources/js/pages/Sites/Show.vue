@@ -2,7 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
     Globe, ExternalLink, ArrowLeft, Star, Clock, MessageSquare, User,
-    Server, Shield, Cpu,
+    Server, Shield, Cpu, AlertTriangle,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
 import HypeOMeter from '@/components/HypeOMeter.vue';
@@ -312,7 +312,7 @@ const formattedCreatedAt = computed(() => {
                                         <span
                                             :class="[
                                                 'rounded-full px-2 py-0.5 text-xs font-medium',
-                                                site.status === 'active'
+                                                site.status === 'completed'
                                                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                                     : 'bg-muted text-muted-foreground',
                                             ]"
@@ -320,6 +320,14 @@ const formattedCreatedAt = computed(() => {
                                             {{ site.status }}
                                         </span>
                                     </dd>
+                                </div>
+                                <div v-if="site.consecutive_failures > 0" class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 dark:border-amber-800 dark:bg-amber-950/30">
+                                    <div class="flex items-start gap-2">
+                                        <AlertTriangle class="mt-0.5 size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                                        <p class="text-xs text-amber-700 dark:text-amber-300">
+                                            Last {{ site.consecutive_failures === 1 ? 'crawl' : `${site.consecutive_failures} crawls` }} failed. Showing data from last successful crawl.
+                                        </p>
+                                    </div>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <dt class="text-sm text-muted-foreground">Times Crawled</dt>
