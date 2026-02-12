@@ -21,7 +21,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, label: '', xVal: 0, yVal: 0 });
 
-const { innerWidth, innerHeight, margin, createSvg, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
+const { innerWidth, innerHeight, margin, createSvg, drawCount, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
     top: 10,
     right: 20,
     bottom: 40,
@@ -97,6 +97,7 @@ function draw() {
     }
 
     // Points
+    const animate = drawCount.value === 1;
     const dots = g
         .selectAll('.dot')
         .data(props.data)
@@ -110,14 +111,15 @@ function draw() {
         .attr('stroke', dotColor)
         .attr('stroke-width', 1)
         .style('cursor', 'pointer')
-        .attr('r', 0);
+        .attr('r', animate ? 0 : 5);
 
-    // Animate points
-    dots.transition()
-        .duration(400)
-        .delay(() => Math.random() * 300)
-        .ease(d3.easeBackOut)
-        .attr('r', 5);
+    if (animate) {
+        dots.transition()
+            .duration(400)
+            .delay(() => Math.random() * 300)
+            .ease(d3.easeBackOut)
+            .attr('r', 5);
+    }
 
     // Interaction
     dots.on('mouseenter', function (event: MouseEvent, d) {

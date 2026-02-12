@@ -18,7 +18,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, label: '', value: 0 });
 
-const { width, height, createSvg, getChartColors, onResize, wrapUpdate } = useD3Chart(containerRef, {
+const { width, height, createSvg, drawCount, getChartColors, onResize, wrapUpdate } = useD3Chart(containerRef, {
     top: 0,
     right: 0,
     bottom: 0,
@@ -46,6 +46,9 @@ function draw() {
         value: d.value,
     }));
 
+    // Capture before async cloud layout — drawCount increments inside createSvg
+    const animateOnEnd = drawCount.value === 0;
+
     cloud()
         .size([w, h])
         .words(words as any)
@@ -59,7 +62,7 @@ function draw() {
 
             const g = svg.append('g').attr('transform', `translate(${w / 2},${h / 2})`);
 
-            g.selectAll('text')
+            const texts = g.selectAll('text')
                 .data(placed)
                 .enter()
                 .append('text')
@@ -71,11 +74,15 @@ function draw() {
                 .attr('fill', (_: any, i: number) => colors[i % colors.length])
                 .attr('transform', (d: any) => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
                 .text((d: any) => d.text)
-                .attr('opacity', 0)
-                .transition()
-                .duration(600)
-                .delay((_: any, i: number) => i * 20)
-                .attr('opacity', 1);
+                .attr('opacity', animateOnEnd ? 0 : 1);
+
+            if (animateOnEnd) {
+                texts
+                    .transition()
+                    .duration(600)
+                    .delay((_: any, i: number) => i * 20)
+                    .attr('opacity', 1);
+            }
 
             // Add tooltip interactions after transition
             g.selectAll('text')

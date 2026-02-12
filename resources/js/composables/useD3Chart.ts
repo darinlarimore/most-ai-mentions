@@ -21,6 +21,7 @@ export function useD3Chart(
     const innerWidth = ref(0);
     const innerHeight = ref(0);
     const isDark = ref(false);
+    const drawCount = ref(0);
 
     let resizeCallback: (() => void) | null = null;
     let mutationObserver: MutationObserver | null = null;
@@ -36,6 +37,8 @@ export function useD3Chart(
 
     function createSvg(): d3.Selection<SVGSVGElement, unknown, null, undefined> | null {
         if (!containerRef.value) return null;
+
+        drawCount.value++;
 
         // Reuse existing SVG element to avoid flash on data updates
         const existing = d3.select(containerRef.value).select<SVGSVGElement>('svg');
@@ -59,21 +62,12 @@ export function useD3Chart(
     }
 
     /**
-     * Wrap a draw function with a crossfade transition for use in watch callbacks.
-     * On data updates the existing chart fades out, redraws, then fades back in.
+     * Wrap a draw function for use in watch callbacks.
+     * Redraws immediately — entrance animations are skipped via drawCount.
      */
     function wrapUpdate(drawFn: () => void): () => void {
         return () => {
-            if (!containerRef.value) { drawFn(); return; }
-            const svg = d3.select(containerRef.value).select<SVGSVGElement>('svg');
-            if (svg.empty()) { drawFn(); return; }
-            svg.interrupt();
-            svg.transition().duration(150).style('opacity', '0').on('end', () => {
-                drawFn();
-                d3.select(containerRef.value!).select('svg')
-                    .style('opacity', '0')
-                    .transition().duration(250).style('opacity', '1');
-            });
+            drawFn();
         };
     }
 
@@ -155,6 +149,7 @@ export function useD3Chart(
         innerWidth,
         innerHeight,
         isDark,
+        drawCount,
         margin,
         updateDimensions,
         createSvg,

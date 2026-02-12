@@ -16,7 +16,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, label: '', value: 0 });
 
-const { innerWidth, innerHeight, margin, createSvg, getChartColors, getColor, onResize, wrapUpdate } = useD3Chart(
+const { innerWidth, innerHeight, margin, createSvg, drawCount, getChartColors, getColor, onResize, wrapUpdate } = useD3Chart(
     containerRef,
     { top: 10, right: 10, bottom: 30, left: 45 },
 );
@@ -63,6 +63,7 @@ function draw() {
         .style('font-size', '11px');
 
     // Bars
+    const animate = drawCount.value === 1;
     const bars = g
         .selectAll('.bar')
         .data(props.data)
@@ -73,16 +74,17 @@ function draw() {
         .attr('width', x.bandwidth())
         .attr('rx', 4)
         .attr('fill', (_, i) => colors[i % colors.length])
-        .attr('y', innerHeight.value)
-        .attr('height', 0);
+        .attr('y', animate ? innerHeight.value : (d) => y(d.value))
+        .attr('height', animate ? 0 : (d) => innerHeight.value - y(d.value));
 
-    // Animate from bottom
-    bars.transition()
-        .duration(500)
-        .delay((_, i) => i * 60)
-        .ease(d3.easeBackOut.overshoot(0.5))
-        .attr('y', (d) => y(d.value))
-        .attr('height', (d) => innerHeight.value - y(d.value));
+    if (animate) {
+        bars.transition()
+            .duration(500)
+            .delay((_, i) => i * 60)
+            .ease(d3.easeBackOut.overshoot(0.5))
+            .attr('y', (d) => y(d.value))
+            .attr('height', (d) => innerHeight.value - y(d.value));
+    }
 
     // Interaction
     bars.on('mouseenter', function (event: MouseEvent, d) {

@@ -16,7 +16,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, date: '', entries: [] as { key: string; value: number; color: string }[] });
 
-const { innerWidth, innerHeight, margin, createSvg, getChartColors, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
+const { innerWidth, innerHeight, margin, createSvg, drawCount, getChartColors, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
     top: 10,
     right: 10,
     bottom: 30,
@@ -87,7 +87,8 @@ function draw() {
         .attr('class', 'layer')
         .attr('fill', (d) => colorMap.get(d.key) ?? colors[0]);
 
-    layers
+    const animate = drawCount.value === 1;
+    const rects = layers
         .selectAll('rect')
         .data((d) => d)
         .enter()
@@ -95,14 +96,18 @@ function draw() {
         .attr('x', (d) => x(d.data.date) ?? 0)
         .attr('width', x.bandwidth())
         .attr('rx', 2)
-        .attr('y', innerHeight.value)
-        .attr('height', 0)
-        .transition()
-        .duration(500)
-        .delay((_, i) => i * 30)
-        .ease(d3.easeBackOut.overshoot(0.3))
-        .attr('y', (d) => y(d[1]))
-        .attr('height', (d) => Math.max(0, y(d[0]) - y(d[1])));
+        .attr('y', animate ? innerHeight.value : (d) => y(d[1]))
+        .attr('height', animate ? 0 : (d) => Math.max(0, y(d[0]) - y(d[1])));
+
+    if (animate) {
+        rects
+            .transition()
+            .duration(500)
+            .delay((_, i) => i * 30)
+            .ease(d3.easeBackOut.overshoot(0.3))
+            .attr('y', (d) => y(d[1]))
+            .attr('height', (d) => Math.max(0, y(d[0]) - y(d[1])));
+    }
 
     // Interaction — hover columns by date
     g.selectAll('.hover-rect')

@@ -21,7 +21,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, count: 0, domains: '' });
 
-const { innerWidth, innerHeight, margin, createSvg, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
+const { innerWidth, innerHeight, margin, createSvg, drawCount, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
     top: 10,
     right: 20,
     bottom: 40,
@@ -119,6 +119,7 @@ function draw() {
         pointToData.set(`${x(d.x)},${y(d.y)}`, d);
     });
 
+    const animate = drawCount.value === 1;
     const hexagons = g
         .selectAll('.hex')
         .data(bins)
@@ -128,18 +129,19 @@ function draw() {
         .attr('transform', (d) => `translate(${d.x},${d.y})`)
         .attr('d', hexbinGenerator.hexagon())
         .attr('fill', (d) => colorScale(d.length))
-        .attr('fill-opacity', 0)
+        .attr('fill-opacity', animate ? 0 : 0.8)
         .attr('stroke', textColor)
         .attr('stroke-opacity', 0.15)
         .style('cursor', 'pointer');
 
-    // Animate
-    hexagons
-        .transition()
-        .duration(600)
-        .delay((_, i) => i * 20)
-        .ease(d3.easeQuadOut)
-        .attr('fill-opacity', 0.8);
+    if (animate) {
+        hexagons
+            .transition()
+            .duration(600)
+            .delay((_, i) => i * 20)
+            .ease(d3.easeQuadOut)
+            .attr('fill-opacity', 0.8);
+    }
 
     // Interaction
     hexagons

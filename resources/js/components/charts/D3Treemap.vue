@@ -16,7 +16,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, label: '', value: 0 });
 
-const { width, height, createSvg, getChartColors, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
+const { width, height, createSvg, drawCount, getChartColors, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
     top: 0,
     right: 0,
     bottom: 0,
@@ -63,21 +63,23 @@ function draw() {
         .attr('height', (d: any) => d.y1 - d.y0);
 
     // Rectangles
+    const animate = drawCount.value === 1;
     const rects = leaves
         .append('rect')
         .attr('width', (d: any) => d.x1 - d.x0)
         .attr('height', (d: any) => d.y1 - d.y0)
         .attr('fill', (_, i) => colors[i % colors.length])
-        .attr('fill-opacity', 0)
+        .attr('fill-opacity', animate ? 0 : 0.85)
         .attr('rx', 3);
 
-    // Animate fade in with stagger
-    rects
-        .transition()
-        .duration(500)
-        .delay((_, i) => i * 20)
-        .ease(d3.easeQuadOut)
-        .attr('fill-opacity', 0.85);
+    if (animate) {
+        rects
+            .transition()
+            .duration(500)
+            .delay((_, i) => i * 20)
+            .ease(d3.easeQuadOut)
+            .attr('fill-opacity', 0.85);
+    }
 
     // Labels - only show if cell is large enough
     leaves

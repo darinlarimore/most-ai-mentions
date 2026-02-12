@@ -17,7 +17,7 @@ const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, label: '', value: 0, pct: '' });
 const legendItems = ref<{ label: string; color: string; value: number }[]>([]);
 
-const { width, height, createSvg, getChartColors, onResize, wrapUpdate } = useD3Chart(containerRef, {
+const { width, height, createSvg, drawCount, getChartColors, onResize, wrapUpdate } = useD3Chart(containerRef, {
     top: 10,
     right: 10,
     bottom: 10,
@@ -52,6 +52,7 @@ function draw() {
         .outerRadius(radius + 6)
         .cornerRadius(3);
 
+    const animate = drawCount.value === 1;
     const arcs = g
         .selectAll('.arc')
         .data(pie(props.data))
@@ -61,14 +62,17 @@ function draw() {
         .attr('fill', (_, i) => colors[i % colors.length])
         .style('cursor', 'pointer');
 
-    // Animate arcs from 0 angle
-    arcs.transition()
-        .duration(800)
-        .ease(d3.easeQuadOut)
-        .attrTween('d', function (d) {
-            const interpolate = d3.interpolate({ startAngle: d.startAngle, endAngle: d.startAngle }, d);
-            return (t: number) => arc(interpolate(t)) ?? '';
-        });
+    if (animate) {
+        arcs.transition()
+            .duration(800)
+            .ease(d3.easeQuadOut)
+            .attrTween('d', function (d) {
+                const interpolate = d3.interpolate({ startAngle: d.startAngle, endAngle: d.startAngle }, d);
+                return (t: number) => arc(interpolate(t)) ?? '';
+            });
+    } else {
+        arcs.attr('d', arc);
+    }
 
     // Interaction
     arcs.on('mouseenter', function (event: MouseEvent, d) {

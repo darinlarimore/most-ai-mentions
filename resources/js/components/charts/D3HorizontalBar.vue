@@ -17,7 +17,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, label: '', value: 0 });
 
-const { innerWidth, innerHeight, margin, createSvg, getColor, resolveColor, onResize, wrapUpdate } = useD3Chart(
+const { innerWidth, innerHeight, margin, createSvg, drawCount, getColor, resolveColor, onResize, wrapUpdate } = useD3Chart(
     containerRef,
     { top: 10, right: 20, bottom: 20, left: 120 },
 );
@@ -64,6 +64,7 @@ function draw() {
         .style('font-size', '11px');
 
     // Bars
+    const animate = drawCount.value === 1;
     const bars = g
         .selectAll('.bar')
         .data(props.data)
@@ -75,14 +76,15 @@ function draw() {
         .attr('x', 0)
         .attr('rx', 4)
         .attr('fill', barColor)
-        .attr('width', 0);
+        .attr('width', animate ? 0 : (d) => x(d.value));
 
-    // Animate bars
-    bars.transition()
-        .duration(600)
-        .delay((_, i) => i * 30)
-        .ease(d3.easeBackOut.overshoot(0.6))
-        .attr('width', (d) => x(d.value));
+    if (animate) {
+        bars.transition()
+            .duration(600)
+            .delay((_, i) => i * 30)
+            .ease(d3.easeBackOut.overshoot(0.6))
+            .attr('width', (d) => x(d.value));
+    }
 
     // Interaction
     bars.on('mouseenter', function (event: MouseEvent, d) {

@@ -16,7 +16,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, label: '', value: 0 });
 
-const { width, height, createSvg, getChartColors, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
+const { width, height, createSvg, drawCount, getChartColors, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
     top: 0,
     right: 0,
     bottom: 0,
@@ -106,6 +106,8 @@ function draw() {
 
     const g = svg.append('g').attr('transform', `translate(${width.value / 2},${height.value / 2})`);
 
+    const animate = drawCount.value === 1;
+
     // Draw links
     const links = g
         .append('g')
@@ -116,7 +118,7 @@ function draw() {
         .attr('fill', 'none')
         .attr('stroke', linkColor)
         .attr('stroke-width', 1.5)
-        .attr('stroke-opacity', 0)
+        .attr('stroke-opacity', animate ? 0 : 0.5)
         .attr(
             'd',
             d3
@@ -125,8 +127,9 @@ function draw() {
                 .radius((d) => d.y),
         );
 
-    // Animate links
-    links.transition().duration(600).ease(d3.easeQuadOut).attr('stroke-opacity', 0.5);
+    if (animate) {
+        links.transition().duration(600).ease(d3.easeQuadOut).attr('stroke-opacity', 0.5);
+    }
 
     // Draw nodes
     const nodes = g
@@ -151,19 +154,20 @@ function draw() {
             const category = TECH_CATEGORIES[d.data.label] ?? 'Other';
             return colorMap.get(category) ?? textColor;
         })
-        .attr('fill-opacity', 0)
+        .attr('fill-opacity', animate ? 0 : 0.85)
         .attr('stroke', 'none');
 
-    // Animate nodes
-    circles
-        .transition()
-        .duration(400)
-        .delay((_, i) => i * 15)
-        .ease(d3.easeBackOut)
-        .attr('fill-opacity', 0.85);
+    if (animate) {
+        circles
+            .transition()
+            .duration(400)
+            .delay((_, i) => i * 15)
+            .ease(d3.easeBackOut)
+            .attr('fill-opacity', 0.85);
+    }
 
     // Node labels
-    nodes
+    const labels = nodes
         .append('text')
         .attr('dy', '0.32em')
         .attr('x', (d: any) => (d.x < Math.PI === !d.children ? 8 : -8))
@@ -172,12 +176,16 @@ function draw() {
         .attr('fill', textColor)
         .attr('font-size', (d: any) => (d.depth <= 1 ? '12px' : '11px'))
         .attr('font-weight', (d: any) => (d.depth <= 1 ? '600' : '400'))
-        .attr('opacity', 0)
-        .text((d: any) => d.data.label)
-        .transition()
-        .duration(400)
-        .delay((_, i) => 300 + i * 10)
-        .attr('opacity', 1);
+        .attr('opacity', animate ? 0 : 1)
+        .text((d: any) => d.data.label);
+
+    if (animate) {
+        labels
+            .transition()
+            .duration(400)
+            .delay((_, i) => 300 + i * 10)
+            .attr('opacity', 1);
+    }
 
     // Interaction on leaf nodes
     nodes
