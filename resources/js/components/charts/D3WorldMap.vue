@@ -43,6 +43,7 @@ let zoomBehavior: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null;
 let svgSelection: d3.Selection<SVGSVGElement, unknown, null, undefined> | null = null;
 let storedProjection: d3.GeoProjection | null = null;
 let clusterLayerSelection: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
+let pingLayerSelection: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
 let currentTransform = d3.zoomIdentity;
 let liveData: MapDatum[] = [];
 let renderClustersRef: ((transform: d3.ZoomTransform) => void) | null = null;
@@ -256,6 +257,10 @@ async function draw() {
     // Cluster layer
     const clusterLayer = g.append('g').attr('class', 'clusters');
     clusterLayerSelection = clusterLayer;
+
+    // Ping animation layer (above clusters so pings aren't wiped by re-clustering)
+    const pingLayer = g.append('g').attr('class', 'pings');
+    pingLayerSelection = pingLayer;
     storedProjection = projection;
     liveData = [...props.data];
 
@@ -453,8 +458,8 @@ watch(() => props.data, draw, { deep: true });
 
 function addPoint(point: MapDatum) {
     console.log('[D3WorldMap] addPoint called', point);
-    console.log('[D3WorldMap] storedProjection:', !!storedProjection, 'clusterLayer:', !!clusterLayerSelection);
-    if (!storedProjection || !clusterLayerSelection) return;
+    console.log('[D3WorldMap] storedProjection:', !!storedProjection, 'pingLayer:', !!pingLayerSelection);
+    if (!storedProjection || !pingLayerSelection) return;
 
     const projected = storedProjection([point.longitude, point.latitude]);
     console.log('[D3WorldMap] projected coordinates:', projected);
@@ -464,8 +469,8 @@ function addPoint(point: MapDatum) {
     const dotColor = getColor('--chart-1');
     const k = currentTransform.k;
 
-    // Ping animation group
-    const ping = clusterLayerSelection.append('g').attr('transform', `translate(${px},${py})`);
+    // Ping animation group (on separate layer so renderClusters doesn't wipe it)
+    const ping = pingLayerSelection.append('g').attr('transform', `translate(${px},${py})`);
 
     // Expanding rings
     for (let i = 0; i < 3; i++) {
