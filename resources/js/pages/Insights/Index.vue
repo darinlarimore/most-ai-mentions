@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Deferred } from '@inertiajs/vue3';
+import { Deferred, WhenVisible } from '@inertiajs/vue3';
 import {
     BarChart3,
     ChartPie,
@@ -11,7 +11,7 @@ import {
     LayoutGrid,
     Sun,
 } from 'lucide-vue-next';
-import { reactive, ref, onMounted, onUnmounted } from 'vue';
+import { reactive, ref, onMounted, onUnmounted, nextTick } from 'vue';
 import D3CirclePacking from '@/components/charts/D3CirclePacking.vue';
 import D3DonutChart from '@/components/charts/D3DonutChart.vue';
 import D3ForceGraph from '@/components/charts/D3ForceGraph.vue';
@@ -98,6 +98,8 @@ const scatterView = ref<'scatter' | 'hexbin'>('scatter');
 const forceGraphRef = ref<InstanceType<typeof D3ForceGraph> | null>(null);
 const networkData = ref<NetworkData | null>(null);
 const networkLoading = ref(true);
+const networkCardRef = ref<InstanceType<typeof Card> | null>(null);
+let networkObserver: IntersectionObserver | null = null;
 
 const liveStats = reactive({ ...props.pipelineStats });
 
@@ -144,7 +146,22 @@ onMounted(() => {
     queueChannel = window.Echo.channel('crawl-queue');
     queueChannel.listen('.QueueUpdated', refreshStats);
 
-    loadNetworkData();
+    nextTick(() => {
+        const el = networkCardRef.value?.$el as HTMLElement | undefined;
+        if (el) {
+            networkObserver = new IntersectionObserver(
+                ([entry]) => {
+                    if (entry.isIntersecting) {
+                        loadNetworkData();
+                        networkObserver?.disconnect();
+                        networkObserver = null;
+                    }
+                },
+                { rootMargin: '300px' },
+            );
+            networkObserver.observe(el);
+        }
+    });
 });
 
 onUnmounted(() => {
@@ -154,6 +171,7 @@ onUnmounted(() => {
     if (queueChannel) {
         window.Echo.leave('crawl-queue');
     }
+    networkObserver?.disconnect();
 });
 </script>
 
@@ -210,23 +228,6 @@ onUnmounted(() => {
                 </CardContent>
             </Card>
 
-            <!-- Sites ↔ AI Terms Network -->
-            <Card class="lg:col-span-2">
-                <CardHeader>
-                    <CardTitle>Sites &amp; AI Terms Network</CardTitle>
-                    <CardDescription>Force-directed graph of sites linked to the AI terms they mention</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Skeleton v-if="networkLoading" class="h-[32rem] w-full" />
-                    <div v-else-if="networkData?.nodes?.length" class="h-[32rem]">
-                        <D3ForceGraph ref="forceGraphRef" :data="networkData" />
-                    </div>
-                    <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
-                        No network data yet. Data populates after sites are crawled.
-                    </div>
-                </CardContent>
-            </Card>
-
             <!-- AI Term Frequency -->
             <Card class="lg:col-span-2">
                 <CardHeader class="flex flex-row items-center justify-between">
@@ -252,7 +253,7 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Deferred data="termFrequency">
+                    <WhenVisible data="termFrequency" :buffer="300">
                         <template #fallback>
                             <Skeleton class="h-96 w-full rounded-lg" />
                         </template>
@@ -266,7 +267,7 @@ onUnmounted(() => {
                                 :data="(termFrequency ?? []).map((t) => ({ label: t.term, value: t.count }))"
                             />
                         </div>
-                    </Deferred>
+                    </WhenVisible>
                 </CardContent>
             </Card>
 
@@ -309,7 +310,7 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Deferred data="techStackDistribution">
+                    <WhenVisible data="techStackDistribution" :buffer="300">
                         <template #fallback>
                             <Skeleton class="h-96 w-full rounded-lg" />
                         </template>
@@ -342,7 +343,7 @@ onUnmounted(() => {
                         <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
                             No tech stack data yet. Data populates after the next crawl cycle.
                         </div>
-                    </Deferred>
+                    </WhenVisible>
                 </CardContent>
             </Card>
 
@@ -385,7 +386,7 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Deferred data="categoryBreakdown">
+                    <WhenVisible data="categoryBreakdown" :buffer="300">
                         <template #fallback>
                             <Skeleton class="mx-auto h-96 w-96 rounded-full" />
                         </template>
@@ -414,7 +415,7 @@ onUnmounted(() => {
                         <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
                             No category data yet.
                         </div>
-                    </Deferred>
+                    </WhenVisible>
                 </CardContent>
             </Card>
 
@@ -443,7 +444,7 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Deferred data="scoreDistribution">
+                    <WhenVisible data="scoreDistribution" :buffer="300">
                         <template #fallback>
                             <Skeleton class="h-64 w-full" />
                         </template>
@@ -457,7 +458,7 @@ onUnmounted(() => {
                                 :data="(scoreDistribution ?? []).map((s) => ({ label: s.range, value: s.count }))"
                             />
                         </div>
-                    </Deferred>
+                    </WhenVisible>
                 </CardContent>
             </Card>
 
@@ -486,7 +487,7 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Deferred data="mentionsVsScore">
+                    <WhenVisible data="mentionsVsScore" :buffer="300">
                         <template #fallback>
                             <Skeleton class="h-80 w-full" />
                         </template>
@@ -518,7 +519,7 @@ onUnmounted(() => {
                                 y-label="Hype Score"
                             />
                         </div>
-                    </Deferred>
+                    </WhenVisible>
                 </CardContent>
             </Card>
 
@@ -529,7 +530,7 @@ onUnmounted(() => {
                     <CardDescription>Individual crawl durations in real-time</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Deferred data="crawlerSpeed">
+                    <WhenVisible data="crawlerSpeed" :buffer="300">
                         <template #fallback>
                             <Skeleton class="h-40 w-full" />
                         </template>
@@ -539,7 +540,24 @@ onUnmounted(() => {
                         <div v-else class="flex h-40 items-center justify-center text-muted-foreground">
                             No crawl duration data yet. Data populates after sites are crawled.
                         </div>
-                    </Deferred>
+                    </WhenVisible>
+                </CardContent>
+            </Card>
+
+            <!-- Sites ↔ AI Terms Network -->
+            <Card ref="networkCardRef" class="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle>Sites &amp; AI Terms Network</CardTitle>
+                    <CardDescription>Force-directed graph of sites linked to the AI terms they mention</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Skeleton v-if="networkLoading" class="h-[32rem] w-full" />
+                    <div v-else-if="networkData?.nodes?.length" class="h-[32rem]">
+                        <D3ForceGraph ref="forceGraphRef" :data="networkData" />
+                    </div>
+                    <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
+                        No network data yet. Data populates after sites are crawled.
+                    </div>
                 </CardContent>
             </Card>
         </div>

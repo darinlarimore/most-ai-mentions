@@ -29,7 +29,7 @@ it('includes pipeline stats', function () {
     );
 });
 
-it('defers term frequency data', function () {
+it('loads term frequency data via partial reload', function () {
     CrawlResult::factory()->create([
         'mention_details' => [
             ['text' => 'AI', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test'],
@@ -42,7 +42,7 @@ it('defers term frequency data', function () {
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
         ->missing('termFrequency')
-        ->loadDeferredProps(fn ($reload) => $reload
+        ->reloadOnly('termFrequency', fn ($reload) => $reload
             ->has('termFrequency', 2)
             ->where('termFrequency.0.term', 'ai')
             ->where('termFrequency.0.count', 1)
@@ -50,7 +50,7 @@ it('defers term frequency data', function () {
     );
 });
 
-it('defers metadata group props', function () {
+it('loads category and score data via partial reload', function () {
     Site::factory()->count(2)->create([
         'category' => 'ai_ml',
         'hype_score' => 150,
@@ -63,14 +63,14 @@ it('defers metadata group props', function () {
     $response->assertInertia(fn ($page) => $page
         ->missing('categoryBreakdown')
         ->missing('scoreDistribution')
-        ->loadDeferredProps(['metadata'], fn ($reload) => $reload
+        ->reloadOnly(['categoryBreakdown', 'scoreDistribution'], fn ($reload) => $reload
             ->has('categoryBreakdown')
             ->has('scoreDistribution', 6)
         )
     );
 });
 
-it('defers scatter data', function () {
+it('loads scatter data via partial reload', function () {
     $site = Site::factory()->create(['last_crawled_at' => now()]);
     CrawlResult::factory()->create(['site_id' => $site->id]);
 
@@ -79,7 +79,7 @@ it('defers scatter data', function () {
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
         ->missing('mentionsVsScore')
-        ->loadDeferredProps(['scatter'], fn ($reload) => $reload
+        ->reloadOnly('mentionsVsScore', fn ($reload) => $reload
             ->has('mentionsVsScore', 1)
             ->where('mentionsVsScore.0.domain', $site->domain)
         )
@@ -182,7 +182,7 @@ it('returns network graph data', function () {
     expect($links)->toHaveCount(2);
 });
 
-it('defers crawler speed data with individual durations', function () {
+it('loads crawler speed data via partial reload', function () {
     $site = Site::factory()->create(['last_crawled_at' => now()]);
     CrawlResult::factory()->count(3)->create([
         'site_id' => $site->id,
@@ -195,7 +195,7 @@ it('defers crawler speed data with individual durations', function () {
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
         ->missing('crawlerSpeed')
-        ->loadDeferredProps(['timeline'], fn ($reload) => $reload
+        ->reloadOnly('crawlerSpeed', fn ($reload) => $reload
             ->has('crawlerSpeed', 3)
             ->where('crawlerSpeed.0.duration_ms', 5000)
             ->has('crawlerSpeed.0.timestamp')

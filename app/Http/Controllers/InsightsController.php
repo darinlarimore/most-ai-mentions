@@ -15,13 +15,13 @@ class InsightsController extends Controller
     {
         return Inertia::render('Insights/Index', [
             'pipelineStats' => $this->getPipelineStats(),
-            'termFrequency' => Inertia::defer(fn () => $this->getTermFrequency()),
-            'techStackDistribution' => Inertia::defer(fn () => $this->getTechStackDistribution()),
-            'categoryBreakdown' => Inertia::defer(fn () => $this->getCategoryBreakdown(), 'metadata'),
-            'scoreDistribution' => Inertia::defer(fn () => $this->getScoreDistribution(), 'metadata'),
-            'mentionsVsScore' => Inertia::defer(fn () => $this->getMentionsVsScore(), 'scatter'),
             'hostingMap' => Inertia::defer(fn () => $this->getHostingMapData(), 'map'),
-            'crawlerSpeed' => Inertia::defer(fn () => $this->getCrawlerSpeed(), 'timeline'),
+            'termFrequency' => Inertia::optional(fn () => $this->getTermFrequency()),
+            'techStackDistribution' => Inertia::optional(fn () => $this->getTechStackDistribution()),
+            'categoryBreakdown' => Inertia::optional(fn () => $this->getCategoryBreakdown()),
+            'scoreDistribution' => Inertia::optional(fn () => $this->getScoreDistribution()),
+            'mentionsVsScore' => Inertia::optional(fn () => $this->getMentionsVsScore()),
+            'crawlerSpeed' => Inertia::optional(fn () => $this->getCrawlerSpeed()),
         ]);
     }
 
