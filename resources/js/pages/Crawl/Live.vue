@@ -67,6 +67,12 @@ const completedResult = ref<{ hype_score: number; ai_mention_count: number } | n
 );
 const isLive = computed(() => activeSite.value && !completedResult.value);
 
+const orderedCompletedSteps = computed(() =>
+    [...completedSteps.value].sort(
+        (a, b) => allStepKeys.indexOf(a.key) - allStepKeys.indexOf(b.key),
+    ),
+);
+
 const pendingSteps = computed(() => {
     const completedKeys = new Set(completedSteps.value.map(s => s.key));
     const currentKey = currentStep.value?.key;
@@ -231,7 +237,7 @@ onUnmounted(() => {
                     <div class="flex flex-col gap-1.5">
                         <!-- Completed steps -->
                         <div
-                            v-for="step in completedSteps"
+                            v-for="step in orderedCompletedSteps"
                             :key="step.key"
                             class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm"
                         >
