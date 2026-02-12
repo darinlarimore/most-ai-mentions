@@ -197,7 +197,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'glow_effect_count' => $observer->getGlowEffectCount(),
             'rainbow_border_count' => $observer->getRainbowBorderCount(),
             'redirect_chain' => $httpMetadata['redirect_chain'] ?? null,
-            'final_url' => $httpMetadata['final_url'] ?? null,
+            'final_url' => mb_substr($httpMetadata['final_url'] ?? '', 0, 2048) ?: null,
             'response_time_ms' => $httpMetadata['response_time_ms'] ?? null,
             'html_size_bytes' => $html ? strlen($html) : null,
             'detected_tech_stack' => $techStack ?: null,
