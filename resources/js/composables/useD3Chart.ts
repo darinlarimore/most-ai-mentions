@@ -1,6 +1,6 @@
-import { ref, onMounted, onBeforeUnmount, type Ref } from 'vue';
 import { useResizeObserver } from '@vueuse/core';
 import * as d3 from 'd3';
+import { ref, onMounted, onBeforeUnmount, type Ref } from 'vue';
 
 export interface ChartMargin {
     top: number;
@@ -37,8 +37,14 @@ export function useD3Chart(
     function createSvg(): d3.Selection<SVGSVGElement, unknown, null, undefined> | null {
         if (!containerRef.value) return null;
 
-        // Clear existing SVG
-        d3.select(containerRef.value).select('svg').remove();
+        // Reuse existing SVG element to avoid flash on data updates
+        const existing = d3.select(containerRef.value).select<SVGSVGElement>('svg');
+        if (!existing.empty()) {
+            existing.attr('viewBox', `0 0 ${width.value} ${height.value}`);
+            existing.selectAll('*').remove();
+            svgRef.value = existing.node();
+            return existing as d3.Selection<SVGSVGElement, unknown, null, undefined>;
+        }
 
         const svg = d3
             .select(containerRef.value)
@@ -50,6 +56,25 @@ export function useD3Chart(
 
         svgRef.value = svg.node();
         return svg as d3.Selection<SVGSVGElement, unknown, null, undefined>;
+    }
+
+    /**
+     * Wrap a draw function with a crossfade transition for use in watch callbacks.
+     * On data updates the existing chart fades out, redraws, then fades back in.
+     */
+    function wrapUpdate(drawFn: () => void): () => void {
+        return () => {
+            if (!containerRef.value) { drawFn(); return; }
+            const svg = d3.select(containerRef.value).select<SVGSVGElement>('svg');
+            if (svg.empty()) { drawFn(); return; }
+            svg.interrupt();
+            svg.transition().duration(150).style('opacity', '0').on('end', () => {
+                drawFn();
+                d3.select(containerRef.value!).select('svg')
+                    .style('opacity', '0')
+                    .transition().duration(250).style('opacity', '1');
+            });
+        };
     }
 
     /** Convert any CSS color value to hex using a canvas context. */
@@ -137,5 +162,6 @@ export function useD3Chart(
         getColor,
         resolveColor,
         onResize,
+        wrapUpdate,
     };
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
 import * as d3 from 'd3';
+import { ref, onMounted, watch } from 'vue';
 import { useD3Chart } from '@/composables/useD3Chart';
 import ChartTooltip from './ChartTooltip.vue';
 
@@ -16,7 +16,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, date: '', entries: [] as { key: string; value: number; color: string }[] });
 
-const { innerWidth, innerHeight, margin, createSvg, getChartColors, getColor, onResize } = useD3Chart(containerRef, {
+const { innerWidth, innerHeight, margin, createSvg, getChartColors, getColor, onResize, wrapUpdate } = useD3Chart(containerRef, {
     top: 10,
     right: 10,
     bottom: 30,
@@ -133,7 +133,7 @@ function draw() {
 
 onResize(draw);
 onMounted(draw);
-watch(() => props.data, draw, { deep: true });
+watch(() => props.data, wrapUpdate(draw), { deep: true });
 </script>
 
 <template>

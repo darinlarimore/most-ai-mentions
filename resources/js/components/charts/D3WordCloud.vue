@@ -18,7 +18,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, label: '', value: 0 });
 
-const { width, height, createSvg, getChartColors, onResize } = useD3Chart(containerRef, {
+const { width, height, createSvg, getChartColors, onResize, wrapUpdate } = useD3Chart(containerRef, {
     top: 0,
     right: 0,
     bottom: 0,
@@ -104,7 +104,7 @@ function draw() {
 
 onResize(draw);
 onMounted(draw);
-watch(() => props.data, draw, { deep: true });
+watch(() => props.data, wrapUpdate(draw), { deep: true });
 </script>
 
 <template>
