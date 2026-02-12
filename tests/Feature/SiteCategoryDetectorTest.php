@@ -78,6 +78,12 @@ it('requires minimum threshold of matches', function () {
     expect($this->detector->detect($html))->toBe(SiteCategory::Other);
 });
 
+it('detects blog from meta description', function () {
+    $html = '<html><head><meta name="description" content="Read our latest blog post about AI. Browse archives and recent posts with comments."></head><body></body></html>';
+
+    expect($this->detector->detect($html))->toBe(SiteCategory::Blog);
+});
+
 it('handles reversed meta attribute order', function () {
     $html = '<html><head><meta content="A healthcare platform for clinical care" name="description"></head><body></body></html>';
 

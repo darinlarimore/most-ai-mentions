@@ -14,7 +14,7 @@ const categoryLabels: Record<string, string> = {
     marketing: 'Marketing', company: 'Company', tech: 'Tech', software: 'Software',
     saas: 'SaaS', agency: 'Agency', startup: 'Startup', enterprise: 'Enterprise',
     consulting: 'Consulting', ecommerce: 'E-commerce', finance: 'Finance',
-    healthcare: 'Healthcare', education: 'Education', media: 'Media', other: 'Other',
+    healthcare: 'Healthcare', education: 'Education', media: 'Media', blog: 'Blog', other: 'Other',
 };
 
 const categoryLabel = computed(() => {

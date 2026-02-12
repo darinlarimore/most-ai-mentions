@@ -18,6 +18,7 @@ enum SiteCategory: string
     case Healthcare = 'healthcare';
     case Education = 'education';
     case Media = 'media';
+    case Blog = 'blog';
     case Other = 'other';
 
     public function label(): string
@@ -37,6 +38,7 @@ enum SiteCategory: string
             self::Healthcare => 'Healthcare',
             self::Education => 'Education',
             self::Media => 'Media',
+            self::Blog => 'Blog',
             self::Other => 'Other',
         };
     }

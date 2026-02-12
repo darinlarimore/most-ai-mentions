@@ -82,6 +82,11 @@ class SiteCategoryDetector
             'streaming', 'video platform', 'editorial', 'newsletter platform',
             'media company', 'broadcast', 'press', 'newsroom',
         ],
+        'blog' => [
+            'blog', 'blog post', 'article', 'author', 'published on',
+            'read more', 'tagged', 'comments', 'recent posts', 'archives',
+            'blogroll', 'rss feed',
+        ],
         'company' => [
             'about us', 'our team', 'our mission', 'corporate', 'headquarters',
             'founded in', 'our values', 'careers page', 'join our team',
