@@ -76,15 +76,17 @@ class ScreenshotService
     {
         $process->wait();
 
-        if (! $process->isSuccessful()) {
-            throw new \RuntimeException('Browser process failed: '.$process->getErrorOutput());
-        }
-
+        // Parse stdout JSON first — browser.cjs always writes JSON output,
+        // even on failure (with an "exception" field), then exits non-zero.
         $rawOutput = rtrim($process->getOutput());
         $data = json_decode($rawOutput, true);
 
         if (isset($data['exception']) && $data['exception'] !== '') {
-            throw new \RuntimeException('Browsershot error: '.$data['exception']);
+            throw new \RuntimeException($data['exception']);
+        }
+
+        if (! $process->isSuccessful() && $data === null) {
+            throw new \RuntimeException($process->getErrorOutput() ?: 'Browser process exited with code '.$process->getExitCode());
         }
 
         return $data['result'] ?? '';
