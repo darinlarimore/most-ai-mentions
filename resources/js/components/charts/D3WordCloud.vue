@@ -28,6 +28,16 @@ const { width, height, createSvg, drawCount, getChartColors, onResize, wrapUpdat
 /** Previous values keyed by label — used to detect growth for bounce animation. */
 let prevValues = new Map<string, number>();
 let svgGroup: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
+let incrementalUpdate = false;
+
+/** Deterministic rotation based on label so layout stays stable across updates. */
+function wordRotation(text: string): number {
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+        hash = (hash * 31 + text.charCodeAt(i)) | 0;
+    }
+    return (hash & 1) ? 90 : 0;
+}
 
 function draw() {
     if (!containerRef.value || !props.data?.length) return;
@@ -38,7 +48,11 @@ function draw() {
 
     const colors = getChartColors(Math.min(props.data.length, 8));
     const maxVal = d3.max(props.data, (d) => d.value) ?? 1;
-    const isFirstDraw = drawCount.value === 0;
+    const shouldAnimate = drawCount.value === 0;
+    const isIncremental = incrementalUpdate && svgGroup?.node()?.isConnected;
+
+    // Reset flag — consumed by this draw call
+    incrementalUpdate = false;
 
     const fontScale = d3
         .scaleSqrt()
@@ -55,29 +69,22 @@ function draw() {
         .size([w, h])
         .words(words as any)
         .padding(3)
-        .rotate((d: any) => {
-            // Deterministic rotation based on label so layout stays stable across updates
-            let hash = 0;
-            for (let i = 0; i < (d.text?.length ?? 0); i++) {
-                hash = (hash * 31 + d.text.charCodeAt(i)) | 0;
-            }
-            return (hash & 1) ? 90 : 0;
-        })
+        .rotate((d: any) => wordRotation(d.text ?? ''))
         .font('system-ui, sans-serif')
         .fontSize((d: any) => d.size)
         .on('end', (placed: any[]) => {
-            if (isFirstDraw || !svgGroup) {
-                // Full draw — create fresh SVG
+            if (isIncremental && svgGroup?.node()?.isConnected) {
+                // Update viewBox and center for safety (dimensions may have shifted)
+                d3.select(containerRef.value!).select('svg').attr('viewBox', `0 0 ${w} ${h}`);
+                svgGroup.attr('transform', `translate(${w / 2},${h / 2})`);
+                renderUpdate(placed, colors);
+            } else {
                 const svg = createSvg();
                 if (!svg) return;
                 svgGroup = svg.append('g').attr('transform', `translate(${w / 2},${h / 2})`);
-                renderFresh(placed, colors, isFirstDraw);
-            } else {
-                // Incremental update — transition existing words
-                renderUpdate(placed, colors);
+                renderFresh(placed, colors, shouldAnimate);
             }
 
-            // Store current values for next comparison
             prevValues = new Map(placed.map((d: any) => [d.text, d.value]));
         })
         .start();
@@ -193,9 +200,21 @@ function attachTooltip() {
         });
 }
 
-onResize(draw);
-onMounted(draw);
-watch(() => props.data, wrapUpdate(draw), { deep: true });
+/** Full redraw — used for mount and resize. */
+function fullDraw() {
+    incrementalUpdate = false;
+    draw();
+}
+
+/** Incremental update — used for data changes, animates word transitions. */
+function dataUpdate() {
+    incrementalUpdate = true;
+    draw();
+}
+
+onResize(fullDraw);
+onMounted(fullDraw);
+watch(() => props.data, wrapUpdate(dataUpdate), { deep: true });
 </script>
 
 <template>
