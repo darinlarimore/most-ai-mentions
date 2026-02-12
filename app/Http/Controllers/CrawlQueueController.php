@@ -22,9 +22,6 @@ class CrawlQueueController extends Controller
      */
     public function live(): Response
     {
-        // InfiniteScroll uses IntersectionObserver which is unavailable in Node SSR
-        config(['inertia.ssr.enabled' => false]);
-
         $currentSite = Site::where('status', 'crawling')->first();
 
         return Inertia::render('Crawl/Live', [

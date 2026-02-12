@@ -80,6 +80,7 @@ const completedResult = ref<{ hype_score: number; ai_mention_count: number } | n
         ? { hype_score: props.lastCrawledSite.hype_score, ai_mention_count: props.lastCrawledSite.latest_crawl_result?.ai_mention_count ?? 0 }
         : null,
 );
+const isMounted = ref(false);
 const isLive = computed(() => activeSite.value && !completedResult.value);
 
 const orderedCompletedSteps = computed(() =>
@@ -101,6 +102,7 @@ let echoQueueChannel: ReturnType<typeof window.Echo.channel> | null = null;
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
+    isMounted.value = true;
     echoActivityChannel = window.Echo.channel('crawl-activity');
 
     echoActivityChannel.listen('.CrawlStarted', (e: { site_id: number; site_url: string; site_name: string; site_slug: string; site_source: string | null }) => {
@@ -329,43 +331,45 @@ onUnmounted(() => {
                     </span>
                 </h2>
 
-                <InfiniteScroll data="queuedSites">
-                    <div class="flex flex-col gap-2">
-                        <div
-                            v-for="(site, index) in filteredQueuedSites"
-                            :key="site.id"
-                            class="flex items-center gap-4 rounded-xl border bg-card p-4"
-                        >
-                            <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-                                {{ index + 1 }}
-                            </span>
-                            <div class="relative size-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
-                                <img
-                                    v-if="site.screenshot_path"
-                                    :src="site.screenshot_path"
-                                    :alt="site.name || site.domain"
-                                    class="size-full object-cover"
-                                />
-                                <div v-else class="flex size-full items-center justify-center">
-                                    <Globe class="size-4 text-muted-foreground" />
-                                </div>
-                            </div>
-                            <div class="flex min-w-0 flex-1 flex-col">
-                                <Link
-                                    :href="`/sites/${site.slug}`"
-                                    class="truncate text-sm font-medium transition-colors hover:text-primary"
-                                >
-                                    {{ site.name || site.domain }}
-                                </Link>
-                                <span class="truncate text-xs text-muted-foreground">
-                                    {{ site.domain }}
-                                    <span v-if="formatSource(site.source)" class="text-muted-foreground/50"> &middot; {{ formatSource(site.source) }}</span>
+                <InfiniteScroll v-if="isMounted" data="queuedSites">
+                    <template #default>
+                        <div class="flex flex-col gap-2">
+                            <div
+                                v-for="(site, index) in filteredQueuedSites"
+                                :key="site.id"
+                                class="flex items-center gap-4 rounded-xl border bg-card p-4"
+                            >
+                                <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                                    {{ index + 1 }}
                                 </span>
+                                <div class="relative size-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                                    <img
+                                        v-if="site.screenshot_path"
+                                        :src="site.screenshot_path"
+                                        :alt="site.name || site.domain"
+                                        class="size-full object-cover"
+                                    />
+                                    <div v-else class="flex size-full items-center justify-center">
+                                        <Globe class="size-4 text-muted-foreground" />
+                                    </div>
+                                </div>
+                                <div class="flex min-w-0 flex-1 flex-col">
+                                    <Link
+                                        :href="`/sites/${site.slug}`"
+                                        class="truncate text-sm font-medium transition-colors hover:text-primary"
+                                    >
+                                        {{ site.name || site.domain }}
+                                    </Link>
+                                    <span class="truncate text-xs text-muted-foreground">
+                                        {{ site.domain }}
+                                        <span v-if="formatSource(site.source)" class="text-muted-foreground/50"> &middot; {{ formatSource(site.source) }}</span>
+                                    </span>
+                                </div>
+                                <HypeScoreBadge v-if="site.hype_score > 0" :score="site.hype_score" />
+                                <span v-else class="text-xs text-muted-foreground">Pending</span>
                             </div>
-                            <HypeScoreBadge v-if="site.hype_score > 0" :score="site.hype_score" />
-                            <span v-else class="text-xs text-muted-foreground">Pending</span>
                         </div>
-                    </div>
+                    </template>
 
                     <template #loading>
                         <div class="flex flex-col gap-2 pt-2">
@@ -384,6 +388,44 @@ onUnmounted(() => {
                         </div>
                     </template>
                 </InfiniteScroll>
+
+                <!-- SSR fallback: static list without InfiniteScroll -->
+                <div v-else class="flex flex-col gap-2">
+                    <div
+                        v-for="(site, index) in filteredQueuedSites"
+                        :key="site.id"
+                        class="flex items-center gap-4 rounded-xl border bg-card p-4"
+                    >
+                        <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                            {{ index + 1 }}
+                        </span>
+                        <div class="relative size-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                            <img
+                                v-if="site.screenshot_path"
+                                :src="site.screenshot_path"
+                                :alt="site.name || site.domain"
+                                class="size-full object-cover"
+                            />
+                            <div v-else class="flex size-full items-center justify-center">
+                                <Globe class="size-4 text-muted-foreground" />
+                            </div>
+                        </div>
+                        <div class="flex min-w-0 flex-1 flex-col">
+                            <Link
+                                :href="`/sites/${site.slug}`"
+                                class="truncate text-sm font-medium transition-colors hover:text-primary"
+                            >
+                                {{ site.name || site.domain }}
+                            </Link>
+                            <span class="truncate text-xs text-muted-foreground">
+                                {{ site.domain }}
+                                <span v-if="formatSource(site.source)" class="text-muted-foreground/50"> &middot; {{ formatSource(site.source) }}</span>
+                            </span>
+                        </div>
+                        <HypeScoreBadge v-if="site.hype_score > 0" :score="site.hype_score" />
+                        <span v-else class="text-xs text-muted-foreground">Pending</span>
+                    </div>
+                </div>
 
                 <div v-if="filteredQueuedSites.length === 0 && !queuedSites?.next_page_url" class="flex flex-col items-center gap-4 rounded-xl border border-dashed p-12 text-center">
                     <Clock class="size-12 text-muted-foreground" />
