@@ -93,6 +93,11 @@ class Site extends Model
         return $this->hasMany(Rating::class);
     }
 
+    public function crawlErrors(): HasMany
+    {
+        return $this->hasMany(CrawlError::class);
+    }
+
     /**
      * Scope a query to only include active sites.
      */

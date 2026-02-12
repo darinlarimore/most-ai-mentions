@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CrawlError;
 use App\Models\CrawlResult;
 use App\Models\Site;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,7 @@ class InsightsController extends Controller
             'scoreDistribution' => Inertia::optional(fn () => $this->getScoreDistribution()),
             'mentionsVsScore' => Inertia::optional(fn () => $this->getMentionsVsScore()),
             'crawlerSpeed' => Inertia::optional(fn () => $this->getCrawlerSpeed()),
+            'crawlErrors' => Inertia::optional(fn () => $this->getCrawlErrors()),
         ]);
     }
 
@@ -297,5 +299,88 @@ class InsightsController extends Controller
                 'duration_ms' => $row->crawl_duration_ms,
             ])
             ->reverse()->values()->all();
+    }
+
+    /**
+     * Crawl error analytics: by category, over time, and top failing domains.
+     *
+     * @return array{by_category: list<array{label: string, value: int}>, over_time: list<array<string, mixed>>, top_domains: list<array{label: string, value: int}>}
+     */
+    private function getCrawlErrors(): array
+    {
+        return [
+            'by_category' => $this->getCrawlErrorsByCategory(),
+            'over_time' => $this->getCrawlErrorsOverTime(),
+            'top_domains' => $this->getCrawlErrorTopDomains(),
+        ];
+    }
+
+    /**
+     * @return list<array{label: string, value: int}>
+     */
+    private function getCrawlErrorsByCategory(): array
+    {
+        return CrawlError::query()
+            ->selectRaw('category, COUNT(*) as count')
+            ->groupBy('category')
+            ->orderByDesc('count')
+            ->get()
+            ->map(fn ($row) => [
+                'label' => $row->category instanceof \App\Enums\CrawlErrorCategory
+                    ? $row->category->label()
+                    : (\App\Enums\CrawlErrorCategory::tryFrom($row->category)?->label() ?? $row->category),
+                'value' => (int) $row->count,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function getCrawlErrorsOverTime(): array
+    {
+        $since = now()->subDays(30)->startOfDay();
+
+        $rows = CrawlError::query()
+            ->where('created_at', '>=', $since)
+            ->selectRaw('DATE(created_at) as date, category, COUNT(*) as count')
+            ->groupBy('date', 'category')
+            ->orderBy('date')
+            ->get();
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $date = $row->date;
+            if (! isset($grouped[$date])) {
+                $grouped[$date] = ['date' => $date];
+            }
+            $label = $row->category instanceof \App\Enums\CrawlErrorCategory
+                ? $row->category->label()
+                : (\App\Enums\CrawlErrorCategory::tryFrom($row->category)?->label() ?? $row->category);
+            $grouped[$date][$label] = (int) $row->count;
+        }
+
+        return array_values($grouped);
+    }
+
+    /**
+     * @return list<array{label: string, value: int}>
+     */
+    private function getCrawlErrorTopDomains(): array
+    {
+        return CrawlError::query()
+            ->join('sites', 'crawl_errors.site_id', '=', 'sites.id')
+            ->selectRaw('sites.domain, COUNT(*) as count')
+            ->groupBy('sites.domain')
+            ->orderByDesc('count')
+            ->limit(15)
+            ->get()
+            ->map(fn ($row) => [
+                'label' => $row->domain,
+                'value' => (int) $row->count,
+            ])
+            ->values()
+            ->all();
     }
 }

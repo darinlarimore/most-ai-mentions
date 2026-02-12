@@ -2,11 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Enums\CrawlErrorCategory;
 use App\Events\CrawlCompleted;
 use App\Events\CrawlProgress;
 use App\Events\CrawlStarted;
 use App\Events\QueueUpdated;
 use App\Jobs\Middleware\CheckQueuePaused;
+use App\Models\CrawlError;
 use App\Models\CrawlResult;
 use App\Models\Site;
 use App\Services\HttpMetadataCollector;
@@ -100,6 +102,12 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             $html = $screenshotService->fetchHtml($this->site->url);
         } catch (\Throwable $e) {
             Log::warning("Failed to fetch HTML for {$this->site->url}: {$e->getMessage()}");
+            CrawlError::create([
+                'site_id' => $this->site->id,
+                'category' => CrawlErrorCategory::fromThrowable($e),
+                'message' => mb_substr($e->getMessage(), 0, 1000),
+                'url' => $this->site->url,
+            ]);
         }
 
         if ($html) {
@@ -175,6 +183,17 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'detected_tech_stack' => $techStack ?: null,
         ]);
 
+        // Record any page-level crawl errors collected by the observer
+        foreach ($observer->getErrors() as $observerError) {
+            CrawlError::create([
+                'site_id' => $this->site->id,
+                'crawl_result_id' => $crawlResult->id,
+                'category' => CrawlErrorCategory::fromThrowable($observerError['exception']),
+                'message' => mb_substr($observerError['exception']->getMessage(), 0, 1000),
+                'url' => $observerError['url'],
+            ]);
+        }
+
         if (! $html) {
             Log::warning("No HTML captured for {$this->site->url} — crawler may have been blocked");
         }
@@ -207,6 +226,14 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             Log::info("Crawl blocked/failed for {$this->site->url} — marking as failed attempt", [
                 'pages_crawled' => $observer->getPagesCrawled(),
                 'has_html' => $html !== null,
+            ]);
+
+            CrawlError::create([
+                'site_id' => $this->site->id,
+                'crawl_result_id' => $crawlResult->id,
+                'category' => $html === null ? CrawlErrorCategory::EmptyResponse : CrawlErrorCategory::Blocked,
+                'message' => $html === null ? 'No HTML captured' : 'No pages crawled — site may be blocking the crawler',
+                'url' => $this->site->url,
             ]);
 
             $failures = $this->site->consecutive_failures + 1;
@@ -287,6 +314,15 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         Log::error("CrawlSiteJob permanently failed for {$this->site->url}", [
             'error' => $exception?->getMessage(),
         ]);
+
+        if ($exception) {
+            CrawlError::create([
+                'site_id' => $this->site->id,
+                'category' => CrawlErrorCategory::fromThrowable($exception),
+                'message' => mb_substr($exception->getMessage(), 0, 1000),
+                'url' => $this->site->url,
+            ]);
+        }
 
         $failures = $this->site->consecutive_failures + 1;
 

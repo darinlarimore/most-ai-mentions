@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { Deferred, WhenVisible } from '@inertiajs/vue3';
 import {
+    AlertTriangle,
     BarChart3,
     ChartPie,
     ChartScatter,
     Cloud,
     GitBranch,
+    Globe,
     Hexagon,
+    Layers,
     LayoutGrid,
 } from 'lucide-vue-next';
 import { reactive, ref, onMounted, onUnmounted, nextTick } from 'vue';
@@ -18,6 +21,7 @@ import D3HorizontalBar from '@/components/charts/D3HorizontalBar.vue';
 import D3RadialTree from '@/components/charts/D3RadialTree.vue';
 import D3RealtimeHorizon from '@/components/charts/D3RealtimeHorizon.vue';
 import D3ScatterPlot from '@/components/charts/D3ScatterPlot.vue';
+import D3StackedBar from '@/components/charts/D3StackedBar.vue';
 import D3Treemap from '@/components/charts/D3Treemap.vue';
 import D3VerticalBar from '@/components/charts/D3VerticalBar.vue';
 import D3WordCloud from '@/components/charts/D3WordCloud.vue';
@@ -62,6 +66,17 @@ interface CrawlerSpeedItem {
     duration_ms: number;
 }
 
+interface LabelValue {
+    label: string;
+    value: number;
+}
+
+interface CrawlErrorsData {
+    by_category: LabelValue[];
+    over_time: Record<string, string | number>[];
+    top_domains: LabelValue[];
+}
+
 defineOptions({ layout: GuestLayout });
 
 const props = defineProps<{
@@ -77,12 +92,14 @@ const props = defineProps<{
     mentionsVsScore: ScatterItem[];
     hostingMap: HostingMapItem[];
     crawlerSpeed: CrawlerSpeedItem[];
+    crawlErrors: CrawlErrorsData;
 }>();
 
 const termView = ref<'bar' | 'treemap'>('treemap');
 const techView = ref<'bar' | 'radial' | 'donut' | 'cloud'>('cloud');
 const scoreView = ref<'bar' | 'donut'>('bar');
 const scatterView = ref<'scatter' | 'hexbin'>('scatter');
+const errorView = ref<'donut' | 'bar' | 'timeline' | 'domains'>('donut');
 
 const forceGraphRef = ref<InstanceType<typeof D3ForceGraph> | null>(null);
 const networkData = ref<NetworkData | null>(null);
@@ -435,6 +452,79 @@ onUnmounted(() => {
                                 x-label="AI Mentions"
                                 y-label="Hype Score"
                             />
+                        </div>
+                    </WhenVisible>
+                </CardContent>
+            </Card>
+
+            <!-- Crawl Errors -->
+            <Card class="lg:col-span-2">
+                <CardHeader class="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Crawl Errors</CardTitle>
+                        <CardDescription>Error patterns and failing domains from crawl pipeline</CardDescription>
+                    </div>
+                    <div class="flex gap-1 rounded-lg border p-0.5">
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="errorView === 'donut' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="errorView = 'donut'"
+                        >
+                            <ChartPie class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="errorView === 'bar' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="errorView = 'bar'"
+                        >
+                            <BarChart3 class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="errorView === 'timeline' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="errorView = 'timeline'"
+                        >
+                            <Layers class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="errorView === 'domains' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="errorView = 'domains'"
+                        >
+                            <Globe class="size-4" />
+                        </button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <WhenVisible data="crawlErrors" :buffer="300">
+                        <template #fallback>
+                            <Skeleton class="h-72 w-full rounded-lg" />
+                        </template>
+                        <template v-if="crawlErrors?.by_category?.length || crawlErrors?.over_time?.length || crawlErrors?.top_domains?.length">
+                            <div v-if="errorView === 'donut'" class="h-72">
+                                <D3DonutChart :data="crawlErrors.by_category ?? []" />
+                            </div>
+                            <div
+                                v-else-if="errorView === 'bar'"
+                                :style="{ height: Math.max(200, (crawlErrors.by_category?.length ?? 0) * 28) + 'px' }"
+                            >
+                                <D3HorizontalBar :data="crawlErrors.by_category ?? []" color="var(--chart-4)" />
+                            </div>
+                            <div v-else-if="errorView === 'timeline'" class="h-72">
+                                <D3StackedBar :data="(crawlErrors.over_time ?? []) as any" />
+                            </div>
+                            <div
+                                v-else-if="errorView === 'domains'"
+                                :style="{ height: Math.max(200, (crawlErrors.top_domains?.length ?? 0) * 28) + 'px' }"
+                            >
+                                <D3HorizontalBar :data="crawlErrors.top_domains ?? []" color="var(--chart-5)" />
+                            </div>
+                        </template>
+                        <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
+                            <div class="text-center">
+                                <AlertTriangle class="mx-auto mb-2 size-8 opacity-50" />
+                                <p>No crawl errors recorded yet.</p>
+                            </div>
                         </div>
                     </WhenVisible>
                 </CardContent>

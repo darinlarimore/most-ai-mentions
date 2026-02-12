@@ -31,6 +31,9 @@ class AiMentionCrawlObserver extends CrawlObserver
     /** @var array<string, int> */
     private array $styleSummary = [];
 
+    /** @var list<array{url: string, exception: \Throwable}> */
+    private array $errors = [];
+
     /**
      * Estimated font sizes for heading tags when no inline style is present.
      *
@@ -93,6 +96,19 @@ class AiMentionCrawlObserver extends CrawlObserver
         ?string $linkText = null,
     ): void {
         Log::warning("Crawl failed for {$url} on site {$this->site->url}: cURL error {$requestException->getCode()}: {$requestException->getMessage()}");
+
+        $this->errors[] = [
+            'url' => (string) $url,
+            'exception' => $requestException,
+        ];
+    }
+
+    /**
+     * @return list<array{url: string, exception: \Throwable}>
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
     }
 
     /**

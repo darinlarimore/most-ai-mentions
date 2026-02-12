@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\CrawlErrorCategory;
 use App\Events\CrawlCompleted;
+use App\Models\CrawlError;
 use App\Models\CrawlResult;
 use App\Models\Site;
 
@@ -197,6 +199,31 @@ it('loads crawler speed data via partial reload', function () {
             ->has('crawlerSpeed', 3)
             ->where('crawlerSpeed.0.duration_ms', 5000)
             ->has('crawlerSpeed.0.timestamp')
+        )
+    );
+});
+
+it('loads crawl error data via partial reload', function () {
+    $site = Site::factory()->create();
+    CrawlError::factory()->count(3)->create([
+        'site_id' => $site->id,
+        'category' => CrawlErrorCategory::Timeout,
+    ]);
+    CrawlError::factory()->count(2)->create([
+        'site_id' => $site->id,
+        'category' => CrawlErrorCategory::DnsFailure,
+    ]);
+
+    $response = $this->get('/insights');
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->missing('crawlErrors')
+        ->reloadOnly('crawlErrors', fn ($reload) => $reload
+            ->has('crawlErrors.by_category', 2)
+            ->has('crawlErrors.top_domains', 1)
+            ->where('crawlErrors.top_domains.0.label', $site->domain)
+            ->where('crawlErrors.top_domains.0.value', 5)
         )
     );
 });
