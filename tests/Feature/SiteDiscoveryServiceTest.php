@@ -212,3 +212,106 @@ it('discovers sites from devto articles', function () {
     expect($sites->pluck('domain')->toArray())->not->toContain('dev.to');
     expect($sites->pluck('source')->unique()->toArray())->toBe(['devto']);
 });
+
+it('discovers sites from reddit link posts', function () {
+    Http::fake([
+        'www.reddit.com/r/*/hot.json*' => Http::response([
+            'data' => [
+                'children' => [
+                    ['data' => ['is_self' => false, 'url' => 'https://cool-ai-startup.example.com/launch']],
+                    ['data' => ['is_self' => true, 'url' => 'https://self-post.example.com']],
+                    ['data' => ['is_self' => false, 'url' => 'https://reddit.com/r/something']],
+                    ['data' => ['is_self' => false, 'url' => 'https://ml-tool.example.com']],
+                ],
+            ],
+        ]),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromReddit();
+
+    expect($sites->pluck('domain')->toArray())->toContain('cool-ai-startup.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('ml-tool.example.com');
+    // Self posts should be skipped
+    expect($sites->pluck('domain')->toArray())->not->toContain('self-post.example.com');
+    // reddit.com is excluded
+    expect($sites->pluck('domain')->toArray())->not->toContain('reddit.com');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['reddit']);
+});
+
+it('discovers sites from lobsters stories filtered by ai keywords', function () {
+    Http::fake([
+        'lobste.rs/*' => Http::response([
+            ['title' => 'New AI Framework Released', 'url' => 'https://ai-framework.example.com'],
+            ['title' => 'Rust Performance Tips', 'url' => 'https://rust-tips.example.com'],
+            ['title' => 'LLM Benchmarking Tool', 'url' => 'https://llm-bench.example.com'],
+            ['title' => 'Cooking Recipes App', 'url' => 'https://cooking.example.com'],
+        ]),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromLobsters();
+
+    expect($sites->pluck('domain')->toArray())->toContain('ai-framework.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('llm-bench.example.com');
+    // Non-AI stories should be filtered out
+    expect($sites->pluck('domain')->toArray())->not->toContain('rust-tips.example.com');
+    expect($sites->pluck('domain')->toArray())->not->toContain('cooking.example.com');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['lobsters']);
+});
+
+it('discovers sites from wikipedia article external links', function () {
+    Http::fake([
+        'en.wikipedia.org/w/api.php?*list=search*' => Http::response([
+            'query' => [
+                'search' => [
+                    ['title' => 'Artificial intelligence'],
+                ],
+            ],
+        ]),
+        'en.wikipedia.org/w/api.php?*prop=extlinks*' => Http::response([
+            'query' => [
+                'pages' => [
+                    '12345' => [
+                        'extlinks' => [
+                            ['url' => 'https://ai-company.example.com'],
+                            ['url' => 'https://wikipedia.org/other'],
+                            ['url' => 'https://ml-platform.example.com'],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromWikipedia();
+
+    expect($sites->pluck('domain')->toArray())->toContain('ai-company.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('ml-platform.example.com');
+    // wikipedia.org is excluded
+    expect($sites->pluck('domain')->toArray())->not->toContain('wikipedia.org');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['wikipedia']);
+});
+
+it('discovers sites from lemmy link posts', function () {
+    Http::fake([
+        'lemmy.world/api/v3/post/list*' => Http::response([
+            'posts' => [
+                ['post' => ['url' => 'https://ai-news.example.com/article']],
+                ['post' => ['name' => 'Text only post']],
+                ['post' => ['url' => 'https://lemmy.world/post/123']],
+                ['post' => ['url' => 'https://new-ml-tool.example.com']],
+            ],
+        ]),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromLemmy();
+
+    expect($sites->pluck('domain')->toArray())->toContain('ai-news.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('new-ml-tool.example.com');
+    // lemmy.world is excluded
+    expect($sites->pluck('domain')->toArray())->not->toContain('lemmy.world');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['lemmy']);
+});

@@ -24,6 +24,10 @@ class DiscoverSites extends Command
             'HN Algolia Search' => fn () => $service->discoverFromHackerNewsSearch(),
             'GitHub Repos' => fn () => $service->discoverFromGitHub(),
             'Dev.to Articles' => fn () => $service->discoverFromDevTo(),
+            'Reddit' => fn () => $service->discoverFromReddit(),
+            'Lobste.rs' => fn () => $service->discoverFromLobsters(),
+            'Wikipedia Links' => fn () => $service->discoverFromWikipedia(),
+            'Lemmy' => fn () => $service->discoverFromLemmy(),
         ];
 
         $total = 0;

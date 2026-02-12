@@ -815,13 +815,39 @@ class SiteDiscoveryService
     /** @var list<string> Dev.to tags to scan for AI-related articles. */
     private const DEVTO_TAGS = ['ai', 'machinelearning', 'llm', 'gpt', 'openai'];
 
+    /** @var list<string> */
+    private const REDDIT_SUBREDDITS = [
+        'artificialintelligence', 'MachineLearning', 'LocalLLaMA',
+        'ChatGPT', 'singularity', 'StableDiffusion',
+    ];
+
+    /** @var list<string> */
+    private const LOBSTERS_ENDPOINTS = [
+        'https://lobste.rs/hottest.json',
+        'https://lobste.rs/newest.json',
+    ];
+
+    /** @var list<string> */
+    private const WIKIPEDIA_SEARCH_QUERIES = [
+        'artificial intelligence company',
+        'AI startup',
+        'machine learning platform',
+        'large language model',
+        'generative AI',
+    ];
+
+    /** @var list<string> */
+    private const LEMMY_COMMUNITIES = [
+        'artificial_intelligence', 'machinelearning', 'localllama',
+    ];
+
     /** @var list<string> Domains to skip (social media, generic, etc.) */
     private const EXCLUDED_DOMAINS = [
         'google.com', 'youtube.com', 'twitter.com', 'x.com', 'facebook.com',
         'linkedin.com', 'reddit.com', 'github.com', 'wikipedia.org',
         'news.ycombinator.com', 'g2.com', 'producthunt.com', 'amazonaws.com',
         'cloudfront.net', 'archive.org', 'web.archive.org', 'dev.to',
-        'medium.com', 'npmjs.com', 'pypi.org',
+        'medium.com', 'npmjs.com', 'pypi.org', 'lemmy.world', 'lobste.rs',
     ];
 
     /**
@@ -837,6 +863,10 @@ class SiteDiscoveryService
         $total += $this->discoverFromHackerNewsSearch()->count();
         $total += $this->discoverFromGitHub()->count();
         $total += $this->discoverFromDevTo()->count();
+        $total += $this->discoverFromReddit()->count();
+        $total += $this->discoverFromLobsters()->count();
+        $total += $this->discoverFromWikipedia()->count();
+        $total += $this->discoverFromLemmy()->count();
 
         return $total;
     }
@@ -1164,6 +1194,214 @@ class SiteDiscoveryService
         }
 
         return $this->createSitesFromUrls($urls, 'devto');
+    }
+
+    /**
+     * Discover AI-related sites from Reddit link posts.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromReddit(): Collection
+    {
+        $urls = [];
+
+        foreach (self::REDDIT_SUBREDDITS as $subreddit) {
+            try {
+                $response = Http::timeout(15)
+                    ->withHeaders(['User-Agent' => 'MostAIMentions/1.0 (site discovery bot)'])
+                    ->get("https://www.reddit.com/r/{$subreddit}/hot.json", [
+                        'limit' => 50,
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $posts = $response->json('data.children', []);
+
+                foreach ($posts as $post) {
+                    $data = $post['data'] ?? [];
+
+                    if (($data['is_self'] ?? true) === true) {
+                        continue;
+                    }
+
+                    $url = $data['url'] ?? null;
+
+                    if ($url && $this->isValidExternalUrl($url)) {
+                        $urls[] = $url;
+                    }
+                }
+
+                sleep(1);
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed Reddit fetch for r/{$subreddit}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'reddit');
+    }
+
+    /**
+     * Discover AI-related sites from Lobste.rs stories.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromLobsters(): Collection
+    {
+        $urls = [];
+
+        foreach (self::LOBSTERS_ENDPOINTS as $endpoint) {
+            try {
+                $response = Http::timeout(15)->get($endpoint);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $stories = $response->json();
+
+                if (! is_array($stories)) {
+                    continue;
+                }
+
+                foreach ($stories as $story) {
+                    $title = strtolower($story['title'] ?? '');
+                    $isAiRelated = false;
+
+                    foreach (self::AI_KEYWORDS as $keyword) {
+                        if (str_contains($title, $keyword)) {
+                            $isAiRelated = true;
+
+                            break;
+                        }
+                    }
+
+                    if (! $isAiRelated) {
+                        continue;
+                    }
+
+                    $url = $story['url'] ?? null;
+
+                    if ($url && $this->isValidExternalUrl($url)) {
+                        $urls[] = $url;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed Lobsters fetch for {$endpoint}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'lobsters');
+    }
+
+    /**
+     * Discover AI-related sites from Wikipedia article external links.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromWikipedia(): Collection
+    {
+        $urls = [];
+
+        foreach (self::WIKIPEDIA_SEARCH_QUERIES as $query) {
+            try {
+                $searchResponse = Http::timeout(15)
+                    ->get('https://en.wikipedia.org/w/api.php', [
+                        'action' => 'query',
+                        'list' => 'search',
+                        'srsearch' => $query,
+                        'format' => 'json',
+                        'srlimit' => 20,
+                    ]);
+
+                if (! $searchResponse->successful()) {
+                    continue;
+                }
+
+                $results = $searchResponse->json('query.search', []);
+
+                foreach ($results as $result) {
+                    $title = $result['title'] ?? null;
+
+                    if (! $title) {
+                        continue;
+                    }
+
+                    try {
+                        $linksResponse = Http::timeout(15)
+                            ->get('https://en.wikipedia.org/w/api.php', [
+                                'action' => 'query',
+                                'titles' => $title,
+                                'prop' => 'extlinks',
+                                'format' => 'json',
+                                'ellimit' => 50,
+                            ]);
+
+                        if (! $linksResponse->successful()) {
+                            continue;
+                        }
+
+                        $pages = $linksResponse->json('query.pages', []);
+
+                        foreach ($pages as $page) {
+                            foreach ($page['extlinks'] ?? [] as $link) {
+                                $url = $link['url'] ?? $link['*'] ?? null;
+
+                                if ($url && $this->isValidExternalUrl($url)) {
+                                    $urls[] = $url;
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        Log::debug("SiteDiscovery: Failed Wikipedia extlinks for '{$title}'", ['error' => $e->getMessage()]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed Wikipedia search for '{$query}'", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'wikipedia');
+    }
+
+    /**
+     * Discover AI-related sites from Lemmy link posts.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromLemmy(): Collection
+    {
+        $urls = [];
+
+        foreach (self::LEMMY_COMMUNITIES as $community) {
+            try {
+                $response = Http::timeout(15)
+                    ->get('https://lemmy.world/api/v3/post/list', [
+                        'community_name' => $community,
+                        'sort' => 'Hot',
+                        'limit' => 50,
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $posts = $response->json('posts', []);
+
+                foreach ($posts as $post) {
+                    $url = $post['post']['url'] ?? null;
+
+                    if ($url && $this->isValidExternalUrl($url)) {
+                        $urls[] = $url;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed Lemmy fetch for c/{$community}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'lemmy');
     }
 
     /**
