@@ -214,7 +214,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Pipeline Stats -->
-        <div class="mb-8 grid grid-cols-4 divide-x divide-border rounded-xl border bg-card">
+        <div class="mb-8 grid grid-cols-2 divide-x divide-border rounded-xl border bg-card sm:grid-cols-4 [&>*:nth-child(n+3)]:border-t [&>*:nth-child(n+3)]:sm:border-t-0">
             <div v-for="stat in stats" :key="stat.key" class="flex flex-col items-center justify-center px-2 py-4 text-center">
                 <span class="text-4xl font-extrabold tracking-tight sm:text-5xl">
                     <TickerNumber :value="liveStats[stat.key]" />
