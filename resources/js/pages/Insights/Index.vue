@@ -285,6 +285,27 @@ onUnmounted(() => {
                 </CardContent>
             </Card>
 
+            <!-- Crawl Duration -->
+            <Card class="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle>Crawl Duration</CardTitle>
+                    <CardDescription>Individual crawl durations in real-time</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Deferred data="crawlerSpeed">
+                        <template #fallback>
+                            <Skeleton class="h-40 w-full" />
+                        </template>
+                        <div v-if="crawlerSpeed?.length" class="h-40">
+                            <D3RealtimeHorizon :initial-data="crawlerSpeed ?? []" />
+                        </div>
+                        <div v-else class="flex h-40 items-center justify-center text-muted-foreground">
+                            No crawl duration data yet. Data populates after sites are crawled.
+                        </div>
+                    </Deferred>
+                </CardContent>
+            </Card>
+
             <!-- AI Term Frequency -->
             <Card class="lg:col-span-2">
                 <CardHeader class="flex flex-row items-center justify-between">
@@ -575,27 +596,6 @@ onUnmounted(() => {
                             </div>
                         </div>
                     </WhenVisible>
-                </CardContent>
-            </Card>
-
-            <!-- Crawl Duration -->
-            <Card class="lg:col-span-2">
-                <CardHeader>
-                    <CardTitle>Crawl Duration</CardTitle>
-                    <CardDescription>Individual crawl durations in real-time</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Deferred data="crawlerSpeed">
-                        <template #fallback>
-                            <Skeleton class="h-40 w-full" />
-                        </template>
-                        <div v-if="crawlerSpeed?.length" class="h-40">
-                            <D3RealtimeHorizon :initial-data="crawlerSpeed ?? []" />
-                        </div>
-                        <div v-else class="flex h-40 items-center justify-center text-muted-foreground">
-                            No crawl duration data yet. Data populates after sites are crawled.
-                        </div>
-                    </Deferred>
                 </CardContent>
             </Card>
 
