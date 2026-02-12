@@ -47,7 +47,12 @@ function domainFromUrl(url: string): string {
                         <Link :href="`/sites/${nearestCrawl.slug}`" class="font-medium text-foreground hover:underline">
                             {{ domainFromUrl(nearestCrawl.url) }}
                         </Link>
-                        is queued for crawling...
+                        <template v-if="nearestCrawl.queuePosition">
+                            is #{{ nearestCrawl.queuePosition }} of {{ nearestCrawl.queueTotal }} in queue
+                        </template>
+                        <template v-else>
+                            is queued for crawling...
+                        </template>
                     </span>
                 </template>
             </div>

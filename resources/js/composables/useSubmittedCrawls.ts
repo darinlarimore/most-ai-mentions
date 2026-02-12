@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue';
+import axios from 'axios';
 
 export interface SubmittedCrawl {
     siteId: number;
@@ -7,6 +8,8 @@ export interface SubmittedCrawl {
     status: 'queued' | 'crawling' | 'completed' | 'failed';
     step?: string;
     hypeScore?: number;
+    queuePosition?: number;
+    queueTotal?: number;
     submittedAt: string;
 }
 
@@ -50,6 +53,8 @@ function addCrawl(site: { id: number; url: string; slug: string }): void {
         status: 'queued',
         submittedAt: new Date().toISOString(),
     });
+
+    fetchQueuePositions();
 }
 
 function addCrawls(sites: Array<{ id: number; url: string; slug: string }>): void {
@@ -62,11 +67,55 @@ function removeCrawl(siteId: number): void {
     crawls.value = crawls.value.filter((c) => c.siteId !== siteId);
 }
 
+async function fetchQueuePositions(): Promise<void> {
+    const queuedCrawls = crawls.value.filter((c) => c.status === 'queued');
+    if (queuedCrawls.length === 0) return;
+
+    try {
+        const params = new URLSearchParams();
+        queuedCrawls.forEach((c) => params.append('ids[]', String(c.siteId)));
+
+        const { data } = await axios.get<{
+            positions: Record<string, number>;
+            total: number;
+            statuses: Record<string, { status: string; hype_score: number }>;
+        }>(`/api/queue-positions?${params.toString()}`);
+
+        for (const crawl of crawls.value) {
+            if (crawl.status !== 'queued') continue;
+
+            const pos = data.positions[String(crawl.siteId)];
+            if (pos !== undefined) {
+                crawl.queuePosition = pos;
+                crawl.queueTotal = data.total;
+                continue;
+            }
+
+            // Reconcile: server says this site is no longer queued
+            const serverStatus = data.statuses?.[String(crawl.siteId)];
+            if (serverStatus) {
+                if (serverStatus.hype_score === 0) {
+                    crawl.status = 'failed';
+                } else {
+                    crawl.status = 'completed';
+                }
+                crawl.hypeScore = serverStatus.hype_score;
+                crawl.step = undefined;
+                crawl.queuePosition = undefined;
+                crawl.queueTotal = undefined;
+            }
+        }
+    } catch {
+        // Silently fail — positions are a nice-to-have
+    }
+}
+
 function setupEcho(): void {
     if (echoSetup.value || typeof window === 'undefined') return;
     echoSetup.value = true;
 
     loadFromStorage();
+    fetchQueuePositions();
 
     const channel = window.Echo.channel('crawl-activity');
 
@@ -75,7 +124,10 @@ function setupEcho(): void {
         if (crawl) {
             crawl.status = 'crawling';
             crawl.step = undefined;
+            crawl.queuePosition = undefined;
+            crawl.queueTotal = undefined;
         }
+        fetchQueuePositions();
     });
 
     channel.listen('.CrawlProgress', (e: { site_id: number; step: string; message: string }) => {
@@ -96,7 +148,10 @@ function setupEcho(): void {
             }
             crawl.hypeScore = e.hype_score;
             crawl.step = undefined;
+            crawl.queuePosition = undefined;
+            crawl.queueTotal = undefined;
         }
+        fetchQueuePositions();
     });
 }
 

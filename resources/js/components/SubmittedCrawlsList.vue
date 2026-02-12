@@ -98,7 +98,12 @@ function statusIcon(status: SubmittedCrawl['status']) {
                         {{ crawl.step }}
                     </span>
                     <span v-else-if="crawl.status === 'queued'" class="text-xs text-muted-foreground">
-                        Queued for crawling
+                        <template v-if="crawl.queuePosition">
+                            #{{ crawl.queuePosition }} of {{ crawl.queueTotal }} in queue
+                        </template>
+                        <template v-else>
+                            Queued for crawling
+                        </template>
                     </span>
                     <span v-else-if="crawl.status === 'failed'" class="text-xs text-destructive">
                         Crawl failed
