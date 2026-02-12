@@ -12,7 +12,6 @@ enum CrawlErrorCategory: string
     case HttpServerError = 'http_server_error';
     case EmptyResponse = 'empty_response';
     case Blocked = 'blocked';
-    case RedirectToNonHomepage = 'redirect_to_non_homepage';
     case ParseError = 'parse_error';
     case Unknown = 'unknown';
 
@@ -27,7 +26,6 @@ enum CrawlErrorCategory: string
             self::HttpServerError => 'HTTP Server Error',
             self::EmptyResponse => 'Empty Response',
             self::Blocked => 'Blocked',
-            self::RedirectToNonHomepage => 'Redirect to Non-Homepage',
             self::ParseError => 'Parse Error',
             self::Unknown => 'Unknown',
         };

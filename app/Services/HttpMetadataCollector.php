@@ -94,32 +94,6 @@ class HttpMetadataCollector
     }
 
     /**
-     * Determine if the final URL after redirects is a non-homepage URL.
-     *
-     * Returns true if the final URL has a meaningful path (anything beyond "/"
-     * or common homepage variants like "/index.html"). Redirects to a different
-     * host's homepage (e.g. domain rebrand) are allowed.
-     */
-    public static function isNonHomepageRedirect(string $originalUrl, string $finalUrl): bool
-    {
-        $finalPath = parse_url($finalUrl, PHP_URL_PATH) ?? '/';
-        $finalPath = rtrim($finalPath, '/');
-
-        // Empty path or just "/" is a homepage (even on a different host)
-        if ($finalPath === '' || $finalPath === '/') {
-            return false;
-        }
-
-        // Common homepage paths that are acceptable
-        $homepagePaths = ['/index.html', '/index.htm', '/index.php'];
-        if (in_array(mb_strtolower($finalPath), $homepagePaths, true)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
      * Resolve the server IP address for a hostname via DNS lookup.
      */
     private function resolveServerIp(?string $host): ?string
