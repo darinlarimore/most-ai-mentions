@@ -124,6 +124,12 @@ onMounted(() => {
         completedResult.value = { hype_score: e.hype_score, ai_mention_count: e.ai_mention_count };
     });
 
+    echoActivityChannel.listen('.ScreenshotReady', (e: { site_id: number; slug: string; screenshot_path: string }) => {
+        if (activeSite.value && activeSite.value.id === e.site_id) {
+            activeSite.value.screenshot_path = e.screenshot_path;
+        }
+    });
+
     echoQueueChannel = window.Echo.channel('crawl-queue');
 
     echoQueueChannel.listen('.QueueUpdated', (e: { queued_count: number }) => {

@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\IpGeolocationService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -59,4 +60,37 @@ it('returns null when API returns server error', function () {
     $result = $this->service->geolocate('8.8.8.8');
 
     expect($result)->toBeNull();
+});
+
+it('returns cached result on second call without making HTTP request', function () {
+    Cache::flush();
+
+    Http::fake([
+        'ip-api.com/*' => Http::response([
+            'status' => 'success',
+            'lat' => 37.7749,
+            'lon' => -122.4194,
+        ]),
+    ]);
+
+    $first = $this->service->geolocate('8.8.8.8');
+    $second = $this->service->geolocate('8.8.8.8');
+
+    expect($first)->toBe($second);
+    Http::assertSentCount(1);
+});
+
+it('caches null results so failed lookups are not retried', function () {
+    Cache::flush();
+
+    Http::fake([
+        'ip-api.com/*' => Http::response(['status' => 'fail']),
+    ]);
+
+    $first = $this->service->geolocate('8.8.8.8');
+    $second = $this->service->geolocate('8.8.8.8');
+
+    expect($first)->toBeNull();
+    expect($second)->toBeNull();
+    Http::assertSentCount(1);
 });

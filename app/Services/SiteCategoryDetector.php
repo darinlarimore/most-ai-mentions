@@ -9,6 +9,12 @@ class SiteCategoryDetector
     /** Minimum keyword matches required to assign a category. */
     private const MIN_THRESHOLD = 2;
 
+    private ?string $cachedHtml = null;
+
+    private ?string $cachedTitle = null;
+
+    private ?string $cachedDescription = null;
+
     /** @var array<string, list<string>> */
     private const CATEGORY_KEYWORDS = [
         'saas' => [
@@ -106,6 +112,30 @@ class SiteCategoryDetector
     }
 
     /**
+     * Extract the page title from HTML.
+     *
+     * Uses the internal metadata cache when detect() has already been called.
+     */
+    public function extractTitle(string $html): ?string
+    {
+        $this->ensureMetadataParsed($html);
+
+        return $this->cachedTitle;
+    }
+
+    /**
+     * Extract the meta description from HTML.
+     *
+     * Uses the internal metadata cache when detect() has already been called.
+     */
+    public function extractDescription(string $html): ?string
+    {
+        $this->ensureMetadataParsed($html);
+
+        return $this->cachedDescription;
+    }
+
+    /**
      * Extract text from HTML metadata sources (title, meta tags, og tags, JSON-LD).
      */
     public function extractMetadataText(string $html): string
@@ -172,6 +202,35 @@ class SiteCategoryDetector
         }
 
         return $scores;
+    }
+
+    /**
+     * Parse and cache title/description from HTML if not already parsed for this HTML.
+     */
+    private function ensureMetadataParsed(string $html): void
+    {
+        if ($this->cachedHtml === $html) {
+            return;
+        }
+
+        $this->cachedHtml = $html;
+        $this->cachedTitle = null;
+        $this->cachedDescription = null;
+
+        // Extract title
+        if (preg_match('/<title[^>]*>(.*?)<\/title>/si', $html, $m)) {
+            $title = html_entity_decode(trim($m[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $this->cachedTitle = mb_strlen($title) > 255 ? mb_substr($title, 0, 255) : ($title ?: null);
+        }
+
+        // Extract meta description (flexible attribute ordering)
+        if (preg_match('/<meta[^>]*name=["\']description["\'][^>]*content=["\']([^"\']*)["\'][^>]*>/si', $html, $m)) {
+            $desc = html_entity_decode(trim($m[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $this->cachedDescription = $desc ?: null;
+        } elseif (preg_match('/<meta[^>]*content=["\']([^"\']*)["\'][^>]*name=["\']description["\'][^>]*>/si', $html, $m)) {
+            $desc = html_entity_decode(trim($m[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $this->cachedDescription = $desc ?: null;
+        }
     }
 
     /**

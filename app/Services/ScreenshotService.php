@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Browsershot\Browsershot;
+use Symfony\Component\Process\Process;
 
 class ScreenshotService
 {
@@ -33,6 +34,67 @@ class ScreenshotService
      */
     public function fetchHtml(string $url): string
     {
+        $process = $this->startHtmlFetch($url);
+
+        return $this->collectHtmlResult($process);
+    }
+
+    /**
+     * Start an asynchronous Chrome process to fetch page HTML.
+     *
+     * Returns a running Symfony Process that can be awaited later,
+     * allowing other I/O (e.g. HTTP metadata collection) to run in parallel.
+     */
+    public function startHtmlFetch(string $url): Process
+    {
+        $browsershot = $this->buildHtmlFetchBrowsershot($url);
+
+        $command = $browsershot->createBodyHtmlCommand();
+
+        $fullCommand = \Closure::bind(
+            fn (array $cmd): array|string => $this->getFullCommand($cmd),
+            $browsershot,
+            Browsershot::class,
+        )($command);
+
+        $process = is_array($fullCommand)
+            ? new Process($fullCommand)
+            : Process::fromShellCommandline($fullCommand);
+
+        $process->setTimeout(self::TIMEOUT);
+        $process->start();
+
+        return $process;
+    }
+
+    /**
+     * Wait for a previously started HTML fetch process and return the rendered HTML.
+     *
+     * @throws \RuntimeException If the browser process fails.
+     */
+    public function collectHtmlResult(Process $process): string
+    {
+        $process->wait();
+
+        if (! $process->isSuccessful()) {
+            throw new \RuntimeException('Browser process failed: '.$process->getErrorOutput());
+        }
+
+        $rawOutput = rtrim($process->getOutput());
+        $data = json_decode($rawOutput, true);
+
+        if (isset($data['exception']) && $data['exception'] !== '') {
+            throw new \RuntimeException('Browsershot error: '.$data['exception']);
+        }
+
+        return $data['result'] ?? '';
+    }
+
+    /**
+     * Build a configured Browsershot instance for HTML fetching.
+     */
+    private function buildHtmlFetchBrowsershot(string $url): Browsershot
+    {
         return Browsershot::url($url)
             ->setOption('waitUntil', 'domcontentloaded')
             ->setDelay(3000)
@@ -51,8 +113,7 @@ class ScreenshotService
                 'disable-backgrounding-occluded-windows',
                 'disable-renderer-backgrounding',
                 'js-flags=--max-old-space-size=128',
-            ])
-            ->bodyHtml();
+            ]);
     }
 
     /**

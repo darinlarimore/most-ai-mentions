@@ -14,7 +14,6 @@ use App\Models\Site;
 use App\Services\HttpMetadataCollector;
 use App\Services\HypeScoreCalculator;
 use App\Services\IpGeolocationService;
-use App\Services\PageMetadataExtractor;
 use App\Services\ScreenshotService;
 use App\Services\SiteCategoryDetector;
 use App\Services\TechStackDetector;
@@ -65,7 +64,6 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         SiteCategoryDetector $categoryDetector,
         HttpMetadataCollector $httpMetadataCollector,
         TechStackDetector $techStackDetector,
-        PageMetadataExtractor $pageMetadataExtractor,
         IpGeolocationService $ipGeolocationService,
     ): void {
         // Guard: skip if this site was already crawled recently (duplicate job protection)
@@ -96,13 +94,14 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
         $observer = new \App\Crawlers\AiMentionCrawlObserver($this->site);
 
-        // Fetch HTML using real Chrome browser (bypasses TLS fingerprinting and JS challenges)
+        // Start Chrome HTML fetch asynchronously so we can collect HTTP metadata in parallel
+        $htmlProcess = null;
         $html = null;
         $fetchError = null;
         try {
-            $html = $screenshotService->fetchHtml($this->site->url);
+            $htmlProcess = $screenshotService->startHtmlFetch($this->site->url);
         } catch (\Throwable $e) {
-            Log::warning("Failed to fetch HTML for {$this->site->url}: {$e->getMessage()}");
+            Log::warning("Failed to start HTML fetch for {$this->site->url}: {$e->getMessage()}");
             $fetchError = CrawlError::create([
                 'site_id' => $this->site->id,
                 'category' => CrawlErrorCategory::fromThrowable($e),
@@ -111,17 +110,32 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             ]);
         }
 
-        if ($html) {
-            $observer->analyzeHtml($html);
-        }
-
-        // Collect HTTP metadata (server info, redirects, TLS)
+        // Collect HTTP metadata while Chrome loads the page
         $httpMetadata = null;
         try {
             CrawlProgress::dispatch($this->site->id, 'collecting_metadata', 'Collecting server metadata...');
             $httpMetadata = $httpMetadataCollector->collect($this->site->url);
         } catch (\Throwable $e) {
             Log::warning("Failed to collect HTTP metadata for {$this->site->url}: {$e->getMessage()}");
+        }
+
+        // Now collect the HTML result from the async Chrome process
+        if ($htmlProcess && ! $fetchError) {
+            try {
+                $html = $screenshotService->collectHtmlResult($htmlProcess);
+            } catch (\Throwable $e) {
+                Log::warning("Failed to fetch HTML for {$this->site->url}: {$e->getMessage()}");
+                $fetchError = CrawlError::create([
+                    'site_id' => $this->site->id,
+                    'category' => CrawlErrorCategory::fromThrowable($e),
+                    'message' => mb_substr($e->getMessage(), 0, 1000),
+                    'url' => $this->site->url,
+                ]);
+            }
+        }
+
+        if ($html) {
+            $observer->analyzeHtml($html);
         }
 
         // Geolocate server IP
@@ -134,22 +148,22 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             }
         }
 
-        // Detect tech stack and extract page metadata
-        $techStack = [];
-        $pageTitle = null;
-        $metaDescription = null;
-        if ($html) {
-            $techStack = $techStackDetector->detect($html, $httpMetadata['headers'] ?? []);
-            $pageTitle = $pageMetadataExtractor->extractTitle($html);
-            $metaDescription = $pageMetadataExtractor->extractDescription($html);
-        }
-
-        // Auto-detect category from metadata (only if currently 'other')
+        // Detect category first so the internal metadata cache is warm for title/description
         if ($html && $this->site->category === 'other') {
             CrawlProgress::dispatch($this->site->id, 'detecting_category', 'Detecting site category...');
             $detectedCategory = $categoryDetector->detect($html);
             $this->site->update(['category' => $detectedCategory->value]);
             Log::info("Category detection for {$this->site->url}", ['detected' => $detectedCategory->value]);
+        }
+
+        // Extract page metadata and detect tech stack
+        $techStack = [];
+        $pageTitle = null;
+        $metaDescription = null;
+        if ($html) {
+            $techStack = $techStackDetector->detect($html, $httpMetadata['headers'] ?? []);
+            $pageTitle = $categoryDetector->extractTitle($html);
+            $metaDescription = $categoryDetector->extractDescription($html);
         }
 
         CrawlProgress::dispatch($this->site->id, 'detecting_mentions', 'Scanning for AI mentions...', [
@@ -279,6 +293,10 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        // Calculate crawl duration before dispatching screenshot (async, not part of crawl time)
+        $crawlDurationMs = (int) round((hrtime(true) - $crawlStartedAt) / 1_000_000);
+        $crawlResult->update(['crawl_duration_ms' => $crawlDurationMs]);
+
         $this->site->update([
             'hype_score' => $hypeScore,
             'last_crawled_at' => now(),
@@ -299,11 +317,8 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'hype_score' => $hypeScore,
         ]);
 
-        GenerateScreenshotJob::dispatchSync($this->site);
-        $this->site->refresh();
-
-        $crawlDurationMs = (int) round((hrtime(true) - $crawlStartedAt) / 1_000_000);
-        $crawlResult->update(['crawl_duration_ms' => $crawlDurationMs]);
+        // Dispatch screenshot asynchronously — ScreenshotReady event will notify the frontend
+        GenerateScreenshotJob::dispatch($this->site);
 
         $aiTerms = collect($crawlResult->mention_details ?? [])
             ->pluck('text')

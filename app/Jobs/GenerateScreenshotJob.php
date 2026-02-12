@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\ScreenshotReady;
 use App\Jobs\Middleware\CheckQueuePaused;
 use App\Models\Site;
 use App\Services\ScreenshotService;
@@ -42,6 +43,12 @@ class GenerateScreenshotJob implements ShouldQueue
             $this->site->update([
                 'screenshot_path' => $screenshotPath,
             ]);
+
+            ScreenshotReady::dispatch(
+                $this->site->id,
+                $this->site->slug,
+                $this->site->screenshot_path,
+            );
 
             Log::info("Screenshot saved for site: {$this->site->url} at {$screenshotPath}");
         } catch (\Throwable $e) {
