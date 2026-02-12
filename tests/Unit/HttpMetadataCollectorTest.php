@@ -2,11 +2,18 @@
 
 use App\Services\HttpMetadataCollector;
 
-it('detects redirect to a different host as non-homepage', function () {
+it('detects redirect to a different host with a path as non-homepage', function () {
     expect(HttpMetadataCollector::isNonHomepageRedirect(
         'https://example.com',
         'https://login.example.org/oauth/authorize',
     ))->toBeTrue();
+});
+
+it('allows redirect to a different host homepage (domain rebrand)', function () {
+    expect(HttpMetadataCollector::isNonHomepageRedirect(
+        'https://obviously.ai',
+        'https://www.zams.com/',
+    ))->toBeFalse();
 });
 
 it('detects redirect to a path on the same host as non-homepage', function () {
