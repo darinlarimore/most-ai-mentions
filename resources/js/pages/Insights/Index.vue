@@ -187,11 +187,9 @@ let queueChannel: ReturnType<typeof window.Echo.channel> | null = null;
 onMounted(() => {
     activityChannel = window.Echo.channel('crawl-activity');
     activityChannel.listen('.CrawlCompleted', (e: Record<string, unknown>) => {
-        console.log('[CrawlCompleted] event received', { domain: e.domain, latitude: e.latitude, longitude: e.longitude, hype_score: e.hype_score });
         refreshStats();
         forceGraphRef.value?.addSiteNode(e as Parameters<InstanceType<typeof D3ForceGraph>['addSiteNode']>[0]);
         if (e.latitude && e.longitude) {
-            console.log('[CrawlCompleted] has coordinates, worldMapRef exists:', !!worldMapRef.value);
             worldMapRef.value?.addPoint({
                 domain: e.domain as string,
                 slug: e.slug as string,
@@ -199,8 +197,6 @@ onMounted(() => {
                 longitude: e.longitude as number,
                 hypeScore: (e.hype_score as number) ?? 0,
             });
-        } else {
-            console.log('[CrawlCompleted] no coordinates in event');
         }
         scheduleChartRefresh();
     });

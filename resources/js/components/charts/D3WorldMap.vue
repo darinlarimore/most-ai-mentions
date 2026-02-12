@@ -135,7 +135,6 @@ function clusterPoints(
 
 async function draw() {
     const generation = ++drawGeneration;
-    console.log('[D3WorldMap] draw() called, generation:', generation, 'containerRef:', !!containerRef.value, 'data points:', props.data?.length ?? 0);
     if (!containerRef.value) return;
 
     const svg = createSvg();
@@ -151,10 +150,7 @@ async function draw() {
     if (!world || !us) return;
 
     // Another draw() started while we were loading map data — abort this one
-    if (generation !== drawGeneration) {
-        console.log('[D3WorldMap] draw() aborted, stale generation:', generation, 'current:', drawGeneration);
-        return;
-    }
+    if (generation !== drawGeneration) return;
 
     const worldTopology = world as unknown as Topology<{ countries: GeometryCollection }>;
     const countries = feature(worldTopology, worldTopology.objects.countries);
@@ -458,7 +454,6 @@ async function draw() {
     svg.call(zoom).on('wheel.zoom', null);
     zoomBehavior = zoom;
     svgSelection = svg;
-    console.log('[D3WorldMap] draw() complete. storedProjection:', !!storedProjection, 'pingLayer:', !!pingLayerSelection, 'clusterLayer:', !!clusterLayerSelection);
 }
 
 onResize(draw);
@@ -466,12 +461,9 @@ onMounted(draw);
 watch(() => props.data, draw, { deep: true });
 
 function addPoint(point: MapDatum) {
-    console.log('[D3WorldMap] addPoint called', point);
-    console.log('[D3WorldMap] storedProjection:', !!storedProjection, 'pingLayer:', !!pingLayerSelection);
     if (!storedProjection || !pingLayerSelection) return;
 
     const projected = storedProjection([point.longitude, point.latitude]);
-    console.log('[D3WorldMap] projected coordinates:', projected);
     if (!projected) return;
 
     const [px, py] = projected;
@@ -484,44 +476,41 @@ function addPoint(point: MapDatum) {
     // Expanding rings
     for (let i = 0; i < 3; i++) {
         ping.append('circle')
-            .attr('r', 2 / k)
+            .attr('r', 3 / k)
             .attr('fill', 'none')
             .attr('stroke', dotColor)
-            .attr('stroke-width', 1.5 / k)
-            .attr('stroke-opacity', 0.8)
+            .attr('stroke-width', 2.5 / k)
+            .attr('stroke-opacity', 1)
             .transition()
-            .delay(i * 200)
-            .duration(1000)
+            .delay(i * 250)
+            .duration(1400)
             .ease(d3.easeCubicOut)
-            .attr('r', 24 / k)
+            .attr('r', 50 / k)
             .attr('stroke-opacity', 0)
             .remove();
     }
 
-    // Center dot that scales in
+    // Center dot that scales in and holds
     ping.append('circle')
         .attr('r', 0)
         .attr('fill', dotColor)
-        .attr('fill-opacity', 0.9)
-        .attr('stroke', dotColor)
-        .attr('stroke-width', 1 / k)
+        .attr('fill-opacity', 1)
+        .attr('stroke', 'white')
+        .attr('stroke-width', 1.5 / k)
+        .attr('stroke-opacity', 0.9)
         .transition()
-        .duration(300)
-        .ease(d3.easeBackOut)
-        .attr('r', 5 / k)
+        .duration(400)
+        .ease(d3.easeBackOut.overshoot(2))
+        .attr('r', 8 / k)
         .transition()
-        .delay(700)
-        .duration(300)
+        .delay(1200)
+        .duration(500)
         .attr('fill-opacity', 0)
         .attr('stroke-opacity', 0)
         .remove();
 
-    console.log('[D3WorldMap] ping appended to pingLayer, children:', pingLayerSelection.node()?.children.length);
-    console.log('[D3WorldMap] ping group transform:', ping.attr('transform'), 'dotColor:', dotColor, 'k:', k);
-    console.log('[D3WorldMap] ping SVG node:', ping.node());
-
     // Remove the ping group after all animations complete
-    setTimeout(() => ping.remove(), 1500);
+    setTimeout(() => ping.remove(), 2500);
 
     // Add point to live data and re-render clusters
     liveData.push(point);
