@@ -47,6 +47,7 @@ let pingLayerSelection: d3.Selection<SVGGElement, unknown, null, undefined> | nu
 let currentTransform = d3.zoomIdentity;
 let liveData: MapDatum[] = [];
 let renderClustersRef: ((transform: d3.ZoomTransform) => void) | null = null;
+let drawGeneration = 0;
 
 function zoomIn() {
     if (svgSelection && zoomBehavior) {
@@ -133,7 +134,8 @@ function clusterPoints(
 }
 
 async function draw() {
-    console.log('[D3WorldMap] draw() called, containerRef:', !!containerRef.value, 'data points:', props.data?.length ?? 0);
+    const generation = ++drawGeneration;
+    console.log('[D3WorldMap] draw() called, generation:', generation, 'containerRef:', !!containerRef.value, 'data points:', props.data?.length ?? 0);
     if (!containerRef.value) return;
 
     const svg = createSvg();
@@ -147,6 +149,12 @@ async function draw() {
 
     const { world, us } = await loadMapData();
     if (!world || !us) return;
+
+    // Another draw() started while we were loading map data — abort this one
+    if (generation !== drawGeneration) {
+        console.log('[D3WorldMap] draw() aborted, stale generation:', generation, 'current:', drawGeneration);
+        return;
+    }
 
     const worldTopology = world as unknown as Topology<{ countries: GeometryCollection }>;
     const countries = feature(worldTopology, worldTopology.objects.countries);
