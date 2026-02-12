@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { router } from '@inertiajs/vue3';
 import * as d3 from 'd3';
+import { Minus, Plus, RotateCcw } from 'lucide-vue-next';
 import { feature } from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
-import { router } from '@inertiajs/vue3';
+import { ref, onMounted, watch } from 'vue';
 import { useD3Chart } from '@/composables/useD3Chart';
 import ChartTooltip from './ChartTooltip.vue';
 
@@ -38,6 +39,26 @@ const { width, height, createSvg, getColor, onResize } = useD3Chart(containerRef
 
 let worldDataCache: any = null;
 let usDataCache: any = null;
+let zoomBehavior: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null;
+let svgSelection: d3.Selection<SVGSVGElement, unknown, null, undefined> | null = null;
+
+function zoomIn() {
+    if (svgSelection && zoomBehavior) {
+        svgSelection.transition().duration(300).call(zoomBehavior.scaleBy, 2);
+    }
+}
+
+function zoomOut() {
+    if (svgSelection && zoomBehavior) {
+        svgSelection.transition().duration(300).call(zoomBehavior.scaleBy, 0.5);
+    }
+}
+
+function resetZoom() {
+    if (svgSelection && zoomBehavior) {
+        svgSelection.transition().duration(300).call(zoomBehavior.transform, d3.zoomIdentity);
+    }
+}
 
 async function loadMapData() {
     // Guard with SSR check so Vite tree-shakes atlas JSON from the SSR bundle
@@ -410,7 +431,9 @@ async function draw() {
     }
 
     renderClusters(d3.zoomIdentity);
-    svg.call(zoom);
+    svg.call(zoom).on('wheel.zoom', null);
+    zoomBehavior = zoom;
+    svgSelection = svg;
 }
 
 onResize(draw);
@@ -419,7 +442,28 @@ watch(() => props.data, draw, { deep: true });
 </script>
 
 <template>
-    <div ref="containerRef" class="h-full w-full">
+    <div class="relative h-full w-full">
+        <div ref="containerRef" class="h-full w-full" />
+        <div class="absolute bottom-3 right-3 flex flex-col gap-1">
+            <button
+                class="rounded-md bg-muted/80 p-1.5 text-muted-foreground backdrop-blur-sm transition-colors hover:bg-muted hover:text-foreground"
+                @click="zoomIn"
+            >
+                <Plus class="size-4" />
+            </button>
+            <button
+                class="rounded-md bg-muted/80 p-1.5 text-muted-foreground backdrop-blur-sm transition-colors hover:bg-muted hover:text-foreground"
+                @click="zoomOut"
+            >
+                <Minus class="size-4" />
+            </button>
+            <button
+                class="rounded-md bg-muted/80 p-1.5 text-muted-foreground backdrop-blur-sm transition-colors hover:bg-muted hover:text-foreground"
+                @click="resetZoom"
+            >
+                <RotateCcw class="size-3.5" />
+            </button>
+        </div>
         <Teleport to="body">
             <ChartTooltip :visible="tooltip.visible" :x="tooltip.x" :y="tooltip.y">
                 <div class="flex flex-col gap-0.5">

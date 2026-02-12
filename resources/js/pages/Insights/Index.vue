@@ -179,23 +179,6 @@ onUnmounted(() => {
 
         <!-- Charts Grid -->
         <div class="grid gap-6 lg:grid-cols-2">
-            <!-- Sites ↔ AI Terms Network -->
-            <Card class="lg:col-span-2">
-                <CardHeader>
-                    <CardTitle>Sites &amp; AI Terms Network</CardTitle>
-                    <CardDescription>Force-directed graph of sites linked to the AI terms they mention</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Skeleton v-if="networkLoading" class="h-[32rem] w-full" />
-                    <div v-else-if="networkData?.nodes?.length" class="h-[32rem]">
-                        <D3ForceGraph ref="forceGraphRef" :data="networkData" />
-                    </div>
-                    <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
-                        No network data yet. Data populates after sites are crawled.
-                    </div>
-                </CardContent>
-            </Card>
-
             <!-- Server Hosting Map -->
             <Card class="lg:col-span-2">
                 <CardHeader>
@@ -224,6 +207,23 @@ onUnmounted(() => {
                             No geocoded server data yet. Coordinates populate during crawl.
                         </div>
                     </Deferred>
+                </CardContent>
+            </Card>
+
+            <!-- Sites ↔ AI Terms Network -->
+            <Card class="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle>Sites &amp; AI Terms Network</CardTitle>
+                    <CardDescription>Force-directed graph of sites linked to the AI terms they mention</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Skeleton v-if="networkLoading" class="h-[32rem] w-full" />
+                    <div v-else-if="networkData?.nodes?.length" class="h-[32rem]">
+                        <D3ForceGraph ref="forceGraphRef" :data="networkData" />
+                    </div>
+                    <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
+                        No network data yet. Data populates after sites are crawled.
+                    </div>
                 </CardContent>
             </Card>
 

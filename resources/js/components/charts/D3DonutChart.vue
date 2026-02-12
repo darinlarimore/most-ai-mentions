@@ -33,8 +33,7 @@ function draw() {
     const colors = getChartColors(props.data.length);
     const total = d3.sum(props.data, (d) => d.value);
 
-    // Use only the left portion for the chart, leave right for legend
-    const chartWidth = width.value * 0.55;
+    const chartWidth = width.value;
     const radius = Math.min(chartWidth, height.value) / 2 - 10;
     const innerRadius = radius * 0.6;
 
