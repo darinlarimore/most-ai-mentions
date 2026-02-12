@@ -22,13 +22,13 @@ it('dispatches crawl job when queue has sites', function () {
     Bus::assertNotDispatched(DiscoverSitesJob::class);
 });
 
-it('does not dispatch discovery when crawl queue is empty', function () {
+it('dispatches discovery when crawl and backfill queues are empty', function () {
     Bus::fake([CrawlSiteJob::class, DiscoverSitesJob::class]);
 
     CrawlSiteJob::dispatchNext();
 
     Bus::assertNotDispatched(CrawlSiteJob::class);
-    Bus::assertNotDispatched(DiscoverSitesJob::class);
+    Bus::assertDispatched(DiscoverSitesJob::class);
 });
 
 it('calls discoverAll and always dispatches next crawl', function () {

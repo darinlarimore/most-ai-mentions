@@ -16,8 +16,8 @@ class DiscoverSitesJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /** Throttle discovery to once per hour via unique lock. */
-    public int $uniqueFor = 3600;
+    /** Throttle discovery to once per 10 minutes to respect external API rate limits. */
+    public int $uniqueFor = 600;
 
     public int $timeout = 120;
 
