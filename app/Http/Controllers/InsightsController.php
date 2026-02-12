@@ -31,6 +31,20 @@ class InsightsController extends Controller
     }
 
     /**
+     * Return all chart datasets as JSON for incremental real-time updates.
+     */
+    public function charts(): JsonResponse
+    {
+        return response()->json([
+            'termFrequency' => $this->getTermFrequency(),
+            'techStackDistribution' => $this->getTechStackDistribution(),
+            'scoreDistribution' => $this->getScoreDistribution(),
+            'mentionsVsScore' => $this->getMentionsVsScore(),
+            'crawlErrors' => $this->getCrawlErrors(),
+        ]);
+    }
+
+    /**
      * Return nodes + links for the Sites ↔ AI Terms force graph.
      *
      * @return array{nodes: list<array<string, mixed>>, links: list<array<string, mixed>>}

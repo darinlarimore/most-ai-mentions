@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
 import * as d3 from 'd3';
+import { ref, onMounted, watch } from 'vue';
 import { useD3Chart } from '@/composables/useD3Chart';
 import ChartTooltip from './ChartTooltip.vue';
 

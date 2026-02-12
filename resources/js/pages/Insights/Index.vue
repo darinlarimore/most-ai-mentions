@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Deferred, router, WhenVisible } from '@inertiajs/vue3';
+import { Deferred, WhenVisible } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     BarChart3,
@@ -12,7 +12,7 @@ import {
     Layers,
     LayoutGrid,
 } from 'lucide-vue-next';
-import { reactive, ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { reactive, ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import D3DonutChart from '@/components/charts/D3DonutChart.vue';
 import D3ForceGraph from '@/components/charts/D3ForceGraph.vue';
 import type { NetworkData } from '@/components/charts/D3ForceGraph.vue';
@@ -110,6 +110,21 @@ let networkObserver: IntersectionObserver | null = null;
 
 const liveStats = reactive({ ...props.pipelineStats });
 
+// Local reactive refs for chart data — populated by WhenVisible on first load,
+// then updated via JSON fetch to avoid full component remounts.
+const liveTermFrequency = ref<TermFrequencyItem[]>(props.termFrequency ?? []);
+const liveTechStack = ref<TechStackItem[]>(props.techStackDistribution ?? []);
+const liveScoreDist = ref<ScoreDistItem[]>(props.scoreDistribution ?? []);
+const liveMentionsVsScore = ref<ScatterItem[]>(props.mentionsVsScore ?? []);
+const liveCrawlErrors = ref<CrawlErrorsData | null>(props.crawlErrors ?? null);
+
+// Sync from WhenVisible's initial lazy load into local refs
+watch(() => props.termFrequency, (v) => { if (v?.length) liveTermFrequency.value = v; });
+watch(() => props.techStackDistribution, (v) => { if (v?.length) liveTechStack.value = v; });
+watch(() => props.scoreDistribution, (v) => { if (v?.length) liveScoreDist.value = v; });
+watch(() => props.mentionsVsScore, (v) => { if (v?.length) liveMentionsVsScore.value = v; });
+watch(() => props.crawlErrors, (v) => { if (v) liveCrawlErrors.value = v; });
+
 const stats = [
     { label: 'Total Sites', key: 'total_sites' as const },
     { label: 'Crawled', key: 'crawled_sites' as const },
@@ -142,20 +157,26 @@ async function loadNetworkData() {
 
 let chartRefreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
+async function refreshCharts() {
+    try {
+        const res = await fetch('/insights/charts');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.termFrequency) liveTermFrequency.value = data.termFrequency;
+        if (data.techStackDistribution) liveTechStack.value = data.techStackDistribution;
+        if (data.scoreDistribution) liveScoreDist.value = data.scoreDistribution;
+        if (data.mentionsVsScore) liveMentionsVsScore.value = data.mentionsVsScore;
+        if (data.crawlErrors) liveCrawlErrors.value = data.crawlErrors;
+    } catch {
+        // silently ignore
+    }
+}
+
 function scheduleChartRefresh() {
     if (chartRefreshTimeout) clearTimeout(chartRefreshTimeout);
     chartRefreshTimeout = setTimeout(() => {
         chartRefreshTimeout = null;
-        const loaded: string[] = [];
-        if (props.termFrequency) loaded.push('termFrequency');
-        if (props.techStackDistribution) loaded.push('techStackDistribution');
-        if (props.scoreDistribution) loaded.push('scoreDistribution');
-        if (props.mentionsVsScore) loaded.push('mentionsVsScore');
-        if (props.crawlerSpeed) loaded.push('crawlerSpeed');
-        if (props.crawlErrors) loaded.push('crawlErrors');
-        if (loaded.length > 0) {
-            router.reload({ only: loaded, preserveScroll: true, preserveState: true });
-        }
+        refreshCharts();
     }, 5000);
 }
 
@@ -285,14 +306,14 @@ onUnmounted(() => {
                         <template #fallback>
                             <Skeleton class="h-96 w-full rounded-lg" />
                         </template>
-                        <div v-if="termView === 'bar'" :style="{ height: Math.max(300, (termFrequency?.length ?? 0) * 28) + 'px' }">
+                        <div v-if="termView === 'bar'" :style="{ height: Math.max(300, liveTermFrequency.length * 28) + 'px' }">
                             <D3HorizontalBar
-                                :data="(termFrequency ?? []).map((t) => ({ label: t.term, value: t.count }))"
+                                :data="liveTermFrequency.map((t) => ({ label: t.term, value: t.count }))"
                             />
                         </div>
                         <div v-else class="h-96">
                             <D3Treemap
-                                :data="(termFrequency ?? []).map((t) => ({ label: t.term, value: t.count }))"
+                                :data="liveTermFrequency.map((t) => ({ label: t.term, value: t.count }))"
                             />
                         </div>
                     </WhenVisible>
@@ -342,29 +363,29 @@ onUnmounted(() => {
                         <template #fallback>
                             <Skeleton class="h-96 w-full rounded-lg" />
                         </template>
-                        <template v-if="techStackDistribution?.length">
+                        <template v-if="liveTechStack.length">
                             <div
                                 v-if="techView === 'bar'"
-                                :style="{ height: Math.max(300, (techStackDistribution?.length ?? 0) * 28) + 'px' }"
+                                :style="{ height: Math.max(300, liveTechStack.length * 28) + 'px' }"
                             >
                                 <D3HorizontalBar
-                                    :data="(techStackDistribution ?? []).map((t) => ({ label: t.tech, value: t.count }))"
+                                    :data="liveTechStack.map((t) => ({ label: t.tech, value: t.count }))"
                                     color="var(--chart-2)"
                                 />
                             </div>
                             <div v-else-if="techView === 'donut'" class="h-96">
                                 <D3DonutChart
-                                    :data="(techStackDistribution ?? []).map((t) => ({ label: t.tech, value: t.count }))"
+                                    :data="liveTechStack.map((t) => ({ label: t.tech, value: t.count }))"
                                 />
                             </div>
                             <div v-else-if="techView === 'cloud'" class="h-96">
                                 <D3WordCloud
-                                    :data="(techStackDistribution ?? []).map((t) => ({ label: t.tech, value: t.count }))"
+                                    :data="liveTechStack.map((t) => ({ label: t.tech, value: t.count }))"
                                 />
                             </div>
                             <div v-else class="h-[500px]">
                                 <D3RadialTree
-                                    :data="(techStackDistribution ?? []).map((t) => ({ label: t.tech, value: t.count }))"
+                                    :data="liveTechStack.map((t) => ({ label: t.tech, value: t.count }))"
                                 />
                             </div>
                         </template>
@@ -406,12 +427,12 @@ onUnmounted(() => {
                         </template>
                         <div v-if="scoreView === 'bar'" class="h-64">
                             <D3VerticalBar
-                                :data="(scoreDistribution ?? []).map((s) => ({ label: s.range, value: s.count }))"
+                                :data="liveScoreDist.map((s) => ({ label: s.range, value: s.count }))"
                             />
                         </div>
                         <div v-else class="h-64">
                             <D3DonutChart
-                                :data="(scoreDistribution ?? []).map((s) => ({ label: s.range, value: s.count }))"
+                                :data="liveScoreDist.map((s) => ({ label: s.range, value: s.count }))"
                             />
                         </div>
                     </WhenVisible>
@@ -450,7 +471,7 @@ onUnmounted(() => {
                         <div v-if="scatterView === 'scatter'" class="h-80">
                             <D3ScatterPlot
                                 :data="
-                                    (mentionsVsScore ?? []).map((s) => ({
+                                    liveMentionsVsScore.map((s) => ({
                                         label: s.domain,
                                         x: s.mentions,
                                         y: s.score,
@@ -464,7 +485,7 @@ onUnmounted(() => {
                         <div v-else-if="scatterView === 'hexbin'" class="h-80">
                             <D3Hexbin
                                 :data="
-                                    (mentionsVsScore ?? []).map((s) => ({
+                                    liveMentionsVsScore.map((s) => ({
                                         label: s.domain,
                                         x: s.mentions,
                                         y: s.score,
@@ -522,21 +543,21 @@ onUnmounted(() => {
                         <template #fallback>
                             <Skeleton class="h-72 w-full rounded-lg" />
                         </template>
-                        <template v-if="crawlErrors?.by_category?.length || crawlErrors?.over_time?.length || crawlErrors?.top_domains?.length">
+                        <template v-if="liveCrawlErrors?.by_category?.length || liveCrawlErrors?.over_time?.length || liveCrawlErrors?.top_domains?.length">
                             <div v-if="errorView === 'donut'" class="h-72">
-                                <D3DonutChart :data="crawlErrors.by_category ?? []" />
+                                <D3DonutChart :data="liveCrawlErrors.by_category ?? []" />
                             </div>
                             <div
                                 v-else-if="errorView === 'bar'"
-                                :style="{ height: Math.max(200, (crawlErrors.by_category?.length ?? 0) * 28) + 'px' }"
+                                :style="{ height: Math.max(200, (liveCrawlErrors.by_category?.length ?? 0) * 28) + 'px' }"
                             >
-                                <D3HorizontalBar :data="crawlErrors.by_category ?? []" color="var(--chart-4)" />
+                                <D3HorizontalBar :data="liveCrawlErrors.by_category ?? []" color="var(--chart-4)" />
                             </div>
                             <div v-else-if="errorView === 'timeline'" class="h-72">
-                                <D3StackedBar :data="(crawlErrors.over_time ?? []) as any" />
+                                <D3StackedBar :data="(liveCrawlErrors.over_time ?? []) as any" />
                             </div>
                             <div v-else-if="errorView === 'domains'" class="h-96">
-                                <D3Treemap :data="crawlErrors.top_domains ?? []" />
+                                <D3Treemap :data="liveCrawlErrors.top_domains ?? []" />
                             </div>
                         </template>
                         <div v-else class="flex h-48 items-center justify-center text-muted-foreground">

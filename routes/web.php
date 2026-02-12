@@ -22,6 +22,7 @@ Route::get('/algorithm', [AlgorithmController::class, 'index'])->name('algorithm
 Route::get('/insights', [InsightsController::class, 'index'])->name('insights');
 Route::get('/insights/stats', [InsightsController::class, 'stats'])->name('insights.stats');
 Route::get('/insights/network', [InsightsController::class, 'network'])->name('insights.network');
+Route::get('/insights/charts', [InsightsController::class, 'charts'])->name('insights.charts');
 Route::get('/crawl/queue', [CrawlQueueController::class, 'index'])->name('crawl.queue');
 Route::get('/crawl/live', [CrawlQueueController::class, 'live'])->name('crawl.live');
 Route::get('/donate', [DonationController::class, 'index'])->name('donate');
