@@ -62,10 +62,6 @@ function removeCrawl(siteId: number): void {
     crawls.value = crawls.value.filter((c) => c.siteId !== siteId);
 }
 
-function clearCompleted(): void {
-    crawls.value = crawls.value.filter((c) => c.status !== 'completed' && c.status !== 'failed');
-}
-
 function setupEcho(): void {
     if (echoSetup.value || typeof window === 'undefined') return;
     echoSetup.value = true;
@@ -126,7 +122,6 @@ export function useSubmittedCrawls() {
         addCrawl,
         addCrawls,
         removeCrawl,
-        clearCompleted,
         setupEcho,
         loadFromStorage,
     };
