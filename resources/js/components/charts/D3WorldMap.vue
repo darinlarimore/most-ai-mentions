@@ -450,6 +450,7 @@ async function draw() {
     svg.call(zoom).on('wheel.zoom', null);
     zoomBehavior = zoom;
     svgSelection = svg;
+    console.log('[D3WorldMap] draw() complete. storedProjection:', !!storedProjection, 'pingLayer:', !!pingLayerSelection, 'clusterLayer:', !!clusterLayerSelection);
 }
 
 onResize(draw);
@@ -506,6 +507,10 @@ function addPoint(point: MapDatum) {
         .attr('fill-opacity', 0)
         .attr('stroke-opacity', 0)
         .remove();
+
+    console.log('[D3WorldMap] ping appended to pingLayer, children:', pingLayerSelection.node()?.children.length);
+    console.log('[D3WorldMap] ping group transform:', ping.attr('transform'), 'dotColor:', dotColor, 'k:', k);
+    console.log('[D3WorldMap] ping SVG node:', ping.node());
 
     // Remove the ping group after all animations complete
     setTimeout(() => ping.remove(), 1500);
