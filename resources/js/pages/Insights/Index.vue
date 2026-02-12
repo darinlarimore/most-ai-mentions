@@ -513,11 +513,8 @@ onUnmounted(() => {
                             <div v-else-if="errorView === 'timeline'" class="h-72">
                                 <D3StackedBar :data="(crawlErrors.over_time ?? []) as any" />
                             </div>
-                            <div
-                                v-else-if="errorView === 'domains'"
-                                :style="{ height: Math.max(200, (crawlErrors.top_domains?.length ?? 0) * 28) + 'px' }"
-                            >
-                                <D3HorizontalBar :data="crawlErrors.top_domains ?? []" color="var(--chart-5)" />
+                            <div v-else-if="errorView === 'domains'" class="h-96">
+                                <D3Treemap :data="crawlErrors.top_domains ?? []" />
                             </div>
                         </template>
                         <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
