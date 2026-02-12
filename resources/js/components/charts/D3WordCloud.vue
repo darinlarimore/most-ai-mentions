@@ -30,13 +30,15 @@ let prevValues = new Map<string, number>();
 let svgGroup: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
 let incrementalUpdate = false;
 
-/** Deterministic rotation based on label so layout stays stable across updates. */
+/** Slight random-looking tilt based on label to add visual interest without overlap issues. */
 function wordRotation(text: string): number {
     let hash = 0;
     for (let i = 0; i < text.length; i++) {
         hash = (hash * 31 + text.charCodeAt(i)) | 0;
     }
-    return (Math.abs(hash) % 5 === 0) ? 90 : 0;
+    // Small tilts only — full 90° rotation causes overlap from font measurement mismatch
+    const angles = [0, 0, 0, 0, -15, 15];
+    return angles[Math.abs(hash) % angles.length];
 }
 
 function draw() {
@@ -68,7 +70,7 @@ function draw() {
     cloud()
         .size([w, h])
         .words(words as any)
-        .padding(5)
+        .padding(8)
         .rotate((d: any) => wordRotation(d.text ?? ''))
         .font('system-ui, sans-serif')
         .fontSize((d: any) => d.size)
