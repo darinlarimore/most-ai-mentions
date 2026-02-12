@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Deferred, WhenVisible } from '@inertiajs/vue3';
+import { Deferred } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     BarChart3,
@@ -111,7 +111,7 @@ let networkObserver: IntersectionObserver | null = null;
 
 const liveStats = reactive({ ...props.pipelineStats });
 
-// Local reactive refs for chart data — populated by WhenVisible on first load,
+// Local reactive refs for chart data — populated by Deferred on first load,
 // then updated via JSON fetch to avoid full component remounts.
 const liveTermFrequency = ref<TermFrequencyItem[]>(props.termFrequency ?? []);
 const liveTechStack = ref<TechStackItem[]>(props.techStackDistribution ?? []);
@@ -119,7 +119,7 @@ const liveScoreDist = ref<ScoreDistItem[]>(props.scoreDistribution ?? []);
 const liveMentionsVsScore = ref<ScatterItem[]>(props.mentionsVsScore ?? []);
 const liveCrawlErrors = ref<CrawlErrorsData | null>(props.crawlErrors ?? null);
 
-// Sync from WhenVisible's initial lazy load into local refs
+// Sync from Deferred's initial lazy load into local refs
 watch(() => props.termFrequency, (v) => { if (v?.length) liveTermFrequency.value = v; });
 watch(() => props.techStackDistribution, (v) => { if (v?.length) liveTechStack.value = v; });
 watch(() => props.scoreDistribution, (v) => { if (v?.length) liveScoreDist.value = v; });
@@ -331,7 +331,7 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <WhenVisible data="termFrequency" :buffer="300">
+                    <Deferred data="termFrequency">
                         <template #fallback>
                             <Skeleton class="h-96 w-full rounded-lg" />
                         </template>
@@ -345,7 +345,7 @@ onUnmounted(() => {
                                 :data="liveTermFrequency.map((t) => ({ label: t.term, value: t.count }))"
                             />
                         </div>
-                    </WhenVisible>
+                    </Deferred>
                 </CardContent>
             </Card>
 
@@ -388,7 +388,7 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <WhenVisible data="techStackDistribution" :buffer="300">
+                    <Deferred data="techStackDistribution">
                         <template #fallback>
                             <Skeleton class="h-96 w-full rounded-lg" />
                         </template>
@@ -421,7 +421,7 @@ onUnmounted(() => {
                         <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
                             No tech stack data yet. Data populates after the next crawl cycle.
                         </div>
-                    </WhenVisible>
+                    </Deferred>
                 </CardContent>
             </Card>
 
@@ -450,7 +450,7 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <WhenVisible data="scoreDistribution" :buffer="300">
+                    <Deferred data="scoreDistribution">
                         <template #fallback>
                             <Skeleton class="h-64 w-full" />
                         </template>
@@ -464,7 +464,7 @@ onUnmounted(() => {
                                 :data="liveScoreDist.map((s) => ({ label: s.range, value: s.count }))"
                             />
                         </div>
-                    </WhenVisible>
+                    </Deferred>
                 </CardContent>
             </Card>
 
@@ -493,7 +493,7 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <WhenVisible data="mentionsVsScore" :buffer="300">
+                    <Deferred data="mentionsVsScore">
                         <template #fallback>
                             <Skeleton class="h-80 w-full" />
                         </template>
@@ -525,7 +525,7 @@ onUnmounted(() => {
                                 y-label="Hype Score"
                             />
                         </div>
-                    </WhenVisible>
+                    </Deferred>
                 </CardContent>
             </Card>
 
@@ -568,7 +568,7 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <WhenVisible data="crawlErrors" :buffer="300">
+                    <Deferred data="crawlErrors">
                         <template #fallback>
                             <Skeleton class="h-72 w-full rounded-lg" />
                         </template>
@@ -595,7 +595,7 @@ onUnmounted(() => {
                                 <p>No crawl errors recorded yet.</p>
                             </div>
                         </div>
-                    </WhenVisible>
+                    </Deferred>
                 </CardContent>
             </Card>
 
