@@ -267,7 +267,7 @@ onUnmounted(() => {
                         <template #fallback>
                             <Skeleton class="h-[28rem] w-full" />
                         </template>
-                        <div v-if="hostingMap?.length" class="h-[28rem]">
+                        <div class="h-[28rem]">
                             <D3WorldMap
                                 ref="worldMapRef"
                                 :data="
@@ -280,9 +280,6 @@ onUnmounted(() => {
                                     }))
                                 "
                             />
-                        </div>
-                        <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
-                            No geocoded server data yet. Coordinates populate during crawl.
                         </div>
                     </Deferred>
                 </CardContent>

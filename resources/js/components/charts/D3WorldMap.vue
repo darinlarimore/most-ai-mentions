@@ -132,7 +132,7 @@ function clusterPoints(
 }
 
 async function draw() {
-    if (!containerRef.value || !props.data?.length) return;
+    if (!containerRef.value) return;
 
     const svg = createSvg();
     if (!svg) return;
@@ -144,6 +144,7 @@ async function draw() {
     const mutedTextColor = getColor('--muted-foreground');
 
     const { world, us } = await loadMapData();
+    if (!world || !us) return;
 
     const worldTopology = world as unknown as Topology<{ countries: GeometryCollection }>;
     const countries = feature(worldTopology, worldTopology.objects.countries);
