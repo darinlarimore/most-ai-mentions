@@ -98,11 +98,12 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
         // Fetch HTML using real Chrome browser (bypasses TLS fingerprinting and JS challenges)
         $html = null;
+        $fetchError = null;
         try {
             $html = $screenshotService->fetchHtml($this->site->url);
         } catch (\Throwable $e) {
             Log::warning("Failed to fetch HTML for {$this->site->url}: {$e->getMessage()}");
-            CrawlError::create([
+            $fetchError = CrawlError::create([
                 'site_id' => $this->site->id,
                 'category' => CrawlErrorCategory::fromThrowable($e),
                 'message' => mb_substr($e->getMessage(), 0, 1000),
@@ -182,6 +183,11 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'html_size_bytes' => $html ? strlen($html) : null,
             'detected_tech_stack' => $techStack ?: null,
         ]);
+
+        // Link the HTML fetch error to this crawl result now that it exists
+        if ($fetchError) {
+            $fetchError->update(['crawl_result_id' => $crawlResult->id]);
+        }
 
         // Record any page-level crawl errors collected by the observer
         foreach ($observer->getErrors() as $observerError) {
