@@ -6,6 +6,7 @@ import ChartTooltip from './ChartTooltip.vue';
 export interface HorizonDatum {
     timestamp: string;
     duration_ms: number;
+    has_error?: boolean;
 }
 
 const props = withDefaults(
@@ -20,11 +21,12 @@ const CAPACITY = 600;
 
 const containerRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
-const tooltip = ref({ visible: false, x: 0, y: 0, timestamp: '', duration: '' });
+const tooltip = ref({ visible: false, x: 0, y: 0, timestamp: '', duration: '', hasError: false });
 
 // Ring buffer
 const values = new Float64Array(CAPACITY);
 const timestamps: (Date | null)[] = new Array(CAPACITY).fill(null);
+const errors: boolean[] = new Array(CAPACITY).fill(false);
 let head = 0; // next write position
 let count = 0;
 
@@ -32,17 +34,18 @@ let isDark = false;
 let mutationObs: MutationObserver | null = null;
 let echoChannel: ReturnType<typeof window.Echo.channel> | null = null;
 
-function pushDatum(ts: Date, durationMs: number) {
+function pushDatum(ts: Date, durationMs: number, hasError = false) {
     values[head] = durationMs;
     timestamps[head] = ts;
+    errors[head] = hasError;
     head = (head + 1) % CAPACITY;
     if (count < CAPACITY) count++;
 }
 
-function getDatum(index: number): { ts: Date | null; value: number } {
+function getDatum(index: number): { ts: Date | null; value: number; hasError: boolean } {
     // index 0 = oldest, index count-1 = newest
     const pos = (head - count + index + CAPACITY) % CAPACITY;
-    return { ts: timestamps[pos], value: values[pos] };
+    return { ts: timestamps[pos], value: values[pos], hasError: errors[pos] };
 }
 
 function resolveColor(cssVar: string): string {
@@ -78,6 +81,8 @@ function draw() {
 
     const baseHex = resolveColor('--chart-1');
     const [br, bg, bb] = hexToRgb(baseHex);
+    const errorHex = resolveColor('--destructive');
+    const [er, eg, eb] = hexToRgb(errorHex);
 
     // Compute max value for scaling
     let maxVal = 0;
@@ -91,13 +96,15 @@ function draw() {
     const margin = { bottom: 20, top: 4 };
     const chartH = h - margin.top - margin.bottom;
 
-    // Draw bars — single color, height encodes duration
-    ctx.fillStyle = `rgba(${br}, ${bg}, ${bb}, 0.75)`;
+    // Draw bars — red for errors, normal color otherwise
     for (let i = 0; i < count; i++) {
-        const v = getDatum(i).value;
-        const barH = (v / maxVal) * chartH;
+        const d = getDatum(i);
+        const barH = (d.value / maxVal) * chartH;
         if (barH <= 0) continue;
 
+        ctx.fillStyle = d.hasError
+            ? `rgba(${er}, ${eg}, ${eb}, 0.85)`
+            : `rgba(${br}, ${bg}, ${bb}, 0.75)`;
         const x = i * barWidth;
         const y = margin.top + chartH - barH;
         ctx.fillRect(x, y, Math.max(barWidth - 0.5, 1), barH);
@@ -162,6 +169,7 @@ function handleMouseMove(event: MouseEvent) {
             second: '2-digit',
         }),
         duration: (d.value / 1000).toFixed(1) + 's',
+        hasError: d.hasError,
     };
 }
 
@@ -174,7 +182,7 @@ function initFromProps() {
     head = 0;
     count = 0;
     for (const d of props.initialData) {
-        pushDatum(new Date(d.timestamp), d.duration_ms);
+        pushDatum(new Date(d.timestamp), d.duration_ms, d.has_error ?? false);
     }
     draw();
 }
@@ -227,6 +235,7 @@ watch(() => props.initialData, initFromProps, { deep: true });
                 <div class="flex flex-col gap-0.5">
                     <span class="text-xs text-muted-foreground">{{ tooltip.timestamp }}</span>
                     <span class="font-medium tabular-nums">{{ tooltip.duration }}</span>
+                    <span v-if="tooltip.hasError" class="text-xs font-medium text-destructive">Error</span>
                 </div>
             </ChartTooltip>
         </Teleport>

@@ -292,11 +292,13 @@ class InsightsController extends Controller
             ->whereNotNull('crawl_duration_ms')
             ->orderByDesc('created_at')
             ->limit(200)
-            ->select(['created_at', 'crawl_duration_ms', 'site_id'])
+            ->select(['id', 'created_at', 'crawl_duration_ms', 'site_id'])
+            ->withCount('crawlErrors')
             ->get()
             ->map(fn ($row) => [
                 'timestamp' => $row->created_at->toISOString(),
                 'duration_ms' => $row->crawl_duration_ms,
+                'has_error' => $row->crawl_errors_count > 0,
             ])
             ->reverse()->values()->all();
     }

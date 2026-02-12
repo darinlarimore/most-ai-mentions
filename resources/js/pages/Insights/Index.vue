@@ -64,6 +64,7 @@ interface HostingMapItem {
 interface CrawlerSpeedItem {
     timestamp: string;
     duration_ms: number;
+    has_error?: boolean;
 }
 
 interface LabelValue {
