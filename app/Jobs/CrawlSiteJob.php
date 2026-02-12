@@ -234,13 +234,16 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
                 'has_html' => $html !== null,
             ]);
 
-            CrawlError::create([
-                'site_id' => $this->site->id,
-                'crawl_result_id' => $crawlResult->id,
-                'category' => $html === null ? CrawlErrorCategory::EmptyResponse : CrawlErrorCategory::Blocked,
-                'message' => $html === null ? 'No HTML captured' : 'No pages crawled — site may be blocking the crawler',
-                'url' => $this->site->url,
-            ]);
+            // Only record if we don't already have a fetch error explaining the failure
+            if (! $fetchError) {
+                CrawlError::create([
+                    'site_id' => $this->site->id,
+                    'crawl_result_id' => $crawlResult->id,
+                    'category' => $html === null ? CrawlErrorCategory::EmptyResponse : CrawlErrorCategory::Blocked,
+                    'message' => $html === null ? 'No HTML captured' : 'No pages crawled — site may be blocking the crawler',
+                    'url' => $this->site->url,
+                ]);
+            }
 
             $failures = $this->site->consecutive_failures + 1;
 
