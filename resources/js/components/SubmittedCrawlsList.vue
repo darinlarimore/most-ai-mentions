@@ -1,12 +1,24 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Clock, Loader2, CheckCircle, XCircle, X } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
 import { useSubmittedCrawls } from '@/composables/useSubmittedCrawls';
 import type { SubmittedCrawl } from '@/composables/useSubmittedCrawls';
 
 const { crawls, removeCrawl } = useSubmittedCrawls();
+
+const sortedCrawls = computed(() => {
+    const order: Record<SubmittedCrawl['status'], number> = { crawling: 0, queued: 1, completed: 2, failed: 3 };
+    return [...crawls.value].sort((a, b) => {
+        const statusDiff = order[a.status] - order[b.status];
+        if (statusDiff !== 0) return statusDiff;
+        if (a.status === 'queued' && b.status === 'queued') {
+            return (a.queuePosition ?? Infinity) - (b.queuePosition ?? Infinity);
+        }
+        return 0;
+    });
+});
 
 const fadingOut = ref(new Set<number>());
 
@@ -67,7 +79,7 @@ function statusIcon(status: SubmittedCrawl['status']) {
 
         <div class="divide-y rounded-lg border">
             <div
-                v-for="crawl in crawls"
+                v-for="crawl in sortedCrawls"
                 :key="crawl.siteId"
                 :class="[
                     'flex items-center gap-3 px-4 py-3 transition-opacity duration-300',
