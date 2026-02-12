@@ -92,19 +92,26 @@ async function fetchQueuePositions(): Promise<void> {
 
             // Reconcile: server says this site is no longer queued or crawling
             const serverStatus = data.statuses?.[String(crawl.siteId)];
-            if (serverStatus) {
-                if (serverStatus.status === 'crawling') continue;
-
-                if (serverStatus.hype_score === 0) {
-                    crawl.status = 'failed';
-                } else {
-                    crawl.status = 'completed';
-                }
-                crawl.hypeScore = serverStatus.hype_score;
+            if (!serverStatus) {
+                // Site was deleted from the DB — remove from local tracking
+                crawl.status = 'failed';
                 crawl.step = undefined;
                 crawl.queuePosition = undefined;
                 crawl.queueTotal = undefined;
+                continue;
             }
+
+            if (serverStatus.status === 'crawling') continue;
+
+            if (serverStatus.hype_score === 0) {
+                crawl.status = 'failed';
+            } else {
+                crawl.status = 'completed';
+            }
+            crawl.hypeScore = serverStatus.hype_score;
+            crawl.step = undefined;
+            crawl.queuePosition = undefined;
+            crawl.queueTotal = undefined;
         }
     } catch {
         // Silently fail — positions are a nice-to-have
