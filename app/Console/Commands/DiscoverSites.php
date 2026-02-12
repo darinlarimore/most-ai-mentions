@@ -33,6 +33,7 @@ class DiscoverSites extends Command
             'Wikidata' => fn () => $service->discoverFromWikidata(),
             'CommonCrawl' => fn () => $service->discoverFromCommonCrawl(),
             'Stack Exchange' => fn () => $service->discoverFromStackExchange(),
+            'Reverse IP' => fn () => $service->discoverFromReverseIp(),
         ];
 
         $total = 0;

@@ -890,6 +890,9 @@ class SiteDiscoveryService
         ['site' => 'stackoverflow', 'tagged' => 'api', 'sort' => 'votes'],
     ];
 
+    /** Max IPs to look up per run (HackerTarget free limit is 100/day). */
+    private const REVERSE_IP_BATCH_SIZE = 50;
+
     /** @var list<string> Domains to skip (social media, generic, etc.) */
     private const EXCLUDED_DOMAINS = [
         'google.com', 'youtube.com', 'twitter.com', 'x.com', 'facebook.com',
@@ -922,6 +925,7 @@ class SiteDiscoveryService
         $total += $this->discoverFromWikidata()->count();
         $total += $this->discoverFromCommonCrawl()->count();
         $total += $this->discoverFromStackExchange()->count();
+        $total += $this->discoverFromReverseIp()->count();
 
         return $total;
     }
@@ -1662,6 +1666,74 @@ class SiteDiscoveryService
         }
 
         return $this->createSitesFromUrls($urls, 'stackexchange');
+    }
+
+    /**
+     * Discover new sites by performing reverse IP lookups on known server IPs.
+     *
+     * Uses the HackerTarget free API (100 req/day) to find co-hosted domains.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromReverseIp(): Collection
+    {
+        $urls = [];
+
+        $ips = Site::query()
+            ->whereNotNull('server_ip')
+            ->where('server_ip', '!=', '')
+            ->distinct()
+            ->pluck('server_ip')
+            ->shuffle()
+            ->take(self::REVERSE_IP_BATCH_SIZE);
+
+        if ($ips->isEmpty()) {
+            return collect();
+        }
+
+        foreach ($ips as $ip) {
+            try {
+                $response = Http::timeout(10)
+                    ->get("https://api.hackertarget.com/reverseiplookup/?q={$ip}");
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $body = trim($response->body());
+
+                // API returns "error ..." or "API count exceeded" on failure
+                if (str_starts_with($body, 'error') || str_contains($body, 'API count exceeded')) {
+                    if (str_contains($body, 'API count exceeded')) {
+                        Log::info('SiteDiscovery: HackerTarget API daily limit reached');
+
+                        break;
+                    }
+
+                    continue;
+                }
+
+                $domains = explode("\n", $body);
+
+                foreach ($domains as $domain) {
+                    $domain = trim($domain);
+
+                    if (! $domain) {
+                        continue;
+                    }
+
+                    $url = "https://{$domain}";
+
+                    if ($this->isValidExternalUrl($url)) {
+                        $urls[] = $url;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed reverse IP lookup for {$ip}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'reverse_ip');
     }
 
     /**

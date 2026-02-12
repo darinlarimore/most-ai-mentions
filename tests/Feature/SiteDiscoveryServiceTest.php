@@ -416,3 +416,31 @@ it('discovers sites from stack exchange question bodies', function () {
     expect($sites->pluck('domain')->toArray())->not->toContain('stackoverflow.com');
     expect($sites->pluck('source')->unique()->toArray())->toBe(['stackexchange']);
 });
+
+it('discovers sites from reverse ip lookups', function () {
+    Site::factory()->create(['server_ip' => '93.184.216.34']);
+
+    Http::fake([
+        'api.hackertarget.com/reverseiplookup/*' => Http::response(
+            "cohosted-one.example.com\ncohosted-two.example.com\nreddit.com\n"
+        ),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromReverseIp();
+
+    expect($sites->pluck('domain')->toArray())->toContain('cohosted-one.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('cohosted-two.example.com');
+    expect($sites->pluck('domain')->toArray())->not->toContain('reddit.com');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['reverse_ip']);
+});
+
+it('returns empty collection when no server ips exist for reverse ip', function () {
+    Http::fake();
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromReverseIp();
+
+    expect($sites)->toHaveCount(0);
+    Http::assertNothingSent();
+});
