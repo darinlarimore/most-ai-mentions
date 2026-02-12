@@ -68,12 +68,12 @@ function removeCrawl(siteId: number): void {
 }
 
 async function fetchQueuePositions(): Promise<void> {
-    const queuedCrawls = crawls.value.filter((c) => c.status === 'queued');
-    if (queuedCrawls.length === 0) return;
+    const activeCrawls = crawls.value.filter((c) => c.status === 'queued' || c.status === 'crawling');
+    if (activeCrawls.length === 0) return;
 
     try {
         const params = new URLSearchParams();
-        queuedCrawls.forEach((c) => params.append('ids[]', String(c.siteId)));
+        activeCrawls.forEach((c) => params.append('ids[]', String(c.siteId)));
 
         const { data } = await axios.get<{
             positions: Record<string, number>;
@@ -81,19 +81,20 @@ async function fetchQueuePositions(): Promise<void> {
             statuses: Record<string, { status: string; hype_score: number }>;
         }>(`/api/queue-positions?${params.toString()}`);
 
-        for (const crawl of crawls.value) {
-            if (crawl.status !== 'queued') continue;
-
+        for (const crawl of activeCrawls) {
             const pos = data.positions[String(crawl.siteId)];
             if (pos !== undefined) {
+                crawl.status = 'queued';
                 crawl.queuePosition = pos;
                 crawl.queueTotal = data.total;
                 continue;
             }
 
-            // Reconcile: server says this site is no longer queued
+            // Reconcile: server says this site is no longer queued or crawling
             const serverStatus = data.statuses?.[String(crawl.siteId)];
             if (serverStatus) {
+                if (serverStatus.status === 'crawling') continue;
+
                 if (serverStatus.hype_score === 0) {
                     crawl.status = 'failed';
                 } else {
