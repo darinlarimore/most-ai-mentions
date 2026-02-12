@@ -25,7 +25,12 @@ const { width, height, createSvg, drawCount, getChartColors, onResize, wrapUpdat
     left: 0,
 });
 
-function draw() {
+/** Track the current content group for crossfade on data updates. */
+let currentGroup: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
+let svgSel: d3.Selection<SVGSVGElement, unknown, null, undefined> | null = null;
+
+/** Full draw — creates SVG, used for mount and resize. */
+function fullDraw() {
     if (!containerRef.value || !props.data?.length) return;
 
     const w = width.value;
@@ -55,15 +60,80 @@ function draw() {
         .font('system-ui, sans-serif')
         .fontSize((d: any) => d.size)
         .on('end', (placed: any[]) => {
-            const svg = createSvg();
-            if (!svg) return;
-            const g = svg.append('g').attr('transform', `translate(${w / 2},${h / 2})`);
-            render(g, placed, colors, shouldAnimate);
+            svgSel = createSvg();
+            if (!svgSel) return;
+            currentGroup = svgSel.append('g').attr('transform', `translate(${w / 2},${h / 2})`);
+            renderWords(currentGroup, placed, colors, shouldAnimate);
         })
         .start();
 }
 
-function render(
+/** Data update — crossfade old words out, new words in. */
+function dataUpdate() {
+    if (!containerRef.value || !props.data?.length) return;
+    if (!svgSel?.node()?.isConnected) {
+        fullDraw();
+        return;
+    }
+
+    const w = width.value;
+    const h = height.value;
+    if (w === 0 || h === 0) return;
+
+    const colors = getChartColors(Math.min(props.data.length, 8));
+    const maxVal = d3.max(props.data, (d) => d.value) ?? 1;
+
+    const fontScale = d3
+        .scaleSqrt()
+        .domain([0, maxVal])
+        .range([10, Math.min(w, h) / 6]);
+
+    const words = props.data.map((d) => ({
+        text: d.label,
+        size: fontScale(d.value),
+        value: d.value,
+    }));
+
+    cloud()
+        .size([w, h])
+        .words(words as any)
+        .padding(8)
+        .rotate(() => 0)
+        .font('system-ui, sans-serif')
+        .fontSize((d: any) => d.size)
+        .on('end', (placed: any[]) => {
+            if (!svgSel?.node()?.isConnected) return;
+
+            // Update viewBox in case dimensions shifted
+            svgSel.attr('viewBox', `0 0 ${w} ${h}`);
+
+            // Fade old group out
+            const oldGroup = currentGroup;
+            if (oldGroup) {
+                oldGroup
+                    .transition()
+                    .duration(300)
+                    .attr('opacity', 0)
+                    .remove();
+            }
+
+            // Create new group and fade in
+            currentGroup = svgSel.append('g')
+                .attr('transform', `translate(${w / 2},${h / 2})`)
+                .attr('opacity', 0);
+
+            renderWords(currentGroup, placed, colors, false);
+
+            currentGroup
+                .transition()
+                .delay(150)
+                .duration(400)
+                .attr('opacity', 1);
+        })
+        .start();
+}
+
+function renderWords(
     g: d3.Selection<SVGGElement, unknown, null, undefined>,
     placed: any[],
     colors: string[],
@@ -116,9 +186,9 @@ function attachTooltip(g: d3.Selection<SVGGElement, unknown, null, undefined>) {
         });
 }
 
-onResize(draw);
-onMounted(draw);
-watch(() => props.data, wrapUpdate(draw), { deep: true });
+onResize(fullDraw);
+onMounted(fullDraw);
+watch(() => props.data, wrapUpdate(dataUpdate), { deep: true });
 </script>
 
 <template>
