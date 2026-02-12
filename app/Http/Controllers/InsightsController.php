@@ -56,7 +56,7 @@ class InsightsController extends Controller
             ->with(['latestCrawlResult' => fn ($q) => $q->select('crawl_results.id', 'crawl_results.site_id', 'crawl_results.mention_details')])
             ->select(['id', 'domain', 'slug', 'category', 'hype_score'])
             ->orderByDesc('last_crawled_at')
-            ->limit(150)
+            ->limit(500)
             ->get()
             ->filter(fn (Site $site) => ! empty($site->latestCrawlResult?->mention_details));
 
