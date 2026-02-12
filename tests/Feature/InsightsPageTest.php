@@ -61,10 +61,8 @@ it('loads category and score data via partial reload', function () {
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->missing('categoryBreakdown')
         ->missing('scoreDistribution')
-        ->reloadOnly(['categoryBreakdown', 'scoreDistribution'], fn ($reload) => $reload
-            ->has('categoryBreakdown')
+        ->reloadOnly(['scoreDistribution'], fn ($reload) => $reload
             ->has('scoreDistribution', 6)
         )
     );

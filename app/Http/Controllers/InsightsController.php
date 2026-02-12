@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\CrawlResult;
 use App\Models\Site;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,7 +17,6 @@ class InsightsController extends Controller
             'hostingMap' => Inertia::defer(fn () => $this->getHostingMapData(), 'map'),
             'termFrequency' => Inertia::optional(fn () => $this->getTermFrequency()),
             'techStackDistribution' => Inertia::optional(fn () => $this->getTechStackDistribution()),
-            'categoryBreakdown' => Inertia::optional(fn () => $this->getCategoryBreakdown()),
             'scoreDistribution' => Inertia::optional(fn () => $this->getScoreDistribution()),
             'mentionsVsScore' => Inertia::optional(fn () => $this->getMentionsVsScore()),
             'crawlerSpeed' => Inertia::optional(fn () => $this->getCrawlerSpeed()),
@@ -193,18 +191,6 @@ class InsightsController extends Controller
      *
      * @return list<array{category: string, count: int}>
      */
-    private function getCategoryBreakdown(): array
-    {
-        return Site::active()
-            ->whereNotNull('last_crawled_at')
-            ->select('category', DB::raw('count(*) as count'))
-            ->groupBy('category')
-            ->orderByDesc('count')
-            ->get()
-            ->map(fn ($row) => ['category' => $row->category, 'count' => $row->count])
-            ->all();
-    }
-
     /**
      * Bucket hype scores into ranges for a histogram.
      *

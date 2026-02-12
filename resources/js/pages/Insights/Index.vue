@@ -4,15 +4,12 @@ import {
     BarChart3,
     ChartPie,
     ChartScatter,
-    CircleDot,
     Cloud,
     GitBranch,
     Hexagon,
     LayoutGrid,
-    Sun,
 } from 'lucide-vue-next';
 import { reactive, ref, onMounted, onUnmounted, nextTick } from 'vue';
-import D3CirclePacking from '@/components/charts/D3CirclePacking.vue';
 import D3DonutChart from '@/components/charts/D3DonutChart.vue';
 import D3ForceGraph from '@/components/charts/D3ForceGraph.vue';
 import type { NetworkData } from '@/components/charts/D3ForceGraph.vue';
@@ -21,7 +18,6 @@ import D3HorizontalBar from '@/components/charts/D3HorizontalBar.vue';
 import D3RadialTree from '@/components/charts/D3RadialTree.vue';
 import D3RealtimeHorizon from '@/components/charts/D3RealtimeHorizon.vue';
 import D3ScatterPlot from '@/components/charts/D3ScatterPlot.vue';
-import D3Sunburst from '@/components/charts/D3Sunburst.vue';
 import D3Treemap from '@/components/charts/D3Treemap.vue';
 import D3VerticalBar from '@/components/charts/D3VerticalBar.vue';
 import D3WordCloud from '@/components/charts/D3WordCloud.vue';
@@ -38,11 +34,6 @@ interface TermFrequencyItem {
 
 interface TechStackItem {
     tech: string;
-    count: number;
-}
-
-interface CategoryItem {
-    category: string;
     count: number;
 }
 
@@ -82,7 +73,6 @@ const props = defineProps<{
     };
     termFrequency: TermFrequencyItem[];
     techStackDistribution: TechStackItem[];
-    categoryBreakdown: CategoryItem[];
     scoreDistribution: ScoreDistItem[];
     mentionsVsScore: ScatterItem[];
     hostingMap: HostingMapItem[];
@@ -91,7 +81,6 @@ const props = defineProps<{
 
 const termView = ref<'bar' | 'treemap'>('treemap');
 const techView = ref<'bar' | 'radial' | 'donut' | 'cloud'>('cloud');
-const categoryView = ref<'donut' | 'sunburst' | 'circle' | 'treemap'>('donut');
 const scoreView = ref<'bar' | 'donut'>('bar');
 const scatterView = ref<'scatter' | 'hexbin'>('scatter');
 
@@ -342,78 +331,6 @@ onUnmounted(() => {
                         </template>
                         <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
                             No tech stack data yet. Data populates after the next crawl cycle.
-                        </div>
-                    </WhenVisible>
-                </CardContent>
-            </Card>
-
-            <!-- Category Distribution -->
-            <Card class="lg:col-span-2">
-                <CardHeader class="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Site Categories</CardTitle>
-                        <CardDescription>Distribution by detected category</CardDescription>
-                    </div>
-                    <div class="flex gap-1 rounded-lg border p-0.5">
-                        <button
-                            class="rounded-md p-1.5 transition-colors"
-                            :class="categoryView === 'donut' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
-                            @click="categoryView = 'donut'"
-                        >
-                            <ChartPie class="size-4" />
-                        </button>
-                        <button
-                            class="rounded-md p-1.5 transition-colors"
-                            :class="categoryView === 'sunburst' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
-                            @click="categoryView = 'sunburst'"
-                        >
-                            <Sun class="size-4" />
-                        </button>
-                        <button
-                            class="rounded-md p-1.5 transition-colors"
-                            :class="categoryView === 'circle' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
-                            @click="categoryView = 'circle'"
-                        >
-                            <CircleDot class="size-4" />
-                        </button>
-                        <button
-                            class="rounded-md p-1.5 transition-colors"
-                            :class="categoryView === 'treemap' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
-                            @click="categoryView = 'treemap'"
-                        >
-                            <LayoutGrid class="size-4" />
-                        </button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <WhenVisible data="categoryBreakdown" :buffer="300">
-                        <template #fallback>
-                            <Skeleton class="mx-auto h-96 w-96 rounded-full" />
-                        </template>
-                        <template v-if="categoryBreakdown?.length">
-                            <div v-if="categoryView === 'donut'" class="h-96">
-                                <D3DonutChart
-                                    :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
-                                />
-                            </div>
-                            <div v-else-if="categoryView === 'sunburst'" class="h-96">
-                                <D3Sunburst
-                                    :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
-                                />
-                            </div>
-                            <div v-else-if="categoryView === 'circle'" class="h-96">
-                                <D3CirclePacking
-                                    :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
-                                />
-                            </div>
-                            <div v-else class="h-96">
-                                <D3Treemap
-                                    :data="(categoryBreakdown ?? []).map((c) => ({ label: c.category, value: c.count }))"
-                                />
-                            </div>
-                        </template>
-                        <div v-else class="flex h-48 items-center justify-center text-muted-foreground">
-                            No category data yet.
                         </div>
                     </WhenVisible>
                 </CardContent>
