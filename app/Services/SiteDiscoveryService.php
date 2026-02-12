@@ -887,6 +887,9 @@ class SiteDiscoveryService
     {
         $urls = [];
 
+        // Collect all story IDs from each endpoint
+        $allStoryIds = [];
+
         foreach (self::HN_API_ENDPOINTS as $endpoint) {
             try {
                 $response = Http::timeout(15)->get($endpoint);
@@ -902,44 +905,50 @@ class SiteDiscoveryService
                     continue;
                 }
 
-                $storyIds = array_slice($storyIds, 0, self::HN_STORIES_PER_ENDPOINT);
-
-                foreach ($storyIds as $id) {
-                    try {
-                        $itemResponse = Http::timeout(5)
-                            ->get(sprintf(self::HN_ITEM_URL, $id));
-
-                        if (! $itemResponse->successful()) {
-                            continue;
-                        }
-
-                        $item = $itemResponse->json();
-
-                        if (! is_array($item) || empty($item['url']) || empty($item['title'])) {
-                            continue;
-                        }
-
-                        $title = strtolower($item['title']);
-                        $isAiRelated = false;
-
-                        foreach (self::AI_KEYWORDS as $keyword) {
-                            if (str_contains($title, $keyword)) {
-                                $isAiRelated = true;
-
-                                break;
-                            }
-                        }
-
-                        if ($isAiRelated && $this->isValidExternalUrl($item['url'])) {
-                            $urls[] = $item['url'];
-                        }
-                    } catch (\Throwable $e) {
-                        // Individual story fetch failed, continue with next
-                        continue;
-                    }
-                }
+                $allStoryIds[] = array_slice($storyIds, 0, self::HN_STORIES_PER_ENDPOINT);
             } catch (\Throwable $e) {
                 Log::warning("SiteDiscovery: Failed to fetch HN API endpoint {$endpoint}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        // Deduplicate story IDs across endpoints
+        $uniqueIds = array_values(array_unique(array_merge(...$allStoryIds)));
+
+        // Fetch story items concurrently in batches of 25
+        foreach (array_chunk($uniqueIds, 25) as $batch) {
+            $responses = Http::pool(fn ($pool) => collect($batch)->map(
+                fn (int $id) => $pool->as((string) $id)->timeout(5)->get(sprintf(self::HN_ITEM_URL, $id))
+            )->all());
+
+            foreach ($responses as $itemResponse) {
+                try {
+                    if (! $itemResponse instanceof \Illuminate\Http\Client\Response || ! $itemResponse->successful()) {
+                        continue;
+                    }
+
+                    $item = $itemResponse->json();
+
+                    if (! is_array($item) || empty($item['url']) || empty($item['title'])) {
+                        continue;
+                    }
+
+                    $title = strtolower($item['title']);
+                    $isAiRelated = false;
+
+                    foreach (self::AI_KEYWORDS as $keyword) {
+                        if (str_contains($title, $keyword)) {
+                            $isAiRelated = true;
+
+                            break;
+                        }
+                    }
+
+                    if ($isAiRelated && $this->isValidExternalUrl($item['url'])) {
+                        $urls[] = $item['url'];
+                    }
+                } catch (\Throwable $e) {
+                    continue;
+                }
             }
         }
 
