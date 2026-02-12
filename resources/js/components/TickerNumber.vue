@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 
-const props = defineProps<{ value: number }>();
+const props = defineProps<{ value: number; compact?: boolean }>();
 
 interface CharState {
     char: string;
@@ -9,8 +9,15 @@ interface CharState {
     rolling: boolean;
 }
 
+function formatCompact(n: number): string {
+    if (n >= 1_000_000_000_000) return (n / 1_000_000_000_000).toFixed(1).replace(/\.0$/, '') + 'T';
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 10_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return n.toLocaleString();
+}
+
 function toChars(n: number): string[] {
-    return n.toLocaleString().split('');
+    return (props.compact ? formatCompact(n) : n.toLocaleString()).split('');
 }
 
 const chars = ref<CharState[]>(toChars(props.value).map((c) => ({ char: c, prevChar: c, rolling: false })));

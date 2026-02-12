@@ -214,15 +214,13 @@ onUnmounted(() => {
         </div>
 
         <!-- Pipeline Stats -->
-        <div class="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-            <Card v-for="stat in stats" :key="stat.key">
-                <CardContent class="pt-6">
-                    <p class="text-sm font-medium text-muted-foreground">{{ stat.label }}</p>
-                    <p class="text-3xl font-bold">
-                        <TickerNumber :value="liveStats[stat.key]" />
-                    </p>
-                </CardContent>
-            </Card>
+        <div class="mb-8 grid grid-cols-4 divide-x divide-border rounded-xl border bg-card">
+            <div v-for="stat in stats" :key="stat.key" class="flex flex-col items-center justify-center px-2 py-4 text-center">
+                <span class="text-4xl font-extrabold tracking-tight sm:text-5xl">
+                    <TickerNumber :value="liveStats[stat.key]" compact />
+                </span>
+                <span class="mt-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">{{ stat.label }}</span>
+            </div>
         </div>
 
         <!-- Charts Grid -->
