@@ -119,6 +119,63 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             Log::warning("Failed to collect HTTP metadata for {$this->site->url}: {$e->getMessage()}");
         }
 
+        // Check if the site redirects to a non-homepage URL
+        if ($httpMetadata && HttpMetadataCollector::isNonHomepageRedirect($this->site->url, $httpMetadata['final_url'] ?? '')) {
+            Log::info("Site {$this->site->url} redirects to non-homepage: {$httpMetadata['final_url']}");
+
+            // Kill the async HTML fetch — we don't need it
+            if ($htmlProcess) {
+                try {
+                    $htmlProcess->stop(0);
+                } catch (\Throwable) {
+                    // Ignore process cleanup errors
+                }
+            }
+
+            $crawlResult = CrawlResult::create([
+                'site_id' => $this->site->id,
+                'mention_details' => [],
+                'ai_mention_count' => 0,
+                'pages_crawled' => 0,
+                'redirect_chain' => $httpMetadata['redirect_chain'] ?? null,
+                'final_url' => mb_substr($httpMetadata['final_url'] ?? '', 0, 2048) ?: null,
+                'response_time_ms' => $httpMetadata['response_time_ms'] ?? null,
+            ]);
+
+            CrawlError::create([
+                'site_id' => $this->site->id,
+                'crawl_result_id' => $crawlResult->id,
+                'category' => CrawlErrorCategory::RedirectToNonHomepage,
+                'message' => 'Site redirects to non-homepage URL: '.mb_substr($httpMetadata['final_url'] ?? '', 0, 500),
+                'url' => $this->site->url,
+            ]);
+
+            $failures = $this->site->consecutive_failures + 1;
+            $failedDurationMs = (int) round((hrtime(true) - $crawlStartedAt) / 1_000_000);
+            $crawlResult->update(['crawl_duration_ms' => $failedDurationMs]);
+
+            $this->site->update([
+                'last_attempted_at' => now(),
+                'status' => 'pending',
+                'consecutive_failures' => $failures,
+                'is_active' => $failures < Site::MAX_CONSECUTIVE_FAILURES,
+            ]);
+
+            if ($failures >= Site::MAX_CONSECUTIVE_FAILURES) {
+                Log::info("Deactivated {$this->site->url} after {$failures} consecutive failures (redirect to non-homepage)");
+            }
+
+            CrawlCompleted::dispatch(
+                $this->site->id, 0, 0, null, $failedDurationMs,
+                $this->site->domain, $this->site->slug, $this->site->category,
+                [], true, null, null,
+            );
+            QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
+            self::dispatchNext();
+
+            return;
+        }
+
         // Now collect the HTML result from the async Chrome process
         if ($htmlProcess && ! $fetchError) {
             try {

@@ -94,6 +94,43 @@ class HttpMetadataCollector
     }
 
     /**
+     * Determine if the final URL after redirects is a non-homepage URL.
+     *
+     * Returns true if the final URL lands on a different host or has a meaningful path
+     * (anything beyond "/" or common homepage variants like "/index.html").
+     */
+    public static function isNonHomepageRedirect(string $originalUrl, string $finalUrl): bool
+    {
+        $originalHost = mb_strtolower(parse_url($originalUrl, PHP_URL_HOST) ?? '');
+        $finalHost = mb_strtolower(parse_url($finalUrl, PHP_URL_HOST) ?? '');
+
+        // Different host = redirect away from the site entirely
+        if ($originalHost !== '' && $finalHost !== '' && $originalHost !== $finalHost) {
+            // Allow www vs non-www variants
+            $stripWww = fn (string $host): string => str_starts_with($host, 'www.') ? substr($host, 4) : $host;
+            if ($stripWww($originalHost) !== $stripWww($finalHost)) {
+                return true;
+            }
+        }
+
+        $finalPath = parse_url($finalUrl, PHP_URL_PATH) ?? '/';
+        $finalPath = rtrim($finalPath, '/');
+
+        // Empty path or just "/" is a homepage
+        if ($finalPath === '' || $finalPath === '/') {
+            return false;
+        }
+
+        // Common homepage paths that are acceptable
+        $homepagePaths = ['/index.html', '/index.htm', '/index.php'];
+        if (in_array(mb_strtolower($finalPath), $homepagePaths, true)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Resolve the server IP address for a hostname via DNS lookup.
      */
     private function resolveServerIp(?string $host): ?string

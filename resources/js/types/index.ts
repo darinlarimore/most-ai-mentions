@@ -29,6 +29,7 @@ export interface Site {
     crawl_count: number;
     source: string | null;
     status: string;
+    consecutive_failures: number;
     last_crawled_at: string | null;
     submitted_by: number | null;
     created_at: string;

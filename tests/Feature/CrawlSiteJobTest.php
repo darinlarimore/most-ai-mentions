@@ -20,6 +20,8 @@ it('dispatches GenerateScreenshotJob asynchronously instead of synchronously', f
     Event::fake();
 
     $site = Site::factory()->pending()->create([
+        'url' => 'https://example-screenshot.com',
+        'domain' => 'example-screenshot.com',
         'category' => 'other',
     ]);
 
@@ -61,6 +63,8 @@ it('includes site_source in CrawlStarted event', function () {
     Event::fake();
 
     $site = Site::factory()->pending()->create([
+        'url' => 'https://example-source.com',
+        'domain' => 'example-source.com',
         'category' => 'other',
         'source' => 'hackernews',
     ]);
@@ -103,6 +107,8 @@ it('includes latitude and longitude in CrawlCompleted event on success', functio
     Event::fake();
 
     $site = Site::factory()->pending()->create([
+        'url' => 'https://example-geo.com',
+        'domain' => 'example-geo.com',
         'category' => 'other',
     ]);
 
@@ -150,6 +156,8 @@ it('sends null latitude and longitude in CrawlCompleted when crawl fails', funct
     Event::fake();
 
     $site = Site::factory()->pending()->create([
+        'url' => 'https://example-fail.com',
+        'domain' => 'example-fail.com',
         'category' => 'other',
     ]);
 
