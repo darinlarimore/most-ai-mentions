@@ -6,10 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import SubmittedCrawlsList from '@/components/SubmittedCrawlsList.vue';
+import { useSubmittedCrawls } from '@/composables/useSubmittedCrawls';
 import GuestLayout from '@/layouts/GuestLayout.vue';
 
+interface FlashData {
+    success?: string;
+    submitted_site?: { id: number; url: string; slug: string };
+    submitted_sites?: Array<{ id: number; url: string; slug: string }>;
+}
+
 const page = usePage();
-const flash = computed(() => (page.props.flash as { success?: string })?.success);
+const flash = computed(() => (page.props.flash as FlashData)?.success);
+const { addCrawl, addCrawls } = useSubmittedCrawls();
 
 const mode = ref<'single' | 'batch'>('single');
 
@@ -24,6 +33,10 @@ const batchForm = useForm({
 const submitSingle = () => {
     singleForm.post('/submit', {
         onSuccess: () => {
+            const submittedSite = (page.props.flash as FlashData)?.submitted_site;
+            if (submittedSite) {
+                addCrawl(submittedSite);
+            }
             singleForm.reset();
         },
     });
@@ -33,6 +46,10 @@ const submitBatch = () => {
     batchForm.post('/submit/batch', {
         preserveScroll: true,
         onSuccess: () => {
+            const submittedSites = (page.props.flash as FlashData)?.submitted_sites;
+            if (submittedSites && submittedSites.length > 0) {
+                addCrawls(submittedSites);
+            }
             batchForm.reset();
         },
     });
@@ -169,6 +186,8 @@ const submitBatch = () => {
                         </CardFooter>
                     </form>
                 </Card>
+
+                <SubmittedCrawlsList />
             </div>
         </div>
     </GuestLayout>

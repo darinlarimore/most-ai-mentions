@@ -84,7 +84,8 @@ class SiteController extends Controller
 
         CrawlSiteJob::dispatch($site);
 
-        return redirect()->route('sites.show', $site);
+        return redirect()->route('sites.show', $site)
+            ->with('submitted_site', ['id' => $site->id, 'url' => $site->url, 'slug' => $site->slug]);
     }
 
     /**
@@ -99,6 +100,7 @@ class SiteController extends Controller
         $added = 0;
         $skipped = 0;
         $invalid = 0;
+        $createdSites = [];
 
         foreach ($urls as $rawUrl) {
             // Add scheme if missing
@@ -145,6 +147,7 @@ class SiteController extends Controller
             ]);
 
             CrawlSiteJob::dispatch($site);
+            $createdSites[] = ['id' => $site->id, 'url' => $site->url, 'slug' => $site->slug];
             $added++;
         }
 
@@ -165,6 +168,6 @@ class SiteController extends Controller
             return back()->withErrors(['urls' => "No new sites were added. {$message}"]);
         }
 
-        return back()->with('success', $message);
+        return back()->with('success', $message)->with('submitted_sites', $createdSites);
     }
 }

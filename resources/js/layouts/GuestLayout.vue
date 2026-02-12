@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Menu, X } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import CrawlTrackingBar from '@/components/CrawlTrackingBar.vue';
+import { useSubmittedCrawls } from '@/composables/useSubmittedCrawls';
 
 const mobileMenuOpen = ref(false);
+const { setupEcho } = useSubmittedCrawls();
+
+onMounted(() => {
+    setupEcho();
+});
 </script>
 
 <template>
@@ -69,6 +76,8 @@ const mobileMenuOpen = ref(false);
                 </nav>
             </div>
         </header>
+
+        <CrawlTrackingBar />
 
         <main>
             <slot />

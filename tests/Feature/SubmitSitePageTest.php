@@ -55,6 +55,21 @@ it('always sets category to other for auto-detection', function () {
     ]);
 });
 
+it('flashes submitted_site data on successful submit', function () {
+    Queue::fake();
+
+    $response = $this->post('/submit', [
+        'url' => 'https://flashtest.com',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('submitted_site', function (array $data) {
+        return $data['url'] === 'https://flashtest.com'
+            && $data['slug'] === 'flashtest-com'
+            && isset($data['id']);
+    });
+});
+
 it('rejects blocked domains', function () {
     $this->post('/submit', [
         'url' => 'https://pornhub.com',

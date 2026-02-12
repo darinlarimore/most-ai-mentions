@@ -95,6 +95,20 @@ it('returns error when no new sites are added', function () {
     ])->assertSessionHasErrors('urls');
 });
 
+it('flashes submitted_sites data on successful batch submit', function () {
+    Queue::fake();
+
+    $this->post('/submit/batch', [
+        'urls' => "https://track1.com\nhttps://track2.com",
+    ])->assertSessionHas('submitted_sites', function (array $sites) {
+        return count($sites) === 2
+            && $sites[0]['url'] === 'https://track1.com'
+            && $sites[1]['url'] === 'https://track2.com'
+            && isset($sites[0]['id'], $sites[0]['slug'])
+            && isset($sites[1]['id'], $sites[1]['slug']);
+    });
+});
+
 it('flashes success message with counts', function () {
     Queue::fake();
 
