@@ -28,6 +28,11 @@ class DiscoverSites extends Command
             'Lobste.rs' => fn () => $service->discoverFromLobsters(),
             'Wikipedia Links' => fn () => $service->discoverFromWikipedia(),
             'Lemmy' => fn () => $service->discoverFromLemmy(),
+            'Mastodon' => fn () => $service->discoverFromMastodon(),
+            'Show HN' => fn () => $service->discoverFromShowHN(),
+            'Wikidata' => fn () => $service->discoverFromWikidata(),
+            'CommonCrawl' => fn () => $service->discoverFromCommonCrawl(),
+            'Stack Exchange' => fn () => $service->discoverFromStackExchange(),
         ];
 
         $total = 0;

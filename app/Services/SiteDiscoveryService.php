@@ -857,6 +857,39 @@ class SiteDiscoveryService
         'technology', 'programming', 'selfhosted', 'opensource',
     ];
 
+    /** @var list<string> */
+    private const MASTODON_HASHTAGS = [
+        'ai', 'machinelearning', 'llm', 'opensource', 'webdev',
+        'startup', 'saas', 'tech', 'programming', 'software',
+        'selfhosted', 'devtools', 'cloud', 'security',
+    ];
+
+    /** @var list<string> Wikidata entity type IDs to query for official websites. */
+    private const WIKIDATA_ENTITY_TYPES = [
+        'Q7397',    // software
+        'Q1058914', // software company
+        'Q11446',   // technology company
+        'Q1668024', // web application
+        'Q35127',   // website
+    ];
+
+    /** @var list<string> TLD patterns to search in the CommonCrawl index. */
+    private const COMMONCRAWL_TLD_PATTERNS = [
+        '*.ai', '*.io', '*.dev', '*.app', '*.tech', '*.tools',
+    ];
+
+    /**
+     * Stack Exchange API sources: site + sort + optional tag filter.
+     *
+     * @var list<array{site: string, sort: string, tagged?: string}>
+     */
+    private const STACK_EXCHANGE_SOURCES = [
+        ['site' => 'softwarerecs', 'sort' => 'votes'],
+        ['site' => 'softwarerecs', 'sort' => 'activity'],
+        ['site' => 'stackoverflow', 'tagged' => 'web-services', 'sort' => 'votes'],
+        ['site' => 'stackoverflow', 'tagged' => 'api', 'sort' => 'votes'],
+    ];
+
     /** @var list<string> Domains to skip (social media, generic, etc.) */
     private const EXCLUDED_DOMAINS = [
         'google.com', 'youtube.com', 'twitter.com', 'x.com', 'facebook.com',
@@ -864,6 +897,7 @@ class SiteDiscoveryService
         'news.ycombinator.com', 'g2.com', 'producthunt.com', 'amazonaws.com',
         'cloudfront.net', 'archive.org', 'web.archive.org', 'dev.to',
         'medium.com', 'npmjs.com', 'pypi.org', 'lemmy.world', 'lobste.rs',
+        'mastodon.social', 'stackoverflow.com', 'stackexchange.com',
     ];
 
     /**
@@ -883,6 +917,11 @@ class SiteDiscoveryService
         $total += $this->discoverFromLobsters()->count();
         $total += $this->discoverFromWikipedia()->count();
         $total += $this->discoverFromLemmy()->count();
+        $total += $this->discoverFromMastodon()->count();
+        $total += $this->discoverFromShowHN()->count();
+        $total += $this->discoverFromWikidata()->count();
+        $total += $this->discoverFromCommonCrawl()->count();
+        $total += $this->discoverFromStackExchange()->count();
 
         return $total;
     }
@@ -1392,6 +1431,237 @@ class SiteDiscoveryService
         }
 
         return $this->createSitesFromUrls($urls, 'lemmy');
+    }
+
+    /**
+     * Discover sites from Mastodon public hashtag timelines.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromMastodon(): Collection
+    {
+        $urls = [];
+
+        foreach (self::MASTODON_HASHTAGS as $hashtag) {
+            try {
+                $response = Http::timeout(15)
+                    ->get("https://mastodon.social/api/v1/timelines/tag/{$hashtag}", [
+                        'limit' => 40,
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $statuses = $response->json();
+
+                if (! is_array($statuses)) {
+                    continue;
+                }
+
+                foreach ($statuses as $status) {
+                    $cardUrl = $status['card']['url'] ?? null;
+
+                    if ($cardUrl && $this->isValidExternalUrl($cardUrl)) {
+                        $urls[] = $cardUrl;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed Mastodon fetch for #{$hashtag}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'mastodon');
+    }
+
+    /**
+     * Discover sites from Hacker News "Show HN" posts via Algolia.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromShowHN(): Collection
+    {
+        $urls = [];
+
+        try {
+            $response = Http::timeout(15)
+                ->get('https://hn.algolia.com/api/v1/search', [
+                    'tags' => 'show_hn',
+                    'hitsPerPage' => 50,
+                ]);
+
+            if ($response->successful()) {
+                foreach ($response->json('hits', []) as $hit) {
+                    $url = $hit['url'] ?? null;
+
+                    if ($url && $this->isValidExternalUrl($url)) {
+                        $urls[] = $url;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('SiteDiscovery: Failed Show HN fetch', ['error' => $e->getMessage()]);
+        }
+
+        return $this->createSitesFromUrls($urls, 'show_hn');
+    }
+
+    /**
+     * Discover sites from Wikidata SPARQL queries for companies and software.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromWikidata(): Collection
+    {
+        $urls = [];
+
+        foreach (self::WIKIDATA_ENTITY_TYPES as $entityType) {
+            try {
+                $sparql = "SELECT ?website WHERE { ?item wdt:P31 wd:{$entityType} . ?item wdt:P856 ?website . } LIMIT 200";
+
+                $response = Http::timeout(30)
+                    ->withHeaders(['Accept' => 'application/sparql-results+json'])
+                    ->get('https://query.wikidata.org/sparql', [
+                        'query' => $sparql,
+                        'format' => 'json',
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $bindings = $response->json('results.bindings', []);
+
+                foreach ($bindings as $binding) {
+                    $url = $binding['website']['value'] ?? null;
+
+                    if ($url && $this->isValidExternalUrl($url)) {
+                        $urls[] = $url;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed Wikidata query for {$entityType}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'wikidata');
+    }
+
+    /**
+     * Discover sites from the CommonCrawl web index by TLD pattern.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromCommonCrawl(): Collection
+    {
+        $urls = [];
+
+        try {
+            $infoResponse = Http::timeout(15)->get('https://index.commoncrawl.org/collinfo.json');
+
+            if (! $infoResponse->successful()) {
+                return collect();
+            }
+
+            $indexes = $infoResponse->json();
+
+            if (! is_array($indexes) || empty($indexes)) {
+                return collect();
+            }
+
+            $cdxApi = $indexes[0]['cdx-api'] ?? null;
+
+            if (! $cdxApi) {
+                return collect();
+            }
+
+            foreach (self::COMMONCRAWL_TLD_PATTERNS as $pattern) {
+                try {
+                    $response = Http::timeout(30)->get($cdxApi, [
+                        'url' => $pattern,
+                        'output' => 'json',
+                        'limit' => 200,
+                    ]);
+
+                    if (! $response->successful()) {
+                        continue;
+                    }
+
+                    $lines = explode("\n", trim($response->body()));
+
+                    foreach ($lines as $line) {
+                        if (empty($line)) {
+                            continue;
+                        }
+
+                        $record = json_decode($line, true);
+
+                        if (! $record || empty($record['url'])) {
+                            continue;
+                        }
+
+                        if ($this->isValidExternalUrl($record['url'])) {
+                            $urls[] = $record['url'];
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("SiteDiscovery: Failed CommonCrawl fetch for {$pattern}", ['error' => $e->getMessage()]);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('SiteDiscovery: Failed CommonCrawl index fetch', ['error' => $e->getMessage()]);
+        }
+
+        return $this->createSitesFromUrls($urls, 'commoncrawl');
+    }
+
+    /**
+     * Discover sites from Stack Exchange question body links.
+     *
+     * @return Collection<int, Site>
+     */
+    public function discoverFromStackExchange(): Collection
+    {
+        $urls = [];
+
+        foreach (self::STACK_EXCHANGE_SOURCES as $source) {
+            try {
+                $params = [
+                    'site' => $source['site'],
+                    'sort' => $source['sort'],
+                    'order' => 'desc',
+                    'pagesize' => 50,
+                    'filter' => 'withbody',
+                ];
+
+                if (isset($source['tagged'])) {
+                    $params['tagged'] = $source['tagged'];
+                }
+
+                $response = Http::timeout(15)
+                    ->get('https://api.stackexchange.com/2.3/questions', $params);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                foreach ($response->json('items', []) as $item) {
+                    $body = $item['body'] ?? '';
+
+                    preg_match_all('/href="(https?:\/\/[^"]+)"/i', $body, $matches);
+
+                    foreach ($matches[1] ?? [] as $url) {
+                        if ($this->isValidExternalUrl($url)) {
+                            $urls[] = $url;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("SiteDiscovery: Failed Stack Exchange fetch for {$source['site']}", ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $this->createSitesFromUrls($urls, 'stackexchange');
     }
 
     /**

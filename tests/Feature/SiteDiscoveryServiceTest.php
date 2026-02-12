@@ -315,3 +315,104 @@ it('discovers sites from lemmy link posts', function () {
     expect($sites->pluck('domain')->toArray())->not->toContain('lemmy.world');
     expect($sites->pluck('source')->unique()->toArray())->toBe(['lemmy']);
 });
+
+it('discovers sites from mastodon hashtag timelines', function () {
+    Http::fake([
+        'mastodon.social/api/v1/timelines/tag/*' => Http::response([
+            ['card' => ['url' => 'https://cool-tool.example.com']],
+            ['card' => null],
+            ['content' => '<p>No card here</p>'],
+            ['card' => ['url' => 'https://another-app.example.com']],
+            ['card' => ['url' => 'https://mastodon.social/some-post']],
+        ]),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromMastodon();
+
+    expect($sites->pluck('domain')->toArray())->toContain('cool-tool.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('another-app.example.com');
+    expect($sites->pluck('domain')->toArray())->not->toContain('mastodon.social');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['mastodon']);
+});
+
+it('discovers sites from show hn posts', function () {
+    Http::fake([
+        'hn.algolia.com/*' => Http::response([
+            'hits' => [
+                ['url' => 'https://my-startup.example.com', 'title' => 'Show HN: My Startup'],
+                ['url' => null, 'title' => 'Show HN: text only'],
+                ['url' => 'https://dev-tool.example.com', 'title' => 'Show HN: Dev Tool'],
+            ],
+        ]),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromShowHN();
+
+    expect($sites->pluck('domain')->toArray())->toContain('my-startup.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('dev-tool.example.com');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['show_hn']);
+});
+
+it('discovers sites from wikidata sparql queries', function () {
+    Http::fake([
+        'query.wikidata.org/*' => Http::response([
+            'results' => [
+                'bindings' => [
+                    ['website' => ['type' => 'uri', 'value' => 'https://software-co.example.com']],
+                    ['website' => ['type' => 'uri', 'value' => 'https://wikipedia.org/wiki/something']],
+                    ['website' => ['type' => 'uri', 'value' => 'https://tech-startup.example.com']],
+                ],
+            ],
+        ]),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromWikidata();
+
+    expect($sites->pluck('domain')->toArray())->toContain('software-co.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('tech-startup.example.com');
+    expect($sites->pluck('domain')->toArray())->not->toContain('wikipedia.org');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['wikidata']);
+});
+
+it('discovers sites from commoncrawl index', function () {
+    Http::fake([
+        'index.commoncrawl.org/collinfo.json' => Http::response([
+            ['cdx-api' => 'https://index.commoncrawl.org/CC-MAIN-2025-06-index'],
+        ]),
+        'index.commoncrawl.org/CC-MAIN-2025-06-index*' => Http::response(
+            "{\"url\":\"https://example-one.ai/page\",\"urlkey\":\"ai,example-one)/page\"}\n".
+            "{\"url\":\"https://example-two.dev/\",\"urlkey\":\"dev,example-two)/\"}\n".
+            "{\"url\":\"https://reddit.com/r/test\",\"urlkey\":\"com,reddit)/r/test\"}\n"
+        ),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromCommonCrawl();
+
+    expect($sites->pluck('domain')->toArray())->toContain('example-one.ai');
+    expect($sites->pluck('domain')->toArray())->toContain('example-two.dev');
+    expect($sites->pluck('domain')->toArray())->not->toContain('reddit.com');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['commoncrawl']);
+});
+
+it('discovers sites from stack exchange question bodies', function () {
+    Http::fake([
+        'api.stackexchange.com/*' => Http::response([
+            'items' => [
+                ['body' => '<p>Try <a href="https://awesome-tool.example.com">this tool</a> and <a href="https://stackoverflow.com/q/123">related</a></p>'],
+                ['body' => '<p>Use <a href="https://dev-platform.example.com/docs">this platform</a></p>'],
+            ],
+        ]),
+    ]);
+
+    $service = new SiteDiscoveryService;
+    $sites = $service->discoverFromStackExchange();
+
+    expect($sites->pluck('domain')->toArray())->toContain('awesome-tool.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('dev-platform.example.com');
+    expect($sites->pluck('domain')->toArray())->not->toContain('stackoverflow.com');
+    expect($sites->pluck('source')->unique()->toArray())->toBe(['stackexchange']);
+});
