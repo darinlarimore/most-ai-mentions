@@ -74,8 +74,12 @@ function draw() {
     const w = width.value;
     const h = height.value;
 
-    // Deep copy data so simulation can mutate
-    nodes = props.data.nodes.map((n) => ({ ...n }));
+    // Deep copy data so simulation can mutate — start all nodes at center
+    nodes = props.data.nodes.map((n) => ({
+        ...n,
+        x: w / 2 + (Math.random() - 0.5) * 10,
+        y: h / 2 + (Math.random() - 0.5) * 10,
+    }));
     links = props.data.links.map((l) => ({ ...l }));
     nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
@@ -98,41 +102,54 @@ function draw() {
     linkG = svg.append('g').attr('class', 'links');
     nodeG = svg.append('g').attr('class', 'nodes');
 
-    // Links
+    // Links — start invisible, fade in after nodes appear
     const linkSel = linkG
         .selectAll<SVGLineElement, GraphLink>('line')
         .data(links)
         .enter()
         .append('line')
         .attr('stroke', textColor)
-        .attr('stroke-opacity', 0.08)
+        .attr('stroke-opacity', 0)
         .attr('stroke-width', 1);
 
-    // Nodes
+    linkSel
+        .transition()
+        .duration(500)
+        .delay(800)
+        .attr('stroke-opacity', 0.08);
+
+    // Nodes — grow from center with staggered entrance
     const nodeSel = nodeG
         .selectAll<SVGCircleElement, GraphNode>('circle')
         .data(nodes, (d) => d.id)
         .enter()
         .append('circle')
+        .attr('cx', w / 2)
+        .attr('cy', h / 2)
         .attr('r', 0)
         .attr('fill', (d) =>
             d.type === 'term' ? termColor : (categoryColors.get(d.category ?? 'other') ?? termColor),
         )
-        .attr('fill-opacity', (d) => (d.type === 'term' ? 0.7 : 0.8))
+        .attr('fill-opacity', 0)
         .attr('stroke', (d) =>
             d.type === 'term' ? termColor : (categoryColors.get(d.category ?? 'other') ?? termColor),
         )
         .attr('stroke-width', 1)
-        .attr('stroke-opacity', 0.5)
+        .attr('stroke-opacity', 0)
         .style('cursor', (d) => (d.type === 'site' ? 'pointer' : 'default'));
 
-    // Animate in
+    // Staggered grow: site nodes first, then term nodes, with random spread within each group
     nodeSel
         .transition()
-        .duration(600)
-        .delay(() => Math.random() * 400)
-        .ease(d3.easeBackOut)
-        .attr('r', (d) => radiusForNode(d));
+        .duration(700)
+        .delay((d) => {
+            const base = d.type === 'site' ? 0 : 300;
+            return base + Math.random() * 500;
+        })
+        .ease(d3.easeBackOut.overshoot(1.3))
+        .attr('r', (d) => radiusForNode(d))
+        .attr('fill-opacity', (d) => (d.type === 'term' ? 0.7 : 0.8))
+        .attr('stroke-opacity', 0.5);
 
     // Drag
     const drag = d3
