@@ -323,7 +323,7 @@ onUnmounted(() => {
                                     color="var(--chart-2)"
                                 />
                             </div>
-                            <div v-else-if="techView === 'donut'" class="h-72">
+                            <div v-else-if="techView === 'donut'" class="h-96">
                                 <D3DonutChart
                                     :data="(techStackDistribution ?? []).map((t) => ({ label: t.tech, value: t.count }))"
                                 />

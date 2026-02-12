@@ -108,7 +108,7 @@ watch(() => props.data, draw, { deep: true });
 </script>
 
 <template>
-    <div class="flex h-full w-full items-center">
+    <div class="flex h-full w-full items-center justify-center">
         <div ref="containerRef" class="h-full min-w-0 flex-1" />
         <div v-if="legendItems.length" class="flex max-h-full flex-col gap-1.5 overflow-y-auto pr-2 pl-2">
             <div v-for="item in legendItems" :key="item.label" class="flex items-center gap-2 text-xs">
