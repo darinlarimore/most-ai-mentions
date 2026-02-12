@@ -26,6 +26,8 @@ class CrawlCompleted implements ShouldBroadcastNow
         public readonly ?string $category = null,
         public readonly array $ai_terms = [],
         public readonly bool $has_error = false,
+        public readonly ?float $latitude = null,
+        public readonly ?float $longitude = null,
     ) {}
 
     public function broadcastAs(): string
@@ -59,6 +61,8 @@ class CrawlCompleted implements ShouldBroadcastNow
             'category' => $this->category,
             'ai_terms' => $this->ai_terms,
             'has_error' => $this->has_error,
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
         ];
     }
 }

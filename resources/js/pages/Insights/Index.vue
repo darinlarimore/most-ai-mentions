@@ -102,6 +102,7 @@ const scoreView = ref<'bar' | 'donut'>('bar');
 const scatterView = ref<'scatter' | 'hexbin'>('scatter');
 const errorView = ref<'donut' | 'bar' | 'timeline' | 'domains'>('donut');
 
+const worldMapRef = ref<InstanceType<typeof D3WorldMap> | null>(null);
 const forceGraphRef = ref<InstanceType<typeof D3ForceGraph> | null>(null);
 const networkData = ref<NetworkData | null>(null);
 const networkLoading = ref(true);
@@ -188,6 +189,15 @@ onMounted(() => {
     activityChannel.listen('.CrawlCompleted', (e: Record<string, unknown>) => {
         refreshStats();
         forceGraphRef.value?.addSiteNode(e as Parameters<InstanceType<typeof D3ForceGraph>['addSiteNode']>[0]);
+        if (e.latitude && e.longitude) {
+            worldMapRef.value?.addPoint({
+                domain: e.domain as string,
+                slug: e.slug as string,
+                latitude: e.latitude as number,
+                longitude: e.longitude as number,
+                hypeScore: (e.hype_score as number) ?? 0,
+            });
+        }
         scheduleChartRefresh();
     });
 
@@ -259,6 +269,7 @@ onUnmounted(() => {
                         </template>
                         <div v-if="hostingMap?.length" class="h-[28rem]">
                             <D3WorldMap
+                                ref="worldMapRef"
                                 :data="
                                     (hostingMap ?? []).map((s) => ({
                                         domain: s.domain,

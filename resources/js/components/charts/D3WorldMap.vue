@@ -41,6 +41,11 @@ let worldDataCache: any = null;
 let usDataCache: any = null;
 let zoomBehavior: d3.ZoomBehavior<SVGSVGElement, unknown> | null = null;
 let svgSelection: d3.Selection<SVGSVGElement, unknown, null, undefined> | null = null;
+let storedProjection: d3.GeoProjection | null = null;
+let clusterLayerSelection: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
+let currentTransform = d3.zoomIdentity;
+let liveData: MapDatum[] = [];
+let renderClustersRef: ((transform: d3.ZoomTransform) => void) | null = null;
 
 function zoomIn() {
     if (svgSelection && zoomBehavior) {
@@ -248,12 +253,15 @@ async function draw() {
 
     // Cluster layer
     const clusterLayer = g.append('g').attr('class', 'clusters');
+    clusterLayerSelection = clusterLayer;
+    storedProjection = projection;
+    liveData = [...props.data];
 
     const maxScore = d3.max(props.data, (d) => d.hypeScore) ?? 1;
     const radiusScale = d3.scaleSqrt().domain([0, maxScore]).range([3, 12]);
     const clusterRadius = 28;
 
-    let currentTransform = d3.zoomIdentity;
+    currentTransform = d3.zoomIdentity;
 
     const zoom = d3
         .zoom<SVGSVGElement, unknown>()
@@ -277,7 +285,7 @@ async function draw() {
 
     function renderClusters(transform: d3.ZoomTransform) {
         const k = transform.k;
-        const clusters = clusterPoints(props.data, projection, transform, clusterRadius);
+        const clusters = clusterPoints(liveData, projection, transform, clusterRadius);
 
         clusterLayer.selectAll('*').remove();
 
@@ -430,6 +438,7 @@ async function draw() {
         }
     }
 
+    renderClustersRef = renderClusters;
     renderClusters(d3.zoomIdentity);
     svg.call(zoom).on('wheel.zoom', null);
     zoomBehavior = zoom;
@@ -439,6 +448,66 @@ async function draw() {
 onResize(draw);
 onMounted(draw);
 watch(() => props.data, draw, { deep: true });
+
+function addPoint(point: MapDatum) {
+    if (!storedProjection || !clusterLayerSelection) return;
+
+    const projected = storedProjection([point.longitude, point.latitude]);
+    if (!projected) return;
+
+    const [px, py] = projected;
+    const dotColor = getColor('--chart-1');
+    const k = currentTransform.k;
+
+    // Ping animation group
+    const ping = clusterLayerSelection.append('g').attr('transform', `translate(${px},${py})`);
+
+    // Expanding rings
+    for (let i = 0; i < 3; i++) {
+        ping.append('circle')
+            .attr('r', 2 / k)
+            .attr('fill', 'none')
+            .attr('stroke', dotColor)
+            .attr('stroke-width', 1.5 / k)
+            .attr('stroke-opacity', 0.8)
+            .transition()
+            .delay(i * 200)
+            .duration(1000)
+            .ease(d3.easeCubicOut)
+            .attr('r', 24 / k)
+            .attr('stroke-opacity', 0)
+            .remove();
+    }
+
+    // Center dot that scales in
+    ping.append('circle')
+        .attr('r', 0)
+        .attr('fill', dotColor)
+        .attr('fill-opacity', 0.9)
+        .attr('stroke', dotColor)
+        .attr('stroke-width', 1 / k)
+        .transition()
+        .duration(300)
+        .ease(d3.easeBackOut)
+        .attr('r', 5 / k)
+        .transition()
+        .delay(700)
+        .duration(300)
+        .attr('fill-opacity', 0)
+        .attr('stroke-opacity', 0)
+        .remove();
+
+    // Remove the ping group after all animations complete
+    setTimeout(() => ping.remove(), 1500);
+
+    // Add point to live data and re-render clusters
+    liveData.push(point);
+    if (renderClustersRef) {
+        renderClustersRef(currentTransform);
+    }
+}
+
+defineExpose({ addPoint });
 </script>
 
 <template>

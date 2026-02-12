@@ -286,6 +286,8 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
                 $this->site->category,
                 [],
                 true,
+                null,
+                null,
             );
             QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
             self::dispatchNext();
@@ -340,6 +342,8 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             $this->site->category,
             $aiTerms,
             $hasError,
+            $this->site->latitude,
+            $this->site->longitude,
         );
         QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
 
