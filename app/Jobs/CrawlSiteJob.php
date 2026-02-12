@@ -143,9 +143,14 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         if ($httpMetadata['server_ip'] ?? null) {
             try {
                 $coordinates = $ipGeolocationService->geolocate($httpMetadata['server_ip']);
+                if (! $coordinates) {
+                    Log::info("Geolocation returned no coordinates for {$this->site->url} (IP: {$httpMetadata['server_ip']})");
+                }
             } catch (\Throwable $e) {
                 Log::warning("Failed to geolocate IP for {$this->site->url}: {$e->getMessage()}");
             }
+        } else {
+            Log::info("No server IP resolved for {$this->site->url} — skipping geolocation");
         }
 
         // Detect category first so the internal metadata cache is warm for title/description
