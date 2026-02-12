@@ -27,8 +27,11 @@ interface PaginatedSites {
 const props = defineProps<{
     currentSite: Site | null;
     lastCrawledSite: Site | null;
+    queueCount: number;
     queuedSites: PaginatedSites;
 }>();
+
+const liveQueueCount = ref(props.queueCount);
 
 const stepDefinitions: Record<string, { label: string; icon: typeof Scan }> = {
     fetching: { label: 'Fetching Homepage', icon: Globe },
@@ -117,7 +120,8 @@ onMounted(() => {
 
     echoQueueChannel = window.Echo.channel('crawl-queue');
 
-    echoQueueChannel.listen('.QueueUpdated', () => {
+    echoQueueChannel.listen('.QueueUpdated', (e: { queued_count: number }) => {
+        liveQueueCount.value = e.queued_count;
         removedSiteIds.value.clear();
         router.reload({ only: ['queuedSites'], reset: ['queuedSites'] });
     });
@@ -290,6 +294,9 @@ onUnmounted(() => {
                 <h2 class="mb-4 flex items-center gap-2 text-xl font-semibold">
                     <Clock class="size-5 text-muted-foreground" />
                     Waiting in Queue
+                    <span class="rounded-full bg-muted px-2.5 py-0.5 text-sm font-medium text-muted-foreground">
+                        {{ liveQueueCount.toLocaleString() }}
+                    </span>
                 </h2>
 
                 <InfiniteScroll data="queuedSites">

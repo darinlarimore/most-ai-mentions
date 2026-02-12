@@ -31,6 +31,7 @@ class CrawlQueueController extends Controller
                 ->whereNotNull('last_crawled_at')
                 ->orderByDesc('last_crawled_at')
                 ->first(),
+            'queueCount' => Site::query()->crawlQueue()->count(),
             'queuedSites' => Inertia::scroll(fn () => Site::query()
                 ->crawlQueue()
                 ->simplePaginate(10)),
