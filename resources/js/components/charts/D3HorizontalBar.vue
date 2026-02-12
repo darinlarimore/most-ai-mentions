@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
 import * as d3 from 'd3';
+import { ref, onMounted, watch } from 'vue';
 import { useD3Chart } from '@/composables/useD3Chart';
 import ChartTooltip from './ChartTooltip.vue';
 
@@ -17,7 +17,7 @@ const props = defineProps<{
 const containerRef = ref<HTMLElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, label: '', value: 0 });
 
-const { innerWidth, innerHeight, width, height, margin, createSvg, getColor, resolveColor, onResize } = useD3Chart(
+const { innerWidth, innerHeight, margin, createSvg, getColor, resolveColor, onResize } = useD3Chart(
     containerRef,
     { top: 10, right: 20, bottom: 20, left: 120 },
 );
@@ -90,7 +90,7 @@ function draw() {
         bars.filter((other) => other !== d).transition().duration(150).attr('fill-opacity', 0.35);
         tooltip.value = { visible: true, x: event.clientX + 12, y: event.clientY - 10, label: d.label, value: d.value };
     })
-        .on('mousemove', function (event: MouseEvent, d) {
+        .on('mousemove', function (event: MouseEvent) {
             tooltip.value.x = event.clientX + 12;
             tooltip.value.y = event.clientY - 10;
         })
