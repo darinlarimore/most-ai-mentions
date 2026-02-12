@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Deferred, WhenVisible } from '@inertiajs/vue3';
+import { Deferred, router, WhenVisible } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     BarChart3,
@@ -140,6 +140,25 @@ async function loadNetworkData() {
     }
 }
 
+let chartRefreshTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleChartRefresh() {
+    if (chartRefreshTimeout) clearTimeout(chartRefreshTimeout);
+    chartRefreshTimeout = setTimeout(() => {
+        chartRefreshTimeout = null;
+        const loaded: string[] = [];
+        if (props.termFrequency) loaded.push('termFrequency');
+        if (props.techStackDistribution) loaded.push('techStackDistribution');
+        if (props.scoreDistribution) loaded.push('scoreDistribution');
+        if (props.mentionsVsScore) loaded.push('mentionsVsScore');
+        if (props.crawlerSpeed) loaded.push('crawlerSpeed');
+        if (props.crawlErrors) loaded.push('crawlErrors');
+        if (loaded.length > 0) {
+            router.reload({ only: loaded, preserveScroll: true, preserveState: true });
+        }
+    }, 5000);
+}
+
 let activityChannel: ReturnType<typeof window.Echo.channel> | null = null;
 let queueChannel: ReturnType<typeof window.Echo.channel> | null = null;
 
@@ -148,6 +167,7 @@ onMounted(() => {
     activityChannel.listen('.CrawlCompleted', (e: Record<string, unknown>) => {
         refreshStats();
         forceGraphRef.value?.addSiteNode(e as Parameters<InstanceType<typeof D3ForceGraph>['addSiteNode']>[0]);
+        scheduleChartRefresh();
     });
 
     queueChannel = window.Echo.channel('crawl-queue');
@@ -177,6 +197,9 @@ onUnmounted(() => {
     }
     if (queueChannel) {
         window.Echo.leave('crawl-queue');
+    }
+    if (chartRefreshTimeout) {
+        clearTimeout(chartRefreshTimeout);
     }
     networkObserver?.disconnect();
 });
