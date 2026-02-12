@@ -20,7 +20,7 @@ class InsightsController extends Controller
             'techStackDistribution' => Inertia::optional(fn () => $this->getTechStackDistribution()),
             'scoreDistribution' => Inertia::optional(fn () => $this->getScoreDistribution()),
             'mentionsVsScore' => Inertia::optional(fn () => $this->getMentionsVsScore()),
-            'crawlerSpeed' => Inertia::optional(fn () => $this->getCrawlerSpeed()),
+            'crawlerSpeed' => Inertia::defer(fn () => $this->getCrawlerSpeed()),
             'crawlErrors' => Inertia::optional(fn () => $this->getCrawlErrors()),
         ]);
     }

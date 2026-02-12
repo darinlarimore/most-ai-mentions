@@ -585,7 +585,7 @@ onUnmounted(() => {
                     <CardDescription>Individual crawl durations in real-time</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <WhenVisible data="crawlerSpeed" :buffer="300">
+                    <Deferred data="crawlerSpeed">
                         <template #fallback>
                             <Skeleton class="h-40 w-full" />
                         </template>
@@ -595,7 +595,7 @@ onUnmounted(() => {
                         <div v-else class="flex h-40 items-center justify-center text-muted-foreground">
                             No crawl duration data yet. Data populates after sites are crawled.
                         </div>
-                    </WhenVisible>
+                    </Deferred>
                 </CardContent>
             </Card>
 
