@@ -133,6 +133,7 @@ function clusterPoints(
 }
 
 async function draw() {
+    console.log('[D3WorldMap] draw() called, containerRef:', !!containerRef.value, 'data points:', props.data?.length ?? 0);
     if (!containerRef.value) return;
 
     const svg = createSvg();
@@ -456,9 +457,12 @@ onMounted(draw);
 watch(() => props.data, draw, { deep: true });
 
 function addPoint(point: MapDatum) {
+    console.log('[D3WorldMap] addPoint called', point);
+    console.log('[D3WorldMap] storedProjection:', !!storedProjection, 'pingLayer:', !!pingLayerSelection);
     if (!storedProjection || !pingLayerSelection) return;
 
     const projected = storedProjection([point.longitude, point.latitude]);
+    console.log('[D3WorldMap] projected coordinates:', projected);
     if (!projected) return;
 
     const [px, py] = projected;
