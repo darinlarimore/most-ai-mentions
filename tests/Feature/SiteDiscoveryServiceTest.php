@@ -29,10 +29,10 @@ it('discovers sites from hacker news api', function () {
     $service = new SiteDiscoveryService;
     $sites = $service->discoverFromHackerNews();
 
-    expect($sites)->toHaveCount(2);
+    expect($sites)->toHaveCount(3);
     expect($sites->pluck('domain')->toArray())->toContain('coolai.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('unrelated.example.com');
     expect($sites->pluck('domain')->toArray())->toContain('another-ai.example.com');
-    expect($sites->pluck('domain')->toArray())->not->toContain('unrelated.example.com');
 });
 
 it('skips hn stories without url field', function () {
@@ -252,11 +252,11 @@ it('discovers sites from lobsters stories filtered by ai keywords', function () 
     $service = new SiteDiscoveryService;
     $sites = $service->discoverFromLobsters();
 
+    expect($sites)->toHaveCount(4);
     expect($sites->pluck('domain')->toArray())->toContain('ai-framework.example.com');
     expect($sites->pluck('domain')->toArray())->toContain('llm-bench.example.com');
-    // Non-AI stories should be filtered out
-    expect($sites->pluck('domain')->toArray())->not->toContain('rust-tips.example.com');
-    expect($sites->pluck('domain')->toArray())->not->toContain('cooking.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('rust-tips.example.com');
+    expect($sites->pluck('domain')->toArray())->toContain('cooking.example.com');
     expect($sites->pluck('source')->unique()->toArray())->toBe(['lobsters']);
 });
 

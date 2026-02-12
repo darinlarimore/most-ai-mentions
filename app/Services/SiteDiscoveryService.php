@@ -807,18 +807,29 @@ class SiteDiscoveryService
     ];
 
     /** @var list<string> Search queries for the HN Algolia API. */
-    private const HN_SEARCH_QUERIES = ['ai tool', 'llm', 'artificial intelligence', 'gpt', 'machine learning startup'];
+    private const HN_SEARCH_QUERIES = [
+        'ai tool', 'llm', 'artificial intelligence', 'gpt', 'machine learning startup',
+        'startup', 'saas', 'developer tool', 'open source', 'web app', 'platform',
+    ];
 
     /** @var list<string> Search queries for GitHub repository discovery. */
-    private const GITHUB_SEARCH_QUERIES = ['ai tool', 'llm framework', 'gpt', 'ai agent', 'machine learning'];
+    private const GITHUB_SEARCH_QUERIES = [
+        'ai tool', 'llm framework', 'gpt', 'ai agent', 'machine learning',
+        'web app', 'saas', 'developer tool', 'platform', 'startup',
+    ];
 
     /** @var list<string> Dev.to tags to scan for AI-related articles. */
-    private const DEVTO_TAGS = ['ai', 'machinelearning', 'llm', 'gpt', 'openai'];
+    private const DEVTO_TAGS = [
+        'ai', 'machinelearning', 'llm', 'gpt', 'openai',
+        'webdev', 'javascript', 'python', 'startup', 'opensource', 'saas', 'devops',
+    ];
 
     /** @var list<string> */
     private const REDDIT_SUBREDDITS = [
         'artificialintelligence', 'MachineLearning', 'LocalLLaMA',
         'ChatGPT', 'singularity', 'StableDiffusion',
+        'technology', 'programming', 'startups', 'SaaS', 'selfhosted',
+        'InternetIsBeautiful', 'webdev', 'software', 'opensource',
     ];
 
     /** @var list<string> */
@@ -834,11 +845,16 @@ class SiteDiscoveryService
         'machine learning platform',
         'large language model',
         'generative AI',
+        'software company',
+        'technology startup',
+        'software as a service',
+        'cloud computing company',
     ];
 
     /** @var list<string> */
     private const LEMMY_COMMUNITIES = [
         'artificial_intelligence', 'machinelearning', 'localllama',
+        'technology', 'programming', 'selfhosted', 'opensource',
     ];
 
     /** @var list<string> Domains to skip (social media, generic, etc.) */
@@ -909,7 +925,7 @@ class SiteDiscoveryService
     }
 
     /**
-     * Discover AI-related sites from Hacker News via the public Firebase API.
+     * Discover sites from Hacker News via the public Firebase API.
      *
      * @return Collection<int, Site>
      */
@@ -958,22 +974,11 @@ class SiteDiscoveryService
 
                     $item = $itemResponse->json();
 
-                    if (! is_array($item) || empty($item['url']) || empty($item['title'])) {
+                    if (! is_array($item) || empty($item['url'])) {
                         continue;
                     }
 
-                    $title = strtolower($item['title']);
-                    $isAiRelated = false;
-
-                    foreach (self::AI_KEYWORDS as $keyword) {
-                        if (str_contains($title, $keyword)) {
-                            $isAiRelated = true;
-
-                            break;
-                        }
-                    }
-
-                    if ($isAiRelated && $this->isValidExternalUrl($item['url'])) {
+                    if ($this->isValidExternalUrl($item['url'])) {
                         $urls[] = $item['url'];
                     }
                 } catch (\Throwable $e) {
@@ -990,7 +995,7 @@ class SiteDiscoveryService
      *
      * @return Collection<int, Site>
      */
-    public function discoverFromTrancoList(int $limit = 500): Collection
+    public function discoverFromTrancoList(int $limit = 2000): Collection
     {
         try {
             $response = Http::timeout(30)->get(self::TRANCO_LIST_URL);
@@ -1243,7 +1248,7 @@ class SiteDiscoveryService
     }
 
     /**
-     * Discover AI-related sites from Lobste.rs stories.
+     * Discover sites from Lobste.rs stories.
      *
      * @return Collection<int, Site>
      */
@@ -1266,21 +1271,6 @@ class SiteDiscoveryService
                 }
 
                 foreach ($stories as $story) {
-                    $title = strtolower($story['title'] ?? '');
-                    $isAiRelated = false;
-
-                    foreach (self::AI_KEYWORDS as $keyword) {
-                        if (str_contains($title, $keyword)) {
-                            $isAiRelated = true;
-
-                            break;
-                        }
-                    }
-
-                    if (! $isAiRelated) {
-                        continue;
-                    }
-
                     $url = $story['url'] ?? null;
 
                     if ($url && $this->isValidExternalUrl($url)) {
