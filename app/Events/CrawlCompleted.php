@@ -25,6 +25,7 @@ class CrawlCompleted implements ShouldBroadcastNow
         public readonly ?string $slug = null,
         public readonly ?string $category = null,
         public readonly array $ai_terms = [],
+        public readonly bool $has_error = false,
     ) {}
 
     public function broadcastAs(): string
@@ -57,6 +58,7 @@ class CrawlCompleted implements ShouldBroadcastNow
             'slug' => $this->slug,
             'category' => $this->category,
             'ai_terms' => $this->ai_terms,
+            'has_error' => $this->has_error,
         ];
     }
 }

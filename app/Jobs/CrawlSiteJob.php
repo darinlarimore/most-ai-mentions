@@ -255,6 +255,21 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
                 Log::info("Deactivated {$this->site->url} after {$failures} consecutive failures");
             }
 
+            $failedDurationMs = (int) round((hrtime(true) - $crawlStartedAt) / 1_000_000);
+            $crawlResult->update(['crawl_duration_ms' => $failedDurationMs]);
+
+            CrawlCompleted::dispatch(
+                $this->site->id,
+                0,
+                0,
+                null,
+                $failedDurationMs,
+                $this->site->domain,
+                $this->site->slug,
+                $this->site->category,
+                [],
+                true,
+            );
             QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
             self::dispatchNext();
 
@@ -294,6 +309,8 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             ->values()
             ->all();
 
+        $hasError = $fetchError !== null || $observer->getErrors() !== [];
+
         CrawlCompleted::dispatch(
             $this->site->id,
             $hypeScore,
@@ -304,6 +321,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             $this->site->slug,
             $this->site->category,
             $aiTerms,
+            $hasError,
         );
         QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
 

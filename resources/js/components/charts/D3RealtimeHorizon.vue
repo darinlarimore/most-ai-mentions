@@ -205,9 +205,9 @@ onMounted(() => {
 
     // Subscribe to real-time crawl events
     echoChannel = window.Echo.channel('crawl-activity');
-    echoChannel.listen('.CrawlCompleted', (e: { crawl_duration_ms?: number }) => {
+    echoChannel.listen('.CrawlCompleted', (e: { crawl_duration_ms?: number; has_error?: boolean }) => {
         if (e.crawl_duration_ms != null) {
-            pushDatum(new Date(), e.crawl_duration_ms);
+            pushDatum(new Date(), e.crawl_duration_ms, e.has_error ?? false);
             requestAnimationFrame(draw);
         }
     });
