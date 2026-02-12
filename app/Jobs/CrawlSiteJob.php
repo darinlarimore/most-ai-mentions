@@ -424,6 +424,8 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        Log::info('CrawlSiteJob: No sites in crawl queue — waiting for scheduler');
+        // Nothing to crawl or backfill — discover new sites to keep the chain alive
+        Log::info('CrawlSiteJob: No sites in queue — triggering discovery');
+        DiscoverSitesJob::dispatch();
     }
 }
