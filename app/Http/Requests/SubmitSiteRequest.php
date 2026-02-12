@@ -2,9 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\SiteCategory;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Enum;
 
 class SubmitSiteRequest extends FormRequest
 {
@@ -25,8 +23,6 @@ class SubmitSiteRequest extends FormRequest
     {
         return [
             'url' => ['required', 'url'],
-            'name' => ['nullable', 'string', 'max:255'],
-            'category' => ['nullable', 'string', new Enum(SiteCategory::class)],
         ];
     }
 }

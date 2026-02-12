@@ -12,12 +12,10 @@ it('can submit a site for crawling', function () {
 
     $this->post('/submit', [
         'url' => 'https://example.com',
-        'name' => 'Example Site',
     ])->assertRedirect();
 
     $this->assertDatabaseHas('sites', [
         'domain' => 'example.com',
-        'name' => 'Example Site',
         'status' => 'queued',
     ]);
 });
@@ -41,36 +39,10 @@ it('redirects to existing www site when submitting without www', function () {
 
     $this->post('/submit', [
         'url' => 'https://coupa.com',
-        'name' => 'Coupa',
     ])->assertRedirect("/sites/{$existing->slug}");
 });
 
-it('passes categories to the submit page', function () {
-    $this->get('/submit')
-        ->assertSuccessful()
-        ->assertInertia(fn ($page) => $page
-            ->has('categories')
-            ->where('categories.0.value', 'marketing')
-            ->where('categories.0.label', 'Marketing')
-        );
-});
-
-it('can submit a site with a category', function () {
-    Queue::fake();
-
-    $this->post('/submit', [
-        'url' => 'https://healthapp.com',
-        'name' => 'Health App',
-        'category' => 'healthcare',
-    ])->assertRedirect();
-
-    $this->assertDatabaseHas('sites', [
-        'domain' => 'healthapp.com',
-        'category' => 'healthcare',
-    ]);
-});
-
-it('defaults category to other when not provided', function () {
+it('always sets category to other for auto-detection', function () {
     Queue::fake();
 
     $this->post('/submit', [
@@ -83,17 +55,9 @@ it('defaults category to other when not provided', function () {
     ]);
 });
 
-it('rejects invalid category values', function () {
-    $this->post('/submit', [
-        'url' => 'https://example.com',
-        'category' => 'invalid-category',
-    ])->assertSessionHasErrors('category');
-});
-
 it('rejects blocked domains', function () {
     $this->post('/submit', [
         'url' => 'https://pornhub.com',
-        'name' => 'Blocked Site',
     ])->assertSessionHasErrors('url');
 
     $this->assertDatabaseMissing('sites', ['domain' => 'pornhub.com']);

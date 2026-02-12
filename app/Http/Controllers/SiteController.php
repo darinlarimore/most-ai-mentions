@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\SiteCategory;
 use App\Http\Requests\BatchSubmitSiteRequest;
 use App\Http\Requests\SubmitSiteRequest;
 use App\Jobs\CrawlSiteJob;
@@ -44,13 +43,7 @@ class SiteController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Sites/Submit', [
-            'categories' => collect(SiteCategory::cases())
-                ->reject(fn (SiteCategory $c) => $c === SiteCategory::Other)
-                ->map(fn (SiteCategory $c) => ['value' => $c->value, 'label' => $c->label()])
-                ->values()
-                ->all(),
-        ]);
+        return Inertia::render('Sites/Submit');
     }
 
     /**
@@ -82,9 +75,8 @@ class SiteController extends Controller
 
         $site = Site::create([
             'url' => $normalizedUrl,
-            'name' => $validated['name'] ?? null,
             'domain' => $host,
-            'category' => $validated['category'] ?? 'other',
+            'category' => 'other',
             'submitted_by' => $request->user()?->id,
             'source' => 'submitted',
             'status' => 'queued',

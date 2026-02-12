@@ -8,15 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import GuestLayout from '@/layouts/GuestLayout.vue';
 
-interface CategoryOption {
-    value: string;
-    label: string;
-}
-
-defineProps<{
-    categories: CategoryOption[];
-}>();
-
 const page = usePage();
 const flash = computed(() => (page.props.flash as { success?: string })?.success);
 
@@ -24,8 +15,6 @@ const mode = ref<'single' | 'batch'>('single');
 
 const singleForm = useForm({
     url: '',
-    name: '',
-    category: '',
 });
 
 const batchForm = useForm({
@@ -115,36 +104,6 @@ const submitBatch = () => {
                                 />
                                 <p v-if="singleForm.errors.url" class="text-sm text-destructive">
                                     {{ singleForm.errors.url }}
-                                </p>
-                            </div>
-
-                            <div class="flex flex-col gap-1.5">
-                                <Label for="name">Site Name (optional)</Label>
-                                <Input
-                                    id="name"
-                                    v-model="singleForm.name"
-                                    type="text"
-                                    placeholder="e.g. Acme AI Solutions"
-                                />
-                                <p v-if="singleForm.errors.name" class="text-sm text-destructive">
-                                    {{ singleForm.errors.name }}
-                                </p>
-                            </div>
-
-                            <div class="flex flex-col gap-1.5">
-                                <Label for="category">Category (optional)</Label>
-                                <select
-                                    id="category"
-                                    v-model="singleForm.category"
-                                    class="border-input bg-transparent dark:bg-input/30 h-9 w-full rounded-md border px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
-                                >
-                                    <option value="">Auto-detect from site</option>
-                                    <option v-for="cat in categories" :key="cat.value" :value="cat.value">
-                                        {{ cat.label }}
-                                    </option>
-                                </select>
-                                <p v-if="singleForm.errors.category" class="text-sm text-destructive">
-                                    {{ singleForm.errors.category }}
                                 </p>
                             </div>
 
