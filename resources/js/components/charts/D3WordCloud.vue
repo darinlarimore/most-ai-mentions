@@ -36,7 +36,7 @@ function wordRotation(text: string): number {
     for (let i = 0; i < text.length; i++) {
         hash = (hash * 31 + text.charCodeAt(i)) | 0;
     }
-    return (hash & 1) ? 90 : 0;
+    return (Math.abs(hash) % 5 === 0) ? 90 : 0;
 }
 
 function draw() {
@@ -68,7 +68,7 @@ function draw() {
     cloud()
         .size([w, h])
         .words(words as any)
-        .padding(3)
+        .padding(5)
         .rotate((d: any) => wordRotation(d.text ?? ''))
         .font('system-ui, sans-serif')
         .fontSize((d: any) => d.size)
