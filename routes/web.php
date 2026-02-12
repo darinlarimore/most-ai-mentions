@@ -18,7 +18,6 @@ Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('/', [LeaderboardController::class, 'index'])->name('leaderboard');
 Route::get('/user-rated', [LeaderboardController::class, 'userRated'])->name('leaderboard.user-rated');
 Route::get('/sites/{site}', [SiteController::class, 'show'])->name('sites.show');
-Route::get('/sites/{site}/annotated', [SiteController::class, 'annotated'])->name('sites.annotated');
 Route::get('/algorithm', [AlgorithmController::class, 'index'])->name('algorithm');
 Route::get('/insights', [InsightsController::class, 'index'])->name('insights');
 Route::get('/insights/stats', [InsightsController::class, 'stats'])->name('insights.stats');

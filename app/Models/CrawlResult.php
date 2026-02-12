@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 class CrawlResult extends Model
 {
@@ -28,13 +26,6 @@ class CrawlResult extends Model
             'redirect_chain' => 'array',
             'detected_tech_stack' => 'array',
         ];
-    }
-
-    protected function annotatedScreenshotPath(): Attribute
-    {
-        return Attribute::make(
-            get: fn (?string $value) => $value ? Storage::disk('public')->url($value) : null,
-        );
     }
 
     public function site(): BelongsTo

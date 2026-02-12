@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
-    Globe, ExternalLink, ArrowLeft, Star, Clock, MessageSquare, User, Highlighter,
+    Globe, ExternalLink, ArrowLeft, Star, Clock, MessageSquare, User,
     Server, Shield, Cpu,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
@@ -149,14 +149,6 @@ const formattedCreatedAt = computed(() => {
                                 <div v-else class="flex size-full items-center justify-center">
                                     <Globe class="size-16 text-muted-foreground/30" />
                                 </div>
-                            </div>
-                            <div class="mt-4 flex justify-center">
-                                <Link :href="`/sites/${site.slug}/annotated`">
-                                    <Button variant="outline" size="sm">
-                                        <Highlighter class="size-4" />
-                                        View Annotated Page
-                                    </Button>
-                                </Link>
                             </div>
                         </CardContent>
                     </Card>

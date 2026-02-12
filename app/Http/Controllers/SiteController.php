@@ -40,20 +40,6 @@ class SiteController extends Controller
     }
 
     /**
-     * Display the annotated/highlighted screenshot of a crawled site.
-     */
-    public function annotated(Site $site): Response
-    {
-        $crawlResult = $site->crawlResults()->latest()->first();
-
-        return Inertia::render('Sites/Annotated', [
-            'site' => $site,
-            'annotatedScreenshotUrl' => $crawlResult?->annotated_screenshot_path,
-            'crawlResult' => $crawlResult,
-        ]);
-    }
-
-    /**
      * Show the form to submit a new site.
      */
     public function create(): Response

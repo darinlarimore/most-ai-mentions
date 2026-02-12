@@ -9,7 +9,6 @@ use App\Events\QueueUpdated;
 use App\Jobs\Middleware\CheckQueuePaused;
 use App\Models\CrawlResult;
 use App\Models\Site;
-use App\Services\HtmlAnnotationService;
 use App\Services\HttpMetadataCollector;
 use App\Services\HypeScoreCalculator;
 use App\Services\IpGeolocationService;
@@ -60,7 +59,6 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(
         HypeScoreCalculator $calculator,
-        HtmlAnnotationService $annotationService,
         ScreenshotService $screenshotService,
         SiteCategoryDetector $categoryDetector,
         HttpMetadataCollector $httpMetadataCollector,
@@ -229,39 +227,6 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
             return;
         }
-
-        // Generate annotated screenshot from local HTML
-        CrawlProgress::dispatch($this->site->id, 'generating_screenshot', 'Generating annotated screenshot...');
-
-        if ($html) {
-            try {
-                $annotatedHtml = $annotationService->annotate(
-                    $html,
-                    $crawlResult->mention_details ?? [],
-                    [
-                        'total_score' => $crawlResult->total_score,
-                        'mention_score' => $crawlResult->mention_score,
-                        'font_size_score' => $crawlResult->font_size_score,
-                        'animation_score' => $crawlResult->animation_score,
-                        'visual_effects_score' => $crawlResult->visual_effects_score,
-                        'ai_mention_count' => $crawlResult->ai_mention_count,
-                        'animation_count' => $crawlResult->animation_count,
-                        'glow_effect_count' => $crawlResult->glow_effect_count,
-                        'rainbow_border_count' => $crawlResult->rainbow_border_count,
-                    ],
-                );
-
-                $screenshotPath = $screenshotService->captureHtml($annotatedHtml, $this->site->domain);
-                $crawlResult->update(['annotated_screenshot_path' => $screenshotPath]);
-            } catch (\Throwable $e) {
-                Log::warning("Failed to generate annotated screenshot for site: {$this->site->url}", [
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        // Discard HTML — it's no longer needed
-        unset($html);
 
         $this->site->update([
             'hype_score' => $hypeScore,

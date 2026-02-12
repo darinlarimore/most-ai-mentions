@@ -66,7 +66,6 @@ export interface CrawlResult {
     animation_count: number;
     glow_effect_count: number;
     rainbow_border_count: number;
-    annotated_screenshot_path: string | null;
     redirect_chain: Array<{ url: string; status: number }> | null;
     final_url: string | null;
     response_time_ms: number | null;
