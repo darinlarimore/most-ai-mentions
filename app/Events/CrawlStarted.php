@@ -17,6 +17,7 @@ class CrawlStarted implements ShouldBroadcastNow
         public readonly string $site_url,
         public readonly ?string $site_name,
         public readonly string $site_slug,
+        public readonly ?string $site_source = null,
     ) {}
 
     public function broadcastAs(): string
@@ -44,6 +45,7 @@ class CrawlStarted implements ShouldBroadcastNow
             'site_url' => $this->site_url,
             'site_name' => $this->site_name,
             'site_slug' => $this->site_slug,
+            'site_source' => $this->site_source,
         ];
     }
 }

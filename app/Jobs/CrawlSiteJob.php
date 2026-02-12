@@ -89,7 +89,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
         $crawlStartedAt = hrtime(true);
 
-        CrawlStarted::dispatch($this->site->id, $this->site->url, $this->site->name, $this->site->slug);
+        CrawlStarted::dispatch($this->site->id, $this->site->url, $this->site->name, $this->site->slug, $this->site->source);
         CrawlProgress::dispatch($this->site->id, 'fetching', 'Fetching homepage...');
 
         $observer = new \App\Crawlers\AiMentionCrawlObserver($this->site);

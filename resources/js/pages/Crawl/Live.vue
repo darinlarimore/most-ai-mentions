@@ -47,9 +47,24 @@ const allStepKeys = ['fetching', 'collecting_metadata', 'detecting_category', 'd
 
 const initialSite = props.currentSite ?? props.lastCrawledSite;
 
-const activeSite = ref<{ id: number; url: string; name: string | null; slug: string; screenshot_path?: string | null } | null>(
-    initialSite ? { id: initialSite.id, url: initialSite.url, name: initialSite.name, slug: initialSite.slug, screenshot_path: initialSite.screenshot_path } : null,
+const activeSite = ref<{ id: number; url: string; name: string | null; slug: string; source?: string | null; screenshot_path?: string | null } | null>(
+    initialSite ? { id: initialSite.id, url: initialSite.url, name: initialSite.name, slug: initialSite.slug, source: initialSite.source, screenshot_path: initialSite.screenshot_path } : null,
 );
+
+function formatSource(source: string | null | undefined): string | null {
+    if (!source) return null;
+    const map: Record<string, string> = {
+        manual: 'User Submitted',
+        submitted: 'User Submitted',
+        curated: 'Curated List',
+        hackernews: 'Hacker News',
+        show_hn: 'Hacker News',
+        tranco: 'Tranco Top Sites',
+        github: 'GitHub',
+        reddit: 'Reddit',
+    };
+    return map[source] ?? source.charAt(0).toUpperCase() + source.slice(1).replace(/_/g, ' ');
+}
 const removedSiteIds = ref(new Set<number>());
 const filteredQueuedSites = computed(() =>
     (props.queuedSites?.data ?? []).filter(s => !removedSiteIds.value.has(s.id) && s.id !== activeSite.value?.id),
@@ -88,9 +103,9 @@ let pollInterval: ReturnType<typeof setInterval> | null = null;
 onMounted(() => {
     echoActivityChannel = window.Echo.channel('crawl-activity');
 
-    echoActivityChannel.listen('.CrawlStarted', (e: { site_id: number; site_url: string; site_name: string; site_slug: string }) => {
+    echoActivityChannel.listen('.CrawlStarted', (e: { site_id: number; site_url: string; site_name: string; site_slug: string; site_source: string | null }) => {
         removedSiteIds.value.add(e.site_id);
-        activeSite.value = { id: e.site_id, url: e.site_url, name: e.site_name, slug: e.site_slug };
+        activeSite.value = { id: e.site_id, url: e.site_url, name: e.site_name, slug: e.site_slug, source: e.site_source };
         completedSteps.value = [];
         currentStep.value = null;
         completedResult.value = null;
@@ -233,6 +248,9 @@ onUnmounted(() => {
                                 {{ activeSite.name || activeSite.url }}
                             </h3>
                             <p class="text-sm text-muted-foreground">{{ activeSite.url }}</p>
+                            <span v-if="formatSource(activeSite.source)" class="text-xs text-muted-foreground/70">
+                                {{ formatSource(activeSite.source) }}
+                            </span>
                             <div v-if="completedResult" class="mt-1">
                                 <HypeScoreBadge :score="completedResult.hype_score" />
                             </div>
@@ -339,7 +357,10 @@ onUnmounted(() => {
                                 >
                                     {{ site.name || site.domain }}
                                 </Link>
-                                <span class="truncate text-xs text-muted-foreground">{{ site.domain }}</span>
+                                <span class="truncate text-xs text-muted-foreground">
+                                    {{ site.domain }}
+                                    <span v-if="formatSource(site.source)" class="text-muted-foreground/50"> &middot; {{ formatSource(site.source) }}</span>
+                                </span>
                             </div>
                             <HypeScoreBadge v-if="site.hype_score > 0" :score="site.hype_score" />
                             <span v-else class="text-xs text-muted-foreground">Pending</span>

@@ -27,6 +27,7 @@ export interface Site {
     user_rating_avg: number;
     user_rating_count: number;
     crawl_count: number;
+    source: string | null;
     status: string;
     last_crawled_at: string | null;
     submitted_by: number | null;
