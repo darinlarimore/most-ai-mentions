@@ -25,16 +25,6 @@ const { width, height, createSvg, drawCount, getChartColors, onResize, wrapUpdat
     left: 0,
 });
 
-/** Previous values keyed by label — used to detect growth for bounce animation. */
-let prevValues = new Map<string, number>();
-let svgGroup: d3.Selection<SVGGElement, unknown, null, undefined> | null = null;
-let incrementalUpdate = false;
-
-/** All words horizontal for clean layout and accurate collision detection. */
-function wordRotation(): number {
-    return 0;
-}
-
 function draw() {
     if (!containerRef.value || !props.data?.length) return;
 
@@ -45,10 +35,6 @@ function draw() {
     const colors = getChartColors(Math.min(props.data.length, 8));
     const maxVal = d3.max(props.data, (d) => d.value) ?? 1;
     const shouldAnimate = drawCount.value === 0;
-    const isIncremental = incrementalUpdate && svgGroup?.node()?.isConnected;
-
-    // Reset flag — consumed by this draw call
-    incrementalUpdate = false;
 
     const fontScale = d3
         .scaleSqrt()
@@ -65,31 +51,25 @@ function draw() {
         .size([w, h])
         .words(words as any)
         .padding(8)
-        .rotate((d: any) => wordRotation(d.text ?? ''))
+        .rotate(() => 0)
         .font('system-ui, sans-serif')
         .fontSize((d: any) => d.size)
         .on('end', (placed: any[]) => {
-            if (isIncremental && svgGroup?.node()?.isConnected) {
-                // Update viewBox and center for safety (dimensions may have shifted)
-                d3.select(containerRef.value!).select('svg').attr('viewBox', `0 0 ${w} ${h}`);
-                svgGroup.attr('transform', `translate(${w / 2},${h / 2})`);
-                renderUpdate(placed, colors);
-            } else {
-                const svg = createSvg();
-                if (!svg) return;
-                svgGroup = svg.append('g').attr('transform', `translate(${w / 2},${h / 2})`);
-                renderFresh(placed, colors, shouldAnimate);
-            }
-
-            prevValues = new Map(placed.map((d: any) => [d.text, d.value]));
+            const svg = createSvg();
+            if (!svg) return;
+            const g = svg.append('g').attr('transform', `translate(${w / 2},${h / 2})`);
+            render(g, placed, colors, shouldAnimate);
         })
         .start();
 }
 
-function renderFresh(placed: any[], colors: string[], animate: boolean) {
-    if (!svgGroup) return;
-
-    const texts = svgGroup.selectAll('text')
+function render(
+    g: d3.Selection<SVGGElement, unknown, null, undefined>,
+    placed: any[],
+    colors: string[],
+    animate: boolean,
+) {
+    const texts = g.selectAll('text')
         .data(placed, (d: any) => d.text)
         .enter()
         .append('text')
@@ -99,7 +79,7 @@ function renderFresh(placed: any[], colors: string[], animate: boolean) {
         .attr('font-size', (d: any) => `${d.size}px`)
         .attr('font-weight', (d: any) => (d.size > 24 ? '700' : '500'))
         .attr('fill', (_: any, i: number) => colors[i % colors.length])
-        .attr('transform', (d: any) => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
+        .attr('transform', (d: any) => `translate(${d.x},${d.y})`)
         .text((d: any) => d.text)
         .attr('opacity', animate ? 0 : 1);
 
@@ -111,71 +91,11 @@ function renderFresh(placed: any[], colors: string[], animate: boolean) {
             .attr('opacity', 1);
     }
 
-    attachTooltip();
+    attachTooltip(g);
 }
 
-function renderUpdate(placed: any[], colors: string[]) {
-    if (!svgGroup) return;
-
-    const join = svgGroup.selectAll<SVGTextElement, any>('text')
-        .data(placed, (d: any) => d.text);
-
-    // Exit — words no longer present
-    join.exit()
-        .transition()
-        .duration(400)
-        .attr('opacity', 0)
-        .remove();
-
-    // Update — existing words move and resize
-    join
-        .transition()
-        .duration(600)
-        .ease(d3.easeCubicOut)
-        .attr('transform', (d: any) => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
-        .attr('font-size', (d: any) => `${d.size}px`)
-        .attr('font-weight', (d: any) => (d.size > 24 ? '700' : '500'))
-        .attr('fill', (_: any, i: number) => colors[i % colors.length]);
-
-    // Bounce effect for words that grew
-    join.each(function (d: any) {
-        const prev = prevValues.get(d.text) ?? 0;
-        if (d.value > prev && prev > 0) {
-            const el = d3.select(this);
-            const overshoot = Math.min(d.size * 1.3, d.size + 8);
-            el.transition()
-                .duration(300)
-                .attr('font-size', `${overshoot}px`)
-                .transition()
-                .duration(400)
-                .ease(d3.easeBackOut.overshoot(1.5))
-                .attr('font-size', `${d.size}px`);
-        }
-    });
-
-    // Enter — new words fade in
-    join.enter()
-        .append('text')
-        .style('font-family', 'system-ui, sans-serif')
-        .style('cursor', 'pointer')
-        .attr('text-anchor', 'middle')
-        .attr('font-size', (d: any) => `${d.size}px`)
-        .attr('font-weight', (d: any) => (d.size > 24 ? '700' : '500'))
-        .attr('fill', (_: any, i: number) => colors[i % colors.length])
-        .attr('transform', (d: any) => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
-        .text((d: any) => d.text)
-        .attr('opacity', 0)
-        .transition()
-        .duration(500)
-        .attr('opacity', 1);
-
-    attachTooltip();
-}
-
-function attachTooltip() {
-    if (!svgGroup) return;
-
-    svgGroup.selectAll<SVGTextElement, any>('text')
+function attachTooltip(g: d3.Selection<SVGGElement, unknown, null, undefined>) {
+    g.selectAll<SVGTextElement, any>('text')
         .on('mouseenter', function (event: MouseEvent, d: any) {
             d3.select(this).transition().duration(150).attr('font-size', `${d.size * 1.15}px`);
             tooltip.value = {
@@ -196,21 +116,9 @@ function attachTooltip() {
         });
 }
 
-/** Full redraw — used for mount and resize. */
-function fullDraw() {
-    incrementalUpdate = false;
-    draw();
-}
-
-/** Incremental update — used for data changes, animates word transitions. */
-function dataUpdate() {
-    incrementalUpdate = true;
-    draw();
-}
-
-onResize(fullDraw);
-onMounted(fullDraw);
-watch(() => props.data, wrapUpdate(dataUpdate), { deep: true });
+onResize(draw);
+onMounted(draw);
+watch(() => props.data, wrapUpdate(draw), { deep: true });
 </script>
 
 <template>
