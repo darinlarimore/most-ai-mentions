@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CrawlErrorCategory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +30,16 @@ class CrawlError extends Model
         return [
             'category' => CrawlErrorCategory::class,
         ];
+    }
+
+    /** @var list<string> */
+    protected $appends = ['category_label'];
+
+    protected function categoryLabel(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->category?->label(),
+        );
     }
 
     public function site(): BelongsTo

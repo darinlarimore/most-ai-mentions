@@ -557,6 +557,19 @@ const ogImage = computed(() => {
                                         </p>
                                     </div>
                                 </div>
+                                <div v-if="site.latest_crawl_error" class="rounded-lg border border-red-200 bg-red-50 p-2.5 dark:border-red-800 dark:bg-red-950/30">
+                                    <div class="flex items-start gap-2">
+                                        <Shield class="mt-0.5 size-3.5 shrink-0 text-red-600 dark:text-red-400" />
+                                        <div>
+                                            <p class="text-xs font-medium text-red-700 dark:text-red-300">
+                                                {{ site.latest_crawl_error.category_label }}
+                                            </p>
+                                            <p v-if="site.latest_crawl_error.message" class="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                                                {{ site.latest_crawl_error.message }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="flex items-center justify-between">
                                     <dt class="text-sm text-muted-foreground">Times Crawled</dt>
                                     <dd class="text-sm font-medium">{{ site.crawl_count }}</dd>

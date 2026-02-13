@@ -98,6 +98,11 @@ class Site extends Model
         return $this->hasMany(CrawlError::class);
     }
 
+    public function latestCrawlError(): HasOne
+    {
+        return $this->hasOne(CrawlError::class)->latestOfMany();
+    }
+
     /**
      * Scope a query to only include active sites.
      */

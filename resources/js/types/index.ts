@@ -42,6 +42,7 @@ export interface Site {
     page_title: string | null;
     meta_description: string | null;
     latest_crawl_result?: CrawlResult;
+    latest_crawl_error?: CrawlError;
     score_histories?: ScoreHistory[];
     ratings?: Rating[];
     submitter?: User;
@@ -118,6 +119,17 @@ export interface Rating {
     score: number;
     comment: string | null;
     user?: User;
+    created_at: string;
+}
+
+export interface CrawlError {
+    id: number;
+    site_id: number;
+    crawl_result_id: number | null;
+    category: string;
+    category_label: string;
+    message: string | null;
+    url: string | null;
     created_at: string;
 }
 

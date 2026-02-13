@@ -21,6 +21,7 @@ class SiteController extends Controller
     {
         $site->load([
             'latestCrawlResult',
+            'latestCrawlError',
             'scoreHistories' => fn ($q) => $q->orderBy('recorded_at'),
             'ratings' => fn ($q) => $q->with('user:id,name')->latest(),
             'submitter:id,name',
