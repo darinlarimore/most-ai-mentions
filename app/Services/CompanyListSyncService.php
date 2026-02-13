@@ -53,52 +53,6 @@ class CompanyListSyncService
     }
 
     /**
-     * Fetch Fortune 500 companies.
-     *
-     * @return array<int, array{company: string, domain: string, rank: int|null}>
-     */
-    public function fetchFortune500(): array
-    {
-        $results = [];
-
-        // Fortune API paginates at 100 items per request
-        for ($offset = 0; $offset < 500; $offset += 100) {
-            $response = $this->http
-                ->timeout(self::TIMEOUT)
-                ->get("https://fortune.com/api/v2/list/1141696/expand/item/ranking/asc/{$offset}/100");
-
-            $response->throw();
-
-            $items = $response->json('list-items') ?? $response->json('items') ?? [];
-
-            foreach ($items as $item) {
-                $fields = $item['fields'] ?? $item;
-                $name = $fields['title'] ?? $fields['name'] ?? null;
-                $website = $fields['website'] ?? $fields['website_url'] ?? null;
-                $rank = $fields['rank'] ?? null;
-
-                if (! $name) {
-                    continue;
-                }
-
-                $domain = $website ? $this->extractDomain($website) : null;
-
-                if (! $domain) {
-                    continue;
-                }
-
-                $results[] = [
-                    'company' => $name,
-                    'domain' => $domain,
-                    'rank' => is_numeric($rank) ? (int) $rank : null,
-                ];
-            }
-        }
-
-        return $results;
-    }
-
-    /**
      * Fetch Forbes Global 2000 companies.
      *
      * @return array<int, array{company: string, domain: string, rank: int|null}>
@@ -129,49 +83,6 @@ class CompanyListSyncService
 
             $website = $org['webSite'] ?? null;
             $domain = $website ? $this->extractDomain($website) : null;
-
-            if (! $domain) {
-                continue;
-            }
-
-            $results[] = [
-                'company' => $name,
-                'domain' => $domain,
-                'rank' => is_numeric($rank) ? (int) $rank : null,
-            ];
-        }
-
-        return $results;
-    }
-
-    /**
-     * Fetch Inc. 5000 fastest-growing companies.
-     *
-     * @return array<int, array{company: string, domain: string, rank: int|null}>
-     */
-    public function fetchInc5000(): array
-    {
-        $year = now()->year;
-
-        $response = $this->http
-            ->timeout(self::TIMEOUT)
-            ->get("https://www.inc.com/inc5000list/json/inc5000_{$year}.json");
-
-        $response->throw();
-
-        $companies = $response->json();
-        $results = [];
-
-        foreach ($companies as $company) {
-            $name = $company['company'] ?? $company['ifc_company'] ?? null;
-            $website = $company['website'] ?? $company['ifc_url'] ?? null;
-            $rank = $company['rank'] ?? $company['ifc_firank'] ?? null;
-
-            if (! $name || ! $website) {
-                continue;
-            }
-
-            $domain = $this->extractDomain($website);
 
             if (! $domain) {
                 continue;

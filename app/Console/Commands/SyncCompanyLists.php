@@ -25,10 +25,6 @@ class SyncCompanyLists extends Command
     private const FETCH_METHODS = [
         'y-combinator' => 'fetchYCombinator',
         'forbes-global-2000' => 'fetchForbesGlobal2000',
-        // Fortune 500 and Inc. 5000 APIs are unavailable (404 / Cloudflare blocked).
-        // Their data is maintained via the JSON seed files in database/data/.
-        // 'fortune-500' => 'fetchFortune500',
-        // 'inc-5000' => 'fetchInc5000',
     ];
 
     public function handle(CompanyListSyncService $service): int

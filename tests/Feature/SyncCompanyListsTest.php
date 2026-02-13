@@ -14,13 +14,6 @@ beforeEach(function () {
         'sort_order' => 4,
     ]);
 
-    $this->fortuneList = CompanyList::create([
-        'name' => 'Fortune 500',
-        'slug' => 'fortune-500',
-        'description' => 'Fortune 500 companies',
-        'sort_order' => 1,
-    ]);
-
     $this->forbesList = CompanyList::create([
         'name' => 'Forbes Global 2000',
         'slug' => 'forbes-global-2000',
@@ -28,12 +21,6 @@ beforeEach(function () {
         'sort_order' => 3,
     ]);
 
-    $this->incList = CompanyList::create([
-        'name' => 'Inc. 5000',
-        'slug' => 'inc-5000',
-        'description' => 'Inc. 5000 companies',
-        'sort_order' => 2,
-    ]);
 });
 
 it('syncs entries from YC API', function () {
@@ -142,7 +129,7 @@ it('syncs a specific list with --list option', function () {
 
     expect(CompanyListEntry::where('company_list_id', $this->ycList->id)->count())->toBe(1);
     // Other lists should be untouched
-    expect(CompanyListEntry::where('company_list_id', $this->fortuneList->id)->count())->toBe(0);
+    expect(CompanyListEntry::where('company_list_id', $this->forbesList->id)->count())->toBe(0);
 });
 
 it('removes stale entries no longer in API response', function () {
