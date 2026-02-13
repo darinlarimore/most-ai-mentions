@@ -6,3 +6,4 @@ Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=120')->every
 Schedule::command('app:discover-sites')->everyFourHours();
 Schedule::command('app:crawl-sites --limit=5')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('app:send-newsletter')->weeklyOn(2, '10:00')->timezone('America/New_York');
+Schedule::command('app:sync-company-lists')->weekly()->withoutOverlapping();
