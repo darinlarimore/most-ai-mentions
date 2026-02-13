@@ -7,6 +7,7 @@ import {
 import { computed, ref, onMounted } from 'vue';
 import HypeOMeter from '@/components/HypeOMeter.vue';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
+import JsonLd from '@/components/JsonLd.vue';
 import ScoreBreakdown from '@/components/ScoreBreakdown.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -89,7 +90,28 @@ const formattedCreatedAt = computed(() => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 });
 
-const metaTitle = computed(() => `${props.site.name || props.site.domain} - Most AI Mentions`);
+const jsonLd = computed(() => {
+    const data: Record<string, unknown> = {
+        '@type': 'WebSite',
+        'name': props.site.name || props.site.domain,
+        'url': props.site.url,
+    };
+    if (props.site.meta_description) {
+        data.description = props.site.meta_description;
+    }
+    if (props.site.user_rating_count > 0) {
+        data.aggregateRating = {
+            '@type': 'AggregateRating',
+            'ratingValue': props.site.user_rating_avg,
+            'bestRating': 5,
+            'worstRating': 1,
+            'ratingCount': props.site.user_rating_count,
+        };
+    }
+    return data;
+});
+
+const metaTitle = computed(() => `${props.site.name || props.site.domain} AI Hype Score`);
 
 const metaDescription = computed(() => {
     const parts: string[] = [];
@@ -125,6 +147,8 @@ const ogImage = computed(() => {
         <meta name="twitter:description" :content="metaDescription" />
         <meta v-if="ogImage" name="twitter:image" :content="ogImage" />
     </Head>
+
+    <JsonLd :data="jsonLd" />
 
     <GuestLayout>
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

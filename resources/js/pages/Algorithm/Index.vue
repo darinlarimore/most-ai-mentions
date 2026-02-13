@@ -4,13 +4,27 @@ import {
     ArrowLeft, Cpu, MessageSquare, Type, Sparkles, Eye,
     Zap, Brain, Percent,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import JsonLd from '@/components/JsonLd.vue';
 import GuestLayout from '@/layouts/GuestLayout.vue';
 import type { AlgorithmFactor } from '@/types';
-defineProps<{
+const props = defineProps<{
     factors: AlgorithmFactor[];
 }>();
+
+const faqJsonLd = computed(() => ({
+    '@type': 'FAQPage',
+    'mainEntity': props.factors.map((factor) => ({
+        '@type': 'Question',
+        'name': `How does "${factor.name}" affect the Hype Score?`,
+        'acceptedAnswer': {
+            '@type': 'Answer',
+            'text': `${factor.description} Weight: ${factor.weight}. Example: ${factor.example}`,
+        },
+    })),
+}));
 
 const factorIcons: Record<string, typeof MessageSquare> = {
     'AI Buzzword Density': Percent,
@@ -38,6 +52,8 @@ const getIcon = (name: string) => {
         <meta name="twitter:title" content="How the Algorithm Works | Most AI Mentions" />
         <meta name="twitter:description" content="Learn how we calculate AI hype scores. Our algorithm analyzes mentions, font sizes, animations, and visual effects to rank websites." />
     </Head>
+
+    <JsonLd :data="faqJsonLd" />
 
     <GuestLayout>
         <div class="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">

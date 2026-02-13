@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { Trophy, Cpu, FlaskConical, Radio, Users, Search, X, ArrowUpDown, Calendar } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import JsonLd from '@/components/JsonLd.vue';
 import NewsletterForm from '@/components/NewsletterForm.vue';
 import SiteCard from '@/components/SiteCard.vue';
 import { Button } from '@/components/ui/button';
@@ -112,9 +113,37 @@ const goToPage = (url: string | null) => {
         router.visit(url);
     }
 };
+
+const websiteJsonLd = computed(() => ({
+    '@type': 'WebSite',
+    'name': 'Most AI Mentions',
+    'url': window.location.origin,
+    'description': 'The definitive ranking of AI hype on the web. We crawl sites, count the buzzwords, and score the spectacle.',
+    'potentialAction': {
+        '@type': 'SearchAction',
+        'target': `${window.location.origin}/?search={search_term_string}`,
+        'query-input': 'required name=search_term_string',
+    },
+}));
+
+const itemListJsonLd = computed(() => ({
+    '@type': 'ItemList',
+    'name': leaderboardTitle.value,
+    'itemListOrder': 'https://schema.org/ItemListOrderDescending',
+    'numberOfItems': props.sites.total,
+    'itemListElement': props.sites.data.map((site, i) => ({
+        '@type': 'ListItem',
+        'position': startRank.value + i,
+        'url': `${window.location.origin}/sites/${site.slug}`,
+        'name': site.name || site.domain,
+    })),
+}));
 </script>
 
 <template>
+    <JsonLd :data="websiteJsonLd" />
+    <JsonLd :data="itemListJsonLd" />
+
     <Head title="AI Hype Leaderboard">
         <meta name="description" content="Which websites mention AI the most? See the live leaderboard ranking thousands of sites by hype score, AI mentions, animations, and visual effects." />
         <meta property="og:title" content="AI Hype Leaderboard | Most AI Mentions" />
