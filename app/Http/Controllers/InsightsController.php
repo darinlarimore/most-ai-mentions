@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CrawlError;
+use App\Enums\CrawlErrorCategory;
 use App\Models\CrawlResult;
 use App\Models\Site;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -336,15 +337,13 @@ class InsightsController extends Controller
      */
     private function getCrawlErrorsByCategory(): array
     {
-        return CrawlError::query()
+        return DB::table('crawl_errors')
             ->selectRaw('category, COUNT(*) as count')
             ->groupBy('category')
             ->orderByDesc('count')
             ->get()
             ->map(fn ($row) => [
-                'label' => $row->category instanceof \App\Enums\CrawlErrorCategory
-                    ? $row->category->label()
-                    : (\App\Enums\CrawlErrorCategory::tryFrom($row->category)?->label() ?? $row->category),
+                'label' => CrawlErrorCategory::tryFrom($row->category)?->label() ?? $row->category,
                 'value' => (int) $row->count,
             ])
             ->values()
@@ -358,7 +357,7 @@ class InsightsController extends Controller
     {
         $since = now()->subDays(30)->startOfDay();
 
-        $rows = CrawlError::query()
+        $rows = DB::table('crawl_errors')
             ->where('created_at', '>=', $since)
             ->selectRaw('DATE(created_at) as date, category, COUNT(*) as count')
             ->groupBy('date', 'category')
@@ -371,9 +370,7 @@ class InsightsController extends Controller
             if (! isset($grouped[$date])) {
                 $grouped[$date] = ['date' => $date];
             }
-            $label = $row->category instanceof \App\Enums\CrawlErrorCategory
-                ? $row->category->label()
-                : (\App\Enums\CrawlErrorCategory::tryFrom($row->category)?->label() ?? $row->category);
+            $label = CrawlErrorCategory::tryFrom($row->category)?->label() ?? $row->category;
             $grouped[$date][$label] = (int) $row->count;
         }
 
@@ -385,7 +382,7 @@ class InsightsController extends Controller
      */
     private function getCrawlErrorTopDomains(): array
     {
-        return CrawlError::query()
+        return DB::table('crawl_errors')
             ->join('sites', 'crawl_errors.site_id', '=', 'sites.id')
             ->selectRaw('sites.domain, COUNT(*) as count')
             ->groupBy('sites.domain')
