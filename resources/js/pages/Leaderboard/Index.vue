@@ -114,14 +114,16 @@ const goToPage = (url: string | null) => {
     }
 };
 
+const origin = typeof window !== 'undefined' ? window.location.origin : '';
+
 const websiteJsonLd = computed(() => ({
     '@type': 'WebSite',
     'name': 'Most AI Mentions',
-    'url': window.location.origin,
+    'url': origin,
     'description': 'The definitive ranking of AI hype on the web. We crawl sites, count the buzzwords, and score the spectacle.',
     'potentialAction': {
         '@type': 'SearchAction',
-        'target': `${window.location.origin}/?search={search_term_string}`,
+        'target': `${origin}/?search={search_term_string}`,
         'query-input': 'required name=search_term_string',
     },
 }));
@@ -134,7 +136,7 @@ const itemListJsonLd = computed(() => ({
     'itemListElement': props.sites.data.map((site, i) => ({
         '@type': 'ListItem',
         'position': startRank.value + i,
-        'url': `${window.location.origin}/sites/${site.slug}`,
+        'url': `${origin}/sites/${site.slug}`,
         'name': site.name || site.domain,
     })),
 }));

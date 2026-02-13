@@ -173,9 +173,9 @@ const metaDescription = computed(() => {
 
 const ogImage = computed(() => {
     if (!props.site.screenshot_path) return null;
-    return props.site.screenshot_path.startsWith('http')
-        ? props.site.screenshot_path
-        : `${window.location.origin}/storage/${props.site.screenshot_path}`;
+    if (props.site.screenshot_path.startsWith('http')) return props.site.screenshot_path;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/storage/${props.site.screenshot_path}`;
 });
 </script>
 
