@@ -16,8 +16,6 @@ class HypeScoreCalculator
     /** @var int Pages with fewer words than this get density_score = 0. */
     public const MIN_WORD_COUNT = 50;
 
-    /** @var float Maximum word count multiplier applied to the density score. */
-    public const WORD_COUNT_MULTIPLIER_MAX = 1.5;
 
     /**
      * Density breakpoints for piecewise linear interpolation.
@@ -170,11 +168,8 @@ class HypeScoreCalculator
 
         $baseScore = $this->interpolateDensityScore($densityPercent);
 
-        // Pages with more content get a gentle boost: 1.0x at 50 words, up to 1.5x at 500+ words
-        $multiplier = min(
-            self::WORD_COUNT_MULTIPLIER_MAX,
-            1.0 + 0.5 * log10($totalWordCount / self::MIN_WORD_COUNT),
-        );
+        // Pages with more content get a logarithmic boost: 1.0x at 50 words, 1.5x at 500, 2.0x at 5000, etc.
+        $multiplier = 1.0 + 0.5 * log10($totalWordCount / self::MIN_WORD_COUNT);
 
         $adjustedScore = (int) round($baseScore * $multiplier);
 
@@ -287,8 +282,8 @@ class HypeScoreCalculator
         return [
             [
                 'name' => 'AI Buzzword Density',
-                'description' => 'The percentage of a page\'s visible text that consists of AI buzzwords. This is the primary scoring factor. Pages with more content get a gentle boost (up to '.self::WORD_COUNT_MULTIPLIER_MAX.'x) rewarding sites that sustain high density across lots of text.',
-                'weight' => 'Piecewise scale from 0% to 10%+, boosted up to '.self::WORD_COUNT_MULTIPLIER_MAX.'x by word count',
+                'description' => 'The percentage of a page\'s visible text that consists of AI buzzwords. This is the primary scoring factor. Pages with more content get a logarithmic boost, rewarding sites that sustain high density across lots of text.',
+                'weight' => 'Piecewise scale from 0% to 10%+, with logarithmic word count boost',
                 'example' => 'A 500-word page where 5% of words are AI buzzwords scores 1,000 points',
             ],
             [

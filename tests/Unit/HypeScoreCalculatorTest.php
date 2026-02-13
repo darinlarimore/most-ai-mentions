@@ -109,7 +109,7 @@ it('caps mention score at maximum', function () {
 
 it('calculates density score from word count', function () {
     // 10 single-word mentions ("AI") in 1000 words = 1% density
-    // Base score 250 × word count multiplier 1.5 (at 1000 words) = 375
+    // Base score 250 × uncapped log multiplier at 1000 words ≈ 1.65 = 413
     $mentions = array_fill(0, 10, [
         'text' => 'AI', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test',
     ]);
@@ -117,7 +117,7 @@ it('calculates density score from word count', function () {
     $scores = $this->calculator->calculate($mentions, 0, 0, 0, 1000);
 
     expect($scores['ai_density_percent'])->toBe(1.0);
-    expect($scores['density_score'])->toBe(375);
+    expect($scores['density_score'])->toBe(413);
     expect($scores['total_word_count'])->toBe(1000);
 });
 
@@ -168,7 +168,7 @@ it('interpolates density score between breakpoints', function () {
 
 it('counts multi-word mentions correctly for density', function () {
     // 5 mentions of "machine learning" (2 words each) in 1000 words = 10/1000 = 1%
-    // Base score 250 × word count multiplier 1.5 = 375
+    // Base score 250 × uncapped log multiplier ≈ 1.65 = 413
     $mentions = array_fill(0, 5, [
         'text' => 'machine learning', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test',
     ]);
@@ -176,7 +176,7 @@ it('counts multi-word mentions correctly for density', function () {
     $scores = $this->calculator->calculate($mentions, 0, 0, 0, 1000);
 
     expect($scores['ai_density_percent'])->toBe(1.0);
-    expect($scores['density_score'])->toBe(375);
+    expect($scores['density_score'])->toBe(413);
 });
 
 it('boosts density score for pages with more words', function () {
