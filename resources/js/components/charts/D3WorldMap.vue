@@ -358,8 +358,8 @@ async function draw() {
         }
 
         // Adaptive hex radius: screen-space size shrinks at higher zoom for finer granularity
-        // k^1.2 instead of k — at 4x zoom hexes are ~25% smaller, revealing more geographic detail
-        const hexRadius = hexBaseRadius / Math.pow(k, 1.2);
+        // k^1.1 instead of k — screen-space hexes shrink gently at higher zoom for finer detail
+        const hexRadius = hexBaseRadius / Math.pow(k, 1.1);
 
         const hexLayout = d3Hexbin<ProjectedPoint>()
             .x((d) => d[0])
@@ -376,8 +376,8 @@ async function draw() {
         const maxCount = d3.max(bins, (b) => b.length) ?? 1;
 
         // Sqrt scale: hex area ∝ count (perceptually linear)
-        // Min 40% of cell radius so single-server hexes are still visible
-        const sizeScale = d3.scaleSqrt().domain([1, maxCount]).range([hexRadius * 0.4, hexRadius]).clamp(true);
+        // Min 60% of cell radius so single-server hexes are clearly visible
+        const sizeScale = d3.scaleSqrt().domain([1, maxCount]).range([hexRadius * 0.6, hexRadius]).clamp(true);
 
         // Color scale: light → saturated version of chart-1
         const colorScale = d3
