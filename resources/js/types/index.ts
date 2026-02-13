@@ -107,6 +107,18 @@ export interface AlgorithmFactor {
     example: string;
 }
 
+export interface CompanyList {
+    name: string;
+    slug: string;
+    description: string;
+    source_url: string | null;
+}
+
+export interface CompanyListLink {
+    name: string;
+    href: string;
+}
+
 export interface PaginatedData<T> {
     data: T[];
     current_page: number;

@@ -14,8 +14,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
     NavigationMenu,
+    NavigationMenuContent,
     NavigationMenuItem,
+    NavigationMenuLink,
     NavigationMenuList,
+    NavigationMenuTrigger,
     navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import {
@@ -37,6 +40,7 @@ import { getInitials } from '@/composables/useInitials';
 import { toUrl } from '@/lib/utils';
 import { leaderboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
+import type { CompanyListLink } from '@/types';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -48,18 +52,11 @@ const props = withDefaults(defineProps<Props>(), {
 
 const page = usePage();
 const auth = computed(() => page.props.auth);
+const companyLists = computed(() => page.props.companyLists as CompanyListLink[]);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
-
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Leaderboard',
-        href: leaderboard(),
-        icon: LayoutGrid,
-    },
-];
 
 const rightNavItems: NavItem[] = [
     {
@@ -103,23 +100,28 @@ const rightNavItems: NavItem[] = [
                             >
                                 <nav class="-mx-3 space-y-1">
                                     <Link
-                                        v-for="item in mainNavItems"
-                                        :key="item.title"
-                                        :href="item.href"
+                                        :href="leaderboard()"
                                         class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent"
-                                        :class="
-                                            whenCurrentUrl(
-                                                item.href,
-                                                activeItemStyles,
-                                            )
-                                        "
+                                        :class="whenCurrentUrl(leaderboard(), activeItemStyles)"
                                     >
-                                        <component
-                                            v-if="item.icon"
-                                            :is="item.icon"
-                                            class="h-5 w-5"
-                                        />
-                                        {{ item.title }}
+                                        <LayoutGrid class="h-5 w-5" />
+                                        Hype Leaderboard
+                                    </Link>
+                                    <Link
+                                        href="/user-rated"
+                                        class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent"
+                                        :class="whenCurrentUrl('/user-rated', activeItemStyles)"
+                                    >
+                                        User Rated
+                                    </Link>
+                                    <Link
+                                        v-for="list in companyLists"
+                                        :key="list.href"
+                                        :href="list.href"
+                                        class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent"
+                                        :class="whenCurrentUrl(list.href, activeItemStyles)"
+                                    >
+                                        {{ list.name }}
                                     </Link>
                                 </nav>
                                 <div class="flex flex-col space-y-4">
@@ -154,31 +156,39 @@ const rightNavItems: NavItem[] = [
                         <NavigationMenuList
                             class="flex h-full items-stretch space-x-2"
                         >
-                            <NavigationMenuItem
-                                v-for="(item, index) in mainNavItems"
-                                :key="index"
-                                class="relative flex h-full items-center"
-                            >
-                                <Link
-                                    :class="[
-                                        navigationMenuTriggerStyle(),
-                                        whenCurrentUrl(
-                                            item.href,
-                                            activeItemStyles,
-                                        ),
-                                        'h-9 cursor-pointer px-3',
-                                    ]"
-                                    :href="item.href"
-                                >
-                                    <component
-                                        v-if="item.icon"
-                                        :is="item.icon"
-                                        class="mr-2 h-4 w-4"
-                                    />
-                                    {{ item.title }}
-                                </Link>
+                            <NavigationMenuItem class="relative flex h-full items-center">
+                                <NavigationMenuTrigger class="h-9 cursor-pointer px-3">
+                                    <LayoutGrid class="mr-2 h-4 w-4" />
+                                    Leaderboard
+                                </NavigationMenuTrigger>
+                                <NavigationMenuContent>
+                                    <div class="w-48">
+                                        <NavigationMenuLink as-child>
+                                            <Link href="/" class="block">
+                                                Hype Leaderboard
+                                            </Link>
+                                        </NavigationMenuLink>
+                                        <NavigationMenuLink as-child>
+                                            <Link href="/user-rated" class="block">
+                                                User Rated
+                                            </Link>
+                                        </NavigationMenuLink>
+                                        <template v-if="companyLists?.length">
+                                            <div class="my-1 border-t" />
+                                            <NavigationMenuLink
+                                                v-for="list in companyLists"
+                                                :key="list.href"
+                                                as-child
+                                            >
+                                                <Link :href="list.href" class="block">
+                                                    {{ list.name }}
+                                                </Link>
+                                            </NavigationMenuLink>
+                                        </template>
+                                    </div>
+                                </NavigationMenuContent>
                                 <div
-                                    v-if="isCurrentUrl(item.href)"
+                                    v-if="isCurrentUrl(leaderboard())"
                                     class="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"
                                 ></div>
                             </NavigationMenuItem>

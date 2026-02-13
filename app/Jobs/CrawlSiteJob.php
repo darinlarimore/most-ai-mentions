@@ -14,6 +14,7 @@ use App\Models\Site;
 use App\Services\HttpMetadataCollector;
 use App\Services\HypeScoreCalculator;
 use App\Services\IpGeolocationService;
+use App\Services\RobotsTxtChecker;
 use App\Services\ScreenshotService;
 use App\Services\SiteCategoryDetector;
 use App\Services\TechStackDetector;
@@ -81,6 +82,42 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         $homepageUrl = ($parsed['scheme'] ?? 'https').'://'.($parsed['host'] ?? '');
         if ($this->site->url !== $homepageUrl) {
             $this->site->update(['url' => $homepageUrl]);
+        }
+
+        // Check robots.txt before starting the crawl
+        $robotsChecker = app(RobotsTxtChecker::class);
+        if (! $robotsChecker->isAllowed($this->site->url)) {
+            Log::info("Blocked by robots.txt: {$this->site->url}");
+
+            CrawlError::create([
+                'site_id' => $this->site->id,
+                'category' => CrawlErrorCategory::RobotsBlocked,
+                'message' => 'Crawling disallowed by robots.txt',
+                'url' => $this->site->url,
+            ]);
+
+            $failures = $this->site->consecutive_failures + 1;
+
+            $this->site->update([
+                'last_attempted_at' => now(),
+                'status' => 'pending',
+                'consecutive_failures' => $failures,
+                'is_active' => $failures < Site::MAX_CONSECUTIVE_FAILURES,
+            ]);
+
+            if ($failures >= Site::MAX_CONSECUTIVE_FAILURES) {
+                Log::info("Deactivated {$this->site->url} after {$failures} consecutive failures");
+            }
+
+            CrawlCompleted::dispatch(
+                $this->site->id, 0, 0, null, null,
+                $this->site->domain, $this->site->slug, $this->site->category,
+                [], true, null, null,
+            );
+            QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
+            self::dispatchNext();
+
+            return;
         }
 
         Log::info("Starting crawl for site: {$this->site->url}");

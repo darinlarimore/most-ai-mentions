@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CompanyList;
 use App\Models\Site;
 use Illuminate\Http\Response;
 
@@ -34,6 +35,16 @@ class SitemapController extends Controller
             $xml .= '    <loc>'.e($entry['loc']).'</loc>'."\n";
             $xml .= '    <changefreq>'.$entry['changefreq'].'</changefreq>'."\n";
             $xml .= '    <priority>'.$entry['priority'].'</priority>'."\n";
+            $xml .= '  </url>'."\n";
+        }
+
+        $companyLists = CompanyList::orderBy('sort_order')->get();
+
+        foreach ($companyLists as $companyList) {
+            $xml .= '  <url>'."\n";
+            $xml .= '    <loc>'.e(url('/lists/'.$companyList->slug)).'</loc>'."\n";
+            $xml .= '    <changefreq>weekly</changefreq>'."\n";
+            $xml .= '    <priority>0.8</priority>'."\n";
             $xml .= '  </url>'."\n";
         }
 

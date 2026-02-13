@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\CompanyList;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -47,6 +48,14 @@ class HandleInertiaRequests extends Middleware
                 'submitted_site' => $request->session()->get('submitted_site'),
                 'submitted_sites' => $request->session()->get('submitted_sites'),
             ],
+            'companyLists' => fn () => CompanyList::query()
+                ->orderBy('sort_order')
+                ->select('name', 'slug')
+                ->get()
+                ->map(fn (CompanyList $list) => [
+                    'name' => $list->name,
+                    'href' => route('lists.show', $list),
+                ]),
         ];
     }
 }

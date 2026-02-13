@@ -1,12 +1,23 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { Menu, X } from 'lucide-vue-next';
+import { Link, usePage } from '@inertiajs/vue3';
+import { ChevronDown, Menu, X } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 import CrawlTrackingBar from '@/components/CrawlTrackingBar.vue';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useSubmittedCrawls } from '@/composables/useSubmittedCrawls';
+import type { CompanyListLink } from '@/types';
 
 const mobileMenuOpen = ref(false);
 const { setupEcho } = useSubmittedCrawls();
+
+const page = usePage();
+const companyLists = page.props.companyLists as CompanyListLink[];
 
 onMounted(() => {
     setupEcho();
@@ -24,9 +35,24 @@ onMounted(() => {
                 </div>
 
                 <nav class="hidden items-center gap-6 md:flex">
-                    <Link href="/" class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                        Leaderboard
-                    </Link>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger class="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground outline-none">
+                            Leaderboard
+                            <ChevronDown class="size-3.5" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            <DropdownMenuItem as-child>
+                                <Link href="/">Hype Leaderboard</Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem as-child>
+                                <Link href="/user-rated">User Rated</Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator v-if="companyLists?.length" />
+                            <DropdownMenuItem v-for="list in companyLists" :key="list.href" as-child>
+                                <Link :href="list.href">{{ list.name }}</Link>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <Link href="/algorithm" class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
                         Algorithm
                     </Link>
@@ -56,7 +82,18 @@ onMounted(() => {
             <div v-if="mobileMenuOpen" class="border-t md:hidden">
                 <nav class="flex flex-col gap-1 p-4">
                     <Link href="/" class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
-                        Leaderboard
+                        Hype Leaderboard
+                    </Link>
+                    <Link href="/user-rated" class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
+                        User Rated
+                    </Link>
+                    <Link
+                        v-for="list in companyLists"
+                        :key="list.href"
+                        :href="list.href"
+                        class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                        {{ list.name }}
                     </Link>
                     <Link href="/algorithm" class="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground">
                         Algorithm

@@ -88,10 +88,43 @@ const formattedCreatedAt = computed(() => {
     const date = new Date(props.site.created_at);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 });
+
+const metaTitle = computed(() => `${props.site.name || props.site.domain} - Most AI Mentions`);
+
+const metaDescription = computed(() => {
+    const parts: string[] = [];
+    parts.push(`${props.site.domain} has a Hype Score of ${props.site.hype_score}`);
+    const mentions = props.site.latest_crawl_result?.ai_mention_count;
+    if (mentions) {
+        parts[0] += ` with ${mentions} AI mention${mentions !== 1 ? 's' : ''}`;
+    }
+    parts[0] += '.';
+    if (props.site.meta_description) {
+        parts.push(props.site.meta_description);
+    }
+    return parts.join(' ');
+});
+
+const ogImage = computed(() => {
+    if (!props.site.screenshot_path) return null;
+    return props.site.screenshot_path.startsWith('http')
+        ? props.site.screenshot_path
+        : `${window.location.origin}/storage/${props.site.screenshot_path}`;
+});
 </script>
 
 <template>
-    <Head :title="`${site.name || site.domain} - Most AI Mentions`" />
+    <Head :title="metaTitle">
+        <meta name="description" :content="metaDescription" />
+        <meta property="og:title" :content="metaTitle" />
+        <meta property="og:description" :content="metaDescription" />
+        <meta property="og:type" content="website" />
+        <meta v-if="ogImage" property="og:image" :content="ogImage" />
+        <meta name="twitter:card" :content="ogImage ? 'summary_large_image' : 'summary'" />
+        <meta name="twitter:title" :content="metaTitle" />
+        <meta name="twitter:description" :content="metaDescription" />
+        <meta v-if="ogImage" name="twitter:image" :content="ogImage" />
+    </Head>
 
     <GuestLayout>
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

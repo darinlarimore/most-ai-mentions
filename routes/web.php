@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AlgorithmController;
+use App\Http\Controllers\CompanyListController;
 use App\Http\Controllers\CrawlQueueController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\InsightsController;
@@ -25,6 +26,7 @@ Route::get('/insights/network', [InsightsController::class, 'network'])->name('i
 Route::get('/insights/charts', [InsightsController::class, 'charts'])->name('insights.charts');
 Route::get('/crawl/queue', [CrawlQueueController::class, 'index'])->name('crawl.queue');
 Route::get('/crawl/live', [CrawlQueueController::class, 'live'])->name('crawl.live');
+Route::get('/lists/{list}', [CompanyListController::class, 'show'])->name('lists.show');
 Route::get('/donate', [DonationController::class, 'index'])->name('donate');
 Route::get('/donate/success', [DonationController::class, 'success'])->name('donate.success');
 
