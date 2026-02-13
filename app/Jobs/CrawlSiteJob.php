@@ -345,6 +345,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
         // Run axe-core accessibility audit inline (fast, ~3s)
         try {
+            Log::info("Running axe-core audit for site: {$this->site->url}");
             $axeResults = $axeAuditService->audit($this->site->domain);
             if ($axeResults) {
                 $crawlResult->update([
@@ -352,6 +353,12 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
                     'axe_passes_count' => $axeResults['passes_count'],
                     'axe_violations_summary' => $axeResults['violations_summary'],
                 ]);
+                Log::info("axe-core audit completed for site: {$this->site->url}", [
+                    'violations' => $axeResults['violations_count'],
+                    'passes' => $axeResults['passes_count'],
+                ]);
+            } else {
+                Log::warning("axe-core audit returned no results for {$this->site->url}");
             }
         } catch (\Throwable $e) {
             Log::warning("axe-core audit failed for {$this->site->url}: {$e->getMessage()}");
