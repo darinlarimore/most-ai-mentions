@@ -405,14 +405,15 @@ async function draw() {
             .attr('stroke-width', 0.5 / k)
             .attr('stroke-opacity', 0.6);
 
-        // Count labels — only show when hex is large enough to fit text
+        // Count labels — only show when hex is large enough on screen to fit text
+        const minScreenLabel = 10;
         hexGroups
-            .filter((b) => sizeScale(b.length) > hexRadius * 0.35)
+            .filter((b) => sizeScale(b.length) * k > minScreenLabel)
             .append('text')
             .attr('text-anchor', 'middle')
             .attr('dy', '0.35em')
             .attr('fill', textColor)
-            .attr('font-size', (b) => `${Math.max(4, sizeScale(b.length) * 0.7)}px`)
+            .attr('font-size', (b) => `${Math.max(4 / k, sizeScale(b.length) * 0.65)}px`)
             .attr('font-weight', '600')
             .attr('pointer-events', 'none')
             .text((b) => b.length);
