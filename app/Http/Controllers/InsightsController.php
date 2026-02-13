@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CrawlErrorCategory;
+use App\Models\CrawlError;
 use App\Models\CrawlResult;
 use App\Models\Site;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -337,7 +337,8 @@ class InsightsController extends Controller
      */
     private function getCrawlErrorsByCategory(): array
     {
-        return DB::table('crawl_errors')
+        return CrawlError::query()
+            ->withCasts(['category' => 'string'])
             ->selectRaw('category, COUNT(*) as count')
             ->groupBy('category')
             ->orderByDesc('count')
@@ -357,7 +358,8 @@ class InsightsController extends Controller
     {
         $since = now()->subDays(30)->startOfDay();
 
-        $rows = DB::table('crawl_errors')
+        $rows = CrawlError::query()
+            ->withCasts(['category' => 'string'])
             ->where('created_at', '>=', $since)
             ->selectRaw('DATE(created_at) as date, category, COUNT(*) as count')
             ->groupBy('date', 'category')
@@ -382,7 +384,7 @@ class InsightsController extends Controller
      */
     private function getCrawlErrorTopDomains(): array
     {
-        return DB::table('crawl_errors')
+        return CrawlError::query()
             ->join('sites', 'crawl_errors.site_id', '=', 'sites.id')
             ->selectRaw('sites.domain, COUNT(*) as count')
             ->groupBy('sites.domain')
