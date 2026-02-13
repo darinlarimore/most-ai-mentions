@@ -300,7 +300,7 @@ const itemListJsonLd = computed(() => ({
                     v-for="(site, index) in sites.data"
                     :key="site.id"
                     :site="site"
-                    :rank="startRank + index"
+                    :rank="searchQuery ? undefined : startRank + index"
                 />
             </div>
 

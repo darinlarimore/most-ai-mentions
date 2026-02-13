@@ -7,7 +7,7 @@ import type { Site } from '@/types';
 
 const props = defineProps<{
     site: Site;
-    rank: number;
+    rank?: number;
 }>();
 
 const categoryLabels: Record<string, string> = {
@@ -54,6 +54,7 @@ const formattedDate = computed(() => {
 
             <!-- Rank Badge -->
             <div
+                v-if="rank != null"
                 :class="[
                     'absolute left-3 top-3 flex size-9 items-center justify-center rounded-full text-xs font-bold shadow-sm',
                     rankBadgeClass,
