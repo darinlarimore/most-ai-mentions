@@ -268,3 +268,49 @@ it('continues crawl when HTTP metadata fails with non-fatal error', function () 
         return $event->hype_score >= 0;
     });
 });
+
+it('detects Cloudflare challenge page and marks as blocked', function () {
+    Queue::fake();
+    Event::fake();
+
+    $site = Site::factory()->pending()->create([
+        'category' => 'other',
+    ]);
+
+    $challengeHtml = '<html><head><title>Just a moment...</title></head><body><div class="cf-challenge-running">Performing security verification</div></body></html>';
+    $mockProcess = Mockery::mock(Process::class);
+
+    $screenshotService = Mockery::mock(ScreenshotService::class);
+    $screenshotService->shouldReceive('startHtmlFetch')->once()->andReturn($mockProcess);
+    $screenshotService->shouldReceive('collectHtmlResult')->once()->with($mockProcess)->andReturn($challengeHtml);
+    $screenshotService->shouldNotReceive('capture');
+
+    $httpMetadataCollector = Mockery::mock(HttpMetadataCollector::class);
+    $httpMetadataCollector->shouldReceive('collect')->once()->andReturn([
+        'server_ip' => null,
+        'headers' => [],
+        'redirect_chain' => null,
+        'final_url' => $site->url,
+        'response_time_ms' => 100,
+        'server_software' => null,
+        'tls_issuer' => null,
+    ]);
+
+    $job = new CrawlSiteJob($site);
+    $job->handle(
+        app(HypeScoreCalculator::class),
+        $screenshotService,
+        app(SiteCategoryDetector::class),
+        $httpMetadataCollector,
+        app(TechStackDetector::class),
+        app(IpGeolocationService::class),
+        app(AxeAuditService::class),
+    );
+
+    Event::assertDispatched(CrawlCompleted::class, function (CrawlCompleted $event) {
+        return $event->has_error === true && $event->error_category === 'Cloudflare Challenge';
+    });
+
+    $site->refresh();
+    expect($site->crawlErrors()->where('category', 'cloudflare_blocked')->count())->toBe(1);
+});

@@ -12,6 +12,7 @@ enum CrawlErrorCategory: string
     case HttpServerError = 'http_server_error';
     case EmptyResponse = 'empty_response';
     case Blocked = 'blocked';
+    case CloudflareBlocked = 'cloudflare_blocked';
     case RobotsBlocked = 'robots_blocked';
     case ParseError = 'parse_error';
     case Unknown = 'unknown';
@@ -41,6 +42,7 @@ enum CrawlErrorCategory: string
             self::HttpServerError => 'HTTP Server Error',
             self::EmptyResponse => 'Empty Response',
             self::Blocked => 'Blocked',
+            self::CloudflareBlocked => 'Cloudflare Challenge',
             self::RobotsBlocked => 'Blocked by robots.txt',
             self::ParseError => 'Parse Error',
             self::Unknown => 'Unknown',

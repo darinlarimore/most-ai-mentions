@@ -225,6 +225,21 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             }
         }
 
+        // Detect Cloudflare/bot challenge pages before wasting time on analysis
+        if ($html && self::isChallengePage($html)) {
+            Log::info("Cloudflare challenge detected for {$this->site->url} — marking as blocked");
+
+            $fetchError = CrawlError::create([
+                'site_id' => $this->site->id,
+                'category' => CrawlErrorCategory::CloudflareBlocked,
+                'message' => 'Cloudflare challenge page detected — site blocks automated browsers',
+                'url' => $this->site->url,
+            ]);
+
+            // Treat as no HTML — the challenge page isn't real content
+            $html = null;
+        }
+
         if ($html) {
             $observer->analyzeHtml($html);
         }
@@ -531,6 +546,32 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         }
 
         self::dispatchNext();
+    }
+
+    /**
+     * Detect Cloudflare Turnstile, hCaptcha, and other bot challenge pages.
+     */
+    private static function isChallengePage(string $html): bool
+    {
+        $markers = [
+            'Performing security verification',
+            'Verify you are human',
+            'challenges.cloudflare.com',
+            'cdn-cgi/challenge-platform',
+            'Just a moment...',
+            'cf-challenge-running',
+            'cf_chl_opt',
+        ];
+
+        $htmlLower = mb_strtolower($html);
+
+        foreach ($markers as $marker) {
+            if (str_contains($htmlLower, mb_strtolower($marker))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
