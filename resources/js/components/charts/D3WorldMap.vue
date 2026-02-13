@@ -337,7 +337,7 @@ async function draw() {
         const projected = projectPoints(liveData, projection);
         if (projected.length === 0) return;
 
-        // Constant screen-space hex size → SVG-space radius shrinks with zoom
+        // Grid cell radius stays constant in screen-space
         const hexRadius = hexBaseRadius / k;
 
         const hexLayout = d3Hexbin<ProjectedPoint>()
@@ -350,14 +350,16 @@ async function draw() {
 
         const maxCount = d3.max(bins, (b) => b.length) ?? 1;
 
+        // Sqrt scale: hex area ∝ count (perceptually linear)
+        // Min 40% of cell radius so single-server hexes are still visible
+        const sizeScale = d3.scaleSqrt().domain([1, maxCount]).range([hexRadius * 0.4, hexRadius]).clamp(true);
+
         // Color scale: light → saturated version of chart-1
         const colorScale = d3
             .scaleLinear<string>()
             .domain([1, maxCount])
             .range([d3.color(dotColor)!.copy({ opacity: 0.3 }).formatRgb(), dotColor])
             .clamp(true);
-
-        const hexPath = hexLayout.hexagon();
 
         const hexGroups = overlayLayer
             .selectAll('.hex')
@@ -368,22 +370,24 @@ async function draw() {
             .attr('transform', (b) => `translate(${b.x},${b.y})`)
             .style('cursor', 'pointer');
 
+        // Each hex sized proportionally — never exceeds grid cell, so no overlap
         hexGroups
             .append('path')
-            .attr('d', hexPath)
+            .attr('d', (b) => hexLayout.hexagon(sizeScale(b.length))!)
             .attr('fill', (b) => colorScale(b.length))
             .attr('fill-opacity', 0.85)
             .attr('stroke', borderColor)
             .attr('stroke-width', 0.5 / k)
             .attr('stroke-opacity', 0.6);
 
-        // Count labels
+        // Count labels — only show when hex is large enough to fit text
         hexGroups
+            .filter((b) => sizeScale(b.length) > hexRadius * 0.35)
             .append('text')
             .attr('text-anchor', 'middle')
             .attr('dy', '0.35em')
             .attr('fill', textColor)
-            .attr('font-size', `${Math.max(5, hexRadius * 0.75)}px`)
+            .attr('font-size', (b) => `${Math.max(4, sizeScale(b.length) * 0.7)}px`)
             .attr('font-weight', '600')
             .attr('pointer-events', 'none')
             .text((b) => b.length);
