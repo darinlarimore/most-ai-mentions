@@ -11,6 +11,7 @@ if (!url) {
 }
 
 const TIMEOUT_MS = 30_000;
+const PAGE_SETTLE_MS = 3_000;
 
 const timeout = setTimeout(() => {
     console.error(JSON.stringify({ error: 'Timeout exceeded' }));
@@ -27,12 +28,17 @@ try {
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
+            '--disable-software-rasterizer',
         ],
     });
 
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 720 });
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+
+    await page.goto(url, { waitUntil: 'load', timeout: 20_000 });
+
+    // Wait for the page to settle — JS frameworks need time to hydrate
+    await new Promise((resolve) => setTimeout(resolve, PAGE_SETTLE_MS));
 
     const results = await new AxeBuilder(page).analyze();
 

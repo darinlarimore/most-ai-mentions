@@ -71,6 +71,7 @@ class AxeAuditService
         $scriptPath = base_path('scripts/axe-audit.mjs');
 
         $process = new Process(['node', $scriptPath, "https://{$domain}"]);
+        $process->setWorkingDirectory(base_path());
         $process->setTimeout(60);
         $process->run();
 

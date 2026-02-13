@@ -18,9 +18,7 @@ class LighthouseService
             [$success, $output, $errorOutput] = $this->runProcess($domain);
 
             if (! $success) {
-                Log::warning("Lighthouse audit failed for {$domain}", [
-                    'stderr' => mb_substr($errorOutput, 0, 1000),
-                ]);
+                Log::warning("Lighthouse audit failed for {$domain}: {$errorOutput}");
 
                 return null;
             }
@@ -76,19 +74,46 @@ class LighthouseService
     }
 
     /**
+     * Resolve the path to the Chrome executable from puppeteer's cache.
+     */
+    private function resolveChromePath(): ?string
+    {
+        $process = new Process([
+            'node', '-e', "console.log(require('puppeteer').executablePath())",
+        ]);
+        $process->setWorkingDirectory(base_path());
+        $process->setTimeout(10);
+        $process->run();
+
+        $path = trim($process->getOutput());
+
+        return ($process->isSuccessful() && $path !== '' && file_exists($path)) ? $path : null;
+    }
+
+    /**
      * Run the Lighthouse CLI.
      *
      * @return array{0: bool, 1: string, 2: string} [success, stdout, stderr]
      */
     protected function runProcess(string $domain): array
     {
-        $process = new Process([
-            'npx', 'lighthouse',
+        $lighthouseBin = base_path('node_modules/.bin/lighthouse');
+
+        $command = [
+            $lighthouseBin,
             "https://{$domain}",
             '--output=json',
-            '--chrome-flags=--headless --no-sandbox',
+            '--chrome-flags=--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu',
             '--only-categories=performance,accessibility,best-practices,seo',
-        ]);
+        ];
+
+        $chromePath = $this->resolveChromePath();
+        if ($chromePath) {
+            $command[] = "--chrome-path={$chromePath}";
+        }
+
+        $process = new Process($command);
+        $process->setWorkingDirectory(base_path());
         $process->setTimeout(120);
         $process->run();
 
