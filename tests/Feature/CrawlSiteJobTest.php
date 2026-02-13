@@ -186,3 +186,83 @@ it('sends null latitude and longitude in CrawlCompleted when crawl fails', funct
         return $event->latitude === null && $event->longitude === null && $event->has_error === true;
     });
 });
+
+it('bails early on fatal HTTP metadata errors without launching Chrome', function () {
+    Queue::fake();
+    Event::fake();
+
+    $site = Site::factory()->pending()->create([
+        'category' => 'other',
+        'consecutive_failures' => 0,
+    ]);
+
+    $screenshotService = Mockery::mock(ScreenshotService::class);
+    // Chrome should NEVER be called for a fatal connection error
+    $screenshotService->shouldNotReceive('startHtmlFetch');
+    $screenshotService->shouldNotReceive('collectHtmlResult');
+
+    $httpMetadataCollector = Mockery::mock(HttpMetadataCollector::class);
+    $httpMetadataCollector->shouldReceive('collect')->once()
+        ->andThrow(new RuntimeException('cURL error 60: SSL: no alternative certificate subject name matches target host name', 60));
+
+    $job = new CrawlSiteJob($site);
+    $job->handle(
+        app(HypeScoreCalculator::class),
+        $screenshotService,
+        app(SiteCategoryDetector::class),
+        $httpMetadataCollector,
+        app(TechStackDetector::class),
+        app(IpGeolocationService::class),
+        app(AxeAuditService::class),
+    );
+
+    // Should record the error and bail
+    Event::assertDispatched(CrawlCompleted::class, function (CrawlCompleted $event) {
+        return $event->has_error === true && $event->error_category === 'SSL Error';
+    });
+
+    $site->refresh();
+    expect($site->consecutive_failures)->toBe(1);
+    expect($site->status)->toBe('pending');
+
+    // Should have created a crawl error
+    expect($site->crawlErrors()->count())->toBe(1);
+    expect($site->crawlErrors()->first()->category)->toBe(\App\Enums\CrawlErrorCategory::SslError);
+});
+
+it('continues crawl when HTTP metadata fails with non-fatal error', function () {
+    Queue::fake();
+    Event::fake();
+
+    $site = Site::factory()->pending()->create([
+        'category' => 'other',
+    ]);
+
+    $html = '<html><head><title>Test</title></head><body>Hello</body></html>';
+    $mockProcess = Mockery::mock(Process::class);
+
+    $screenshotService = Mockery::mock(ScreenshotService::class);
+    // Chrome SHOULD still be called for non-fatal errors (e.g. HTTP 403)
+    $screenshotService->shouldReceive('startHtmlFetch')->once()->andReturn($mockProcess);
+    $screenshotService->shouldReceive('collectHtmlResult')->once()->with($mockProcess)->andReturn($html);
+
+    $httpMetadataCollector = Mockery::mock(HttpMetadataCollector::class);
+    $httpMetadataCollector->shouldReceive('collect')->once()
+        ->andThrow(new RuntimeException('403 Forbidden'));
+
+    $job = new CrawlSiteJob($site);
+    $job->handle(
+        app(HypeScoreCalculator::class),
+        $screenshotService,
+        app(SiteCategoryDetector::class),
+        $httpMetadataCollector,
+        app(TechStackDetector::class),
+        app(IpGeolocationService::class),
+        app(AxeAuditService::class),
+    );
+
+    // Should still complete successfully since Chrome got HTML
+    Event::assertDispatched(CrawlCompleted::class, function (CrawlCompleted $event) {
+        return $event->hype_score >= 0;
+    });
+});

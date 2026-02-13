@@ -130,11 +130,70 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         $crawlStartedAt = hrtime(true);
 
         CrawlStarted::dispatch($this->site->id, $this->site->url, $this->site->name, $this->site->slug, $this->site->source);
+
+        // Pre-flight: collect HTTP metadata first to detect fatal connection errors
+        // before wasting time launching Chrome/Puppeteer
+        $httpMetadata = null;
+        try {
+            CrawlProgress::dispatch($this->site->id, 'collecting_metadata', 'Collecting server metadata...');
+            $httpMetadata = $httpMetadataCollector->collect($this->site->url);
+        } catch (\Throwable $e) {
+            $errorCategory = CrawlErrorCategory::fromThrowable($e);
+            Log::warning("Failed to collect HTTP metadata for {$this->site->url}: {$e->getMessage()}");
+
+            // Fatal connection error (SSL, DNS, timeout, connection refused) — bail immediately
+            if ($errorCategory->isFatalConnection()) {
+                Log::info("Fatal connection error for {$this->site->url} — skipping Chrome fetch", [
+                    'category' => $errorCategory->value,
+                ]);
+
+                $crawlError = CrawlError::create([
+                    'site_id' => $this->site->id,
+                    'category' => $errorCategory,
+                    'message' => mb_substr($e->getMessage(), 0, 1000),
+                    'url' => $this->site->url,
+                ]);
+
+                $failures = $this->site->consecutive_failures + 1;
+                $durationMs = (int) round((hrtime(true) - $crawlStartedAt) / 1_000_000);
+
+                $crawlResult = CrawlResult::create([
+                    'site_id' => $this->site->id,
+                    'ai_mention_count' => 0,
+                    'pages_crawled' => 0,
+                    'crawl_duration_ms' => $durationMs,
+                ]);
+
+                $crawlError->update(['crawl_result_id' => $crawlResult->id]);
+
+                $this->site->update([
+                    'last_attempted_at' => now(),
+                    'status' => 'pending',
+                    'consecutive_failures' => $failures,
+                    'is_active' => $failures < Site::MAX_CONSECUTIVE_FAILURES,
+                ]);
+
+                if ($failures >= Site::MAX_CONSECUTIVE_FAILURES) {
+                    Log::info("Deactivated {$this->site->url} after {$failures} consecutive failures");
+                }
+
+                CrawlCompleted::dispatch(
+                    $this->site->id, 0, 0, null, $durationMs,
+                    $this->site->domain, $this->site->slug, $this->site->category,
+                    [], true, null, null, $errorCategory->label(),
+                );
+                QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
+                self::dispatchNext();
+
+                return;
+            }
+        }
+
         CrawlProgress::dispatch($this->site->id, 'fetching', 'Fetching homepage...');
 
         $observer = new \App\Crawlers\AiMentionCrawlObserver($this->site);
 
-        // Start Chrome HTML fetch asynchronously so we can collect HTTP metadata in parallel
+        // Start Chrome HTML fetch
         $htmlProcess = null;
         $html = null;
         $fetchError = null;
@@ -150,16 +209,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             ]);
         }
 
-        // Collect HTTP metadata while Chrome loads the page
-        $httpMetadata = null;
-        try {
-            CrawlProgress::dispatch($this->site->id, 'collecting_metadata', 'Collecting server metadata...');
-            $httpMetadata = $httpMetadataCollector->collect($this->site->url);
-        } catch (\Throwable $e) {
-            Log::warning("Failed to collect HTTP metadata for {$this->site->url}: {$e->getMessage()}");
-        }
-
-        // Now collect the HTML result from the async Chrome process
+        // Collect the HTML result from Chrome
         if ($htmlProcess && ! $fetchError) {
             try {
                 $html = $screenshotService->collectHtmlResult($htmlProcess);

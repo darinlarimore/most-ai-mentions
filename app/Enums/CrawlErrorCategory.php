@@ -16,6 +16,20 @@ enum CrawlErrorCategory: string
     case ParseError = 'parse_error';
     case Unknown = 'unknown';
 
+    /**
+     * Whether this error category indicates a fundamental connectivity issue
+     * where Chrome/Puppeteer would also fail (no point continuing the crawl).
+     */
+    public function isFatalConnection(): bool
+    {
+        return in_array($this, [
+            self::Timeout,
+            self::DnsFailure,
+            self::ConnectionError,
+            self::SslError,
+        ]);
+    }
+
     public function label(): string
     {
         return match ($this) {
