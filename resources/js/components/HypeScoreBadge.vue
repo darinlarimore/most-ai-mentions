@@ -5,6 +5,8 @@ const props = defineProps<{
     score: number;
 }>();
 
+const pulseDelay = `${(Math.random() * 2).toFixed(2)}s`;
+
 const tier = computed(() => {
     if (props.score >= 1000) return 'legendary';
     if (props.score >= 500) return 'high';
@@ -41,6 +43,7 @@ const label = computed(() => {
                 badgeClasses,
                 tier === 'legendary' ? 'ring-2 ring-purple-400/50 ring-offset-2 ring-offset-background' : '',
             ]"
+            :style="tier === 'legendary' ? { animationDelay: pulseDelay } : undefined"
         >
             {{ score }}
         </span>
