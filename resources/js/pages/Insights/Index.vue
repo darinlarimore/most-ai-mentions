@@ -87,13 +87,13 @@ const props = defineProps<{
         queued_sites: number;
         total_crawls: number;
     };
-    termFrequency: TermFrequencyItem[];
-    techStackDistribution: TechStackItem[];
-    scoreDistribution: ScoreDistItem[];
-    mentionsVsScore: ScatterItem[];
-    hostingMap: HostingMapItem[];
-    crawlerSpeed: CrawlerSpeedItem[];
-    crawlErrors: CrawlErrorsData;
+    termFrequency?: TermFrequencyItem[];
+    techStackDistribution?: TechStackItem[];
+    scoreDistribution?: ScoreDistItem[];
+    mentionsVsScore?: ScatterItem[];
+    hostingMap?: HostingMapItem[];
+    crawlerSpeed?: CrawlerSpeedItem[];
+    crawlErrors?: CrawlErrorsData;
 }>();
 
 const termView = ref<'bar' | 'treemap'>('treemap');
