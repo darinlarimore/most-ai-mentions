@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
@@ -36,7 +37,10 @@ class RunLighthouseJob implements ShouldBeUnique, ShouldQueue
 
     public function middleware(): array
     {
-        return [new CheckQueuePaused];
+        return [
+            new CheckQueuePaused,
+            (new WithoutOverlapping('lighthouse'))->shared()->releaseAfter(30)->expireAfter(180),
+        ];
     }
 
     public function handle(LighthouseService $lighthouseService): void
