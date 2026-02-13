@@ -167,70 +167,43 @@ it('removes stale entries no longer in API response', function () {
     expect(CompanyListEntry::where('domain', 'newstartup.io')->exists())->toBeTrue();
 });
 
-it('syncs Fortune 500 entries with pagination', function () {
+it('syncs Forbes Global 2000 entries', function () {
     Http::fake([
-        'fortune.com/api/v2/list/1141696/expand/item/ranking/asc/0/100' => Http::response([
-            'list-items' => [
-                ['fields' => ['title' => 'Walmart', 'website' => 'https://walmart.com', 'rank' => 1]],
-                ['fields' => ['title' => 'Amazon', 'website' => 'https://www.amazon.com', 'rank' => 2]],
-            ],
-        ]),
-        'fortune.com/api/v2/list/1141696/expand/item/ranking/asc/100/100' => Http::response(['list-items' => []]),
-        'fortune.com/api/v2/list/1141696/expand/item/ranking/asc/200/100' => Http::response(['list-items' => []]),
-        'fortune.com/api/v2/list/1141696/expand/item/ranking/asc/300/100' => Http::response(['list-items' => []]),
-        'fortune.com/api/v2/list/1141696/expand/item/ranking/asc/400/100' => Http::response(['list-items' => []]),
-    ]);
-
-    $this->artisan('app:sync-company-lists', ['--list' => 'fortune-500'])
-        ->assertSuccessful();
-
-    expect(CompanyListEntry::where('company_list_id', $this->fortuneList->id)->count())->toBe(2);
-    expect(CompanyListEntry::where('domain', 'walmart.com')->first()->rank)->toBe(1);
-    expect(CompanyListEntry::where('domain', 'amazon.com')->first()->rank)->toBe(2);
-});
-
-it('syncs Inc 5000 entries', function () {
-    Http::fake([
-        'www.inc.com/inc5000list/json/*' => Http::response([
-            ['company' => 'Fast Co', 'website' => 'https://fastco.com', 'rank' => 1],
-            ['company' => 'Growth Inc', 'website' => 'https://www.growthinc.io', 'rank' => 2],
+        'www.forbes.com/forbesapi/*' => Http::response([
+            'organizationList' => ['organizationsLists' => [
+                ['organizationName' => 'JPMorganChase', 'uri' => 'jpmorganchase', 'position' => 1, 'webSite' => 'http://www.jpmorganchase.com'],
+                ['organizationName' => 'Berkshire Hathaway', 'uri' => 'berkshire-hathaway', 'position' => 2, 'webSite' => 'http://www.berkshirehathaway.com'],
+            ]],
         ]),
     ]);
 
-    $this->artisan('app:sync-company-lists', ['--list' => 'inc-5000'])
+    $this->artisan('app:sync-company-lists', ['--list' => 'forbes-global-2000'])
         ->assertSuccessful();
 
-    expect(CompanyListEntry::where('company_list_id', $this->incList->id)->count())->toBe(2);
-    expect(CompanyListEntry::where('domain', 'growthinc.io')->exists())->toBeTrue();
+    expect(CompanyListEntry::where('company_list_id', $this->forbesList->id)->count())->toBe(2);
+    expect(CompanyListEntry::where('domain', 'jpmorganchase.com')->first()->rank)->toBe(1);
+    expect(CompanyListEntry::where('domain', 'berkshirehathaway.com')->first()->rank)->toBe(2);
 });
 
 it('continues syncing other lists when one fails', function () {
     Log::shouldReceive('critical')->once();
-    Log::shouldReceive('info')->times(3);
+    Log::shouldReceive('info')->once();
 
     Http::fake([
         'yc-oss.github.io/api/companies/all.json' => Http::response('Error', 500),
-        'fortune.com/api/v2/list/*' => Http::response(['list-items' => [
-            ['fields' => ['title' => 'Walmart', 'website' => 'https://walmart.com', 'rank' => 1]],
-        ]]),
         'www.forbes.com/forbesapi/*' => Http::response([
             'organizationList' => ['organizationsLists' => [
-                ['organizationName' => 'ICBC', 'uri' => 'icbc', 'position' => 1, 'website' => 'https://icbc.com.cn'],
+                ['organizationName' => 'ICBC', 'uri' => 'icbc', 'position' => 1, 'webSite' => 'https://icbc.com.cn'],
             ]],
-        ]),
-        'www.inc.com/inc5000list/json/*' => Http::response([
-            ['company' => 'Fast Co', 'website' => 'https://fastco.com', 'rank' => 1],
         ]),
     ]);
 
     $this->artisan('app:sync-company-lists')
         ->assertFailed();
 
-    // YC failed but others should have synced
+    // YC failed but Forbes should have synced
     expect(CompanyListEntry::where('company_list_id', $this->ycList->id)->count())->toBe(0);
-    expect(CompanyListEntry::where('company_list_id', $this->fortuneList->id)->count())->toBe(1);
     expect(CompanyListEntry::where('company_list_id', $this->forbesList->id)->count())->toBe(1);
-    expect(CompanyListEntry::where('company_list_id', $this->incList->id)->count())->toBe(1);
 });
 
 it('fails for unknown list slug', function () {

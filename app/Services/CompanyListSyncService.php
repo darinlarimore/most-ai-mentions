@@ -127,8 +127,7 @@ class CompanyListSyncService
                 continue;
             }
 
-            // Forbes provides URI slugs; derive domain from company website field if available
-            $website = $org['website'] ?? null;
+            $website = $org['webSite'] ?? null;
             $domain = $website ? $this->extractDomain($website) : null;
 
             if (! $domain) {
