@@ -28,6 +28,7 @@ class CrawlCompleted implements ShouldBroadcastNow
         public readonly bool $has_error = false,
         public readonly ?float $latitude = null,
         public readonly ?float $longitude = null,
+        public readonly ?string $error_category = null,
     ) {}
 
     public function broadcastAs(): string
@@ -63,6 +64,7 @@ class CrawlCompleted implements ShouldBroadcastNow
             'has_error' => $this->has_error,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
+            'error_category' => $this->error_category,
         ];
     }
 }

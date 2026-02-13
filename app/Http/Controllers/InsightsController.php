@@ -299,7 +299,7 @@ class InsightsController extends Controller
     /**
      * Last 200 individual crawl durations for the real-time horizon chart.
      *
-     * @return list<array{timestamp: string, duration_ms: int}>
+     * @return list<array{timestamp: string, duration_ms: int, has_error: bool, error_category: string|null}>
      */
     private function getCrawlerSpeed(): array
     {
@@ -308,12 +308,13 @@ class InsightsController extends Controller
             ->orderByDesc('created_at')
             ->limit(200)
             ->select(['id', 'created_at', 'crawl_duration_ms', 'site_id'])
-            ->withCount('crawlErrors')
+            ->with(['crawlErrors' => fn ($q) => $q->select('id', 'crawl_result_id', 'category')->limit(1)])
             ->get()
             ->map(fn ($row) => [
                 'timestamp' => $row->created_at->toISOString(),
                 'duration_ms' => $row->crawl_duration_ms,
-                'has_error' => $row->crawl_errors_count > 0,
+                'has_error' => $row->crawlErrors->isNotEmpty(),
+                'error_category' => $row->crawlErrors->first()?->category?->label(),
             ])
             ->reverse()->values()->all();
     }

@@ -115,6 +115,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
                 $this->site->id, 0, 0, null, null,
                 $this->site->domain, $this->site->slug, $this->site->category,
                 [], true, null, null,
+                CrawlErrorCategory::RobotsBlocked->label(),
             );
             QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
             self::dispatchNext();
@@ -323,6 +324,8 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             $failedDurationMs = (int) round((hrtime(true) - $crawlStartedAt) / 1_000_000);
             $crawlResult->update(['crawl_duration_ms' => $failedDurationMs]);
 
+            $errorCategory = $crawlResult->crawlErrors()->latest()->first()?->category?->label();
+
             CrawlCompleted::dispatch(
                 $this->site->id,
                 0,
@@ -336,6 +339,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
                 true,
                 null,
                 null,
+                $errorCategory,
             );
             QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
             self::dispatchNext();
@@ -416,6 +420,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             $hasError,
             $this->site->latitude,
             $this->site->longitude,
+            $hasError ? $fetchError?->category?->label() : null,
         );
         QueueUpdated::dispatch(Site::query()->crawlQueue()->count());
 

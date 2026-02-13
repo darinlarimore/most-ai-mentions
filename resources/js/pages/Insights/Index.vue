@@ -65,6 +65,7 @@ interface CrawlerSpeedItem {
     timestamp: string;
     duration_ms: number;
     has_error?: boolean;
+    error_category?: string | null;
 }
 
 interface LabelValue {
@@ -103,7 +104,6 @@ const scatterView = ref<'scatter' | 'hexbin'>('scatter');
 const errorView = ref<'donut' | 'bar' | 'timeline' | 'domains'>('donut');
 
 const worldMapRef = ref<InstanceType<typeof D3WorldMap> | null>(null);
-const horizonRef = ref<InstanceType<typeof D3RealtimeHorizon> | null>(null);
 const forceGraphRef = ref<InstanceType<typeof D3ForceGraph> | null>(null);
 const networkData = ref<NetworkData | null>(null);
 const networkLoading = ref(true);
@@ -307,23 +307,8 @@ onUnmounted(() => {
                         <template #fallback>
                             <Skeleton class="h-40 w-full" />
                         </template>
-                        <div v-if="crawlerSpeed?.length">
-                            <div class="h-40">
-                                <D3RealtimeHorizon ref="horizonRef" :initial-data="crawlerSpeed ?? []" />
-                            </div>
-                            <div class="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                                <span class="flex items-center gap-1.5">
-                                    <span class="size-2.5 rounded-full bg-[hsl(var(--chart-1))]" />
-                                    Success
-                                </span>
-                                <span class="flex items-center gap-1.5">
-                                    <span class="size-2.5 rounded-full bg-destructive" />
-                                    Error
-                                </span>
-                                <span v-if="horizonRef?.errorCount" class="ml-auto tabular-nums">
-                                    {{ horizonRef.errorCount }} error{{ horizonRef.errorCount !== 1 ? 's' : '' }} / {{ horizonRef.totalCount }} crawls
-                                </span>
-                            </div>
+                        <div v-if="crawlerSpeed?.length" class="h-40">
+                            <D3RealtimeHorizon :initial-data="crawlerSpeed ?? []" />
                         </div>
                         <div v-else class="flex h-40 items-center justify-center text-muted-foreground">
                             No crawl duration data yet. Data populates after sites are crawled.
