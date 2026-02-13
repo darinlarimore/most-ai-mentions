@@ -78,8 +78,9 @@ class LighthouseService
      */
     private function resolveChromePath(): ?string
     {
+        // Puppeteer v24+ is ESM-only, so we must use dynamic import() not require()
         $process = new Process([
-            'node', '-e', "console.log(require('puppeteer').executablePath())",
+            'node', '-e', "import('puppeteer').then(p => console.log(p.executablePath()))",
         ]);
         $process->setWorkingDirectory(base_path());
         $process->setTimeout(10);
@@ -87,7 +88,15 @@ class LighthouseService
 
         $path = trim($process->getOutput());
 
-        return ($process->isSuccessful() && $path !== '' && file_exists($path)) ? $path : null;
+        if (! $process->isSuccessful() || $path === '') {
+            Log::warning('Failed to resolve puppeteer Chrome path', [
+                'stderr' => $process->getErrorOutput(),
+            ]);
+
+            return null;
+        }
+
+        return file_exists($path) ? $path : null;
     }
 
     /**
@@ -115,6 +124,13 @@ class LighthouseService
         $process = new Process($command);
         $process->setWorkingDirectory(base_path());
         $process->setTimeout(120);
+
+        // Set CHROME_PATH env var so Lighthouse's ChromeLauncher uses puppeteer's
+        // Chrome instead of finding the snap-confined system chromium
+        if ($chromePath) {
+            $process->setEnv(['CHROME_PATH' => $chromePath]);
+        }
+
         $process->run();
 
         return [$process->isSuccessful(), $process->getOutput(), $process->getErrorOutput()];
