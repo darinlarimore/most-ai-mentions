@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Trophy, Cpu, FlaskConical, Radio, Users, Search, X, ArrowUpDown, Calendar } from 'lucide-vue-next';
+import { Trophy, Cpu, FlaskConical, Radio, Users, Search, X, ArrowUpDown, Calendar, Filter } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import JsonLd from '@/components/JsonLd.vue';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
+    DropdownMenuItem,
     DropdownMenuRadioGroup,
     DropdownMenuRadioItem,
     DropdownMenuTrigger,
@@ -91,6 +92,10 @@ const selectSort = (value: string | number | bigint | Record<string, unknown> | 
 
 const activeSortLabel = computed(() => {
     return sortOptions.find((o) => o.value === activeSort.value)?.label || 'Hype Score';
+});
+
+const activeCategoryLabel = computed(() => {
+    return props.categories.find((c) => c.value === activeCategory.value)?.label || 'Category';
 });
 
 const leaderboardTitle = computed(() => {
@@ -250,7 +255,25 @@ const itemListJsonLd = computed(() => ({
                         </div>
                     </div>
 
-                    <div class="ml-auto">
+                    <div class="ml-auto flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="outline" size="sm" :class="activeCategory ? 'border-primary text-primary' : ''">
+                                    <Filter class="size-4" />
+                                    {{ activeCategoryLabel }}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                    v-for="cat in categories"
+                                    :key="cat.value"
+                                    :class="activeCategory === cat.value ? 'font-medium text-primary' : ''"
+                                    @click="selectCategory(cat.value)"
+                                >
+                                    {{ cat.label }}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <DropdownMenu>
                             <DropdownMenuTrigger as-child>
                                 <Button variant="outline" size="sm">
@@ -267,24 +290,6 @@ const itemListJsonLd = computed(() => ({
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                </div>
-
-                <!-- Category Filters -->
-                <div class="flex flex-wrap gap-2">
-                    <button
-                        v-for="cat in categories"
-                        :key="cat.value"
-                        :class="[
-                            'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                            activeCategory === cat.value
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground',
-                        ]"
-                        @click="selectCategory(cat.value)"
-                    >
-                        {{ cat.label }}
-                        <X v-if="activeCategory === cat.value" class="size-3" />
-                    </button>
                 </div>
             </div>
 
