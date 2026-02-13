@@ -7,6 +7,7 @@ import {
     ChartScatter,
     Cloud,
     GitBranch,
+    Circle,
     Globe,
     Hexagon,
     Layers,
@@ -101,6 +102,7 @@ const termView = ref<'bar' | 'treemap'>('treemap');
 const techView = ref<'bar' | 'radial' | 'donut' | 'cloud'>('cloud');
 const scoreView = ref<'bar' | 'donut'>('bar');
 const scatterView = ref<'scatter' | 'hexbin'>('scatter');
+const mapView = ref<'hexbin' | 'circles'>('hexbin');
 const errorView = ref<'donut' | 'bar' | 'timeline' | 'domains'>('donut');
 
 const worldMapRef = ref<InstanceType<typeof D3WorldMap> | null>(null);
@@ -269,9 +271,27 @@ onUnmounted(() => {
         <div class="grid gap-6 lg:grid-cols-2">
             <!-- Server Hosting Map -->
             <Card class="lg:col-span-2">
-                <CardHeader>
-                    <CardTitle>Server Hosting Map</CardTitle>
-                    <CardDescription>Geographic distribution of where crawled sites are hosted</CardDescription>
+                <CardHeader class="flex-row items-center justify-between space-y-0">
+                    <div>
+                        <CardTitle>Server Hosting Map</CardTitle>
+                        <CardDescription>Geographic distribution of where crawled sites are hosted</CardDescription>
+                    </div>
+                    <div class="flex gap-1 rounded-lg border p-0.5">
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="mapView === 'hexbin' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="mapView = 'hexbin'"
+                        >
+                            <Hexagon class="size-4" />
+                        </button>
+                        <button
+                            class="rounded-md p-1.5 transition-colors"
+                            :class="mapView === 'circles' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'"
+                            @click="mapView = 'circles'"
+                        >
+                            <Circle class="size-4" />
+                        </button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Deferred data="hostingMap">
@@ -281,6 +301,7 @@ onUnmounted(() => {
                         <div class="h-[28rem]">
                             <D3WorldMap
                                 ref="worldMapRef"
+                                :mode="mapView"
                                 :data="
                                     (hostingMap ?? []).map((s) => ({
                                         domain: s.domain,
