@@ -176,7 +176,7 @@ class HypeScoreCalculator
             1.0 + 0.5 * log10($totalWordCount / self::MIN_WORD_COUNT),
         );
 
-        $adjustedScore = min((int) round($baseScore * $multiplier), self::DENSITY_MAX_SCORE);
+        $adjustedScore = (int) round($baseScore * $multiplier);
 
         return [$adjustedScore, $densityPercent];
     }
@@ -288,7 +288,7 @@ class HypeScoreCalculator
             [
                 'name' => 'AI Buzzword Density',
                 'description' => 'The percentage of a page\'s visible text that consists of AI buzzwords. This is the primary scoring factor. Pages with more content get a gentle boost (up to '.self::WORD_COUNT_MULTIPLIER_MAX.'x) rewarding sites that sustain high density across lots of text.',
-                'weight' => 'Up to '.self::DENSITY_MAX_SCORE.' points (piecewise scale from 0% to 10%+, boosted by word count)',
+                'weight' => 'Piecewise scale from 0% to 10%+, boosted up to '.self::WORD_COUNT_MULTIPLIER_MAX.'x by word count',
                 'example' => 'A 500-word page where 5% of words are AI buzzwords scores 1,000 points',
             ],
             [

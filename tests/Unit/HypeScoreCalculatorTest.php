@@ -132,26 +132,31 @@ it('returns zero density for pages under minimum word count', function () {
     expect($scores['ai_density_percent'])->toBe(0.0);
 });
 
-it('caps density score at 1000 for 10% or more', function () {
-    // 20 mentions of "AI" in 200 words = 10% density
+it('boosts density score above base max with word count multiplier', function () {
+    // 20 mentions of "AI" in 200 words = 10% density, base score 1000
+    // Multiplier at 200 words ≈ 1.301, so adjusted = round(1000 * 1.301) = 1301
     $mentions = array_fill(0, 20, [
         'text' => 'AI', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test',
     ]);
 
     $scores = $this->calculator->calculate($mentions, 0, 0, 0, 200);
 
-    expect($scores['density_score'])->toBe(HypeScoreCalculator::DENSITY_MAX_SCORE);
+    expect($scores['density_score'])->toBeGreaterThan(HypeScoreCalculator::DENSITY_MAX_SCORE);
 });
 
-it('caps density score at 1000 for density above 10%', function () {
-    // 50 mentions of "AI" in 200 words = 25% density, still capped at 1000
-    $mentions = array_fill(0, 50, [
+it('gives same density score for 10% and 25% at same word count', function () {
+    // Base interpolation maxes out at 10%, so 25% density has the same base score
+    $tenPercent = array_fill(0, 20, [
+        'text' => 'AI', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test',
+    ]);
+    $twentyFivePercent = array_fill(0, 50, [
         'text' => 'AI', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test',
     ]);
 
-    $scores = $this->calculator->calculate($mentions, 0, 0, 0, 200);
+    $scores10 = $this->calculator->calculate($tenPercent, 0, 0, 0, 200);
+    $scores25 = $this->calculator->calculate($twentyFivePercent, 0, 0, 0, 200);
 
-    expect($scores['density_score'])->toBe(HypeScoreCalculator::DENSITY_MAX_SCORE);
+    expect($scores10['density_score'])->toBe($scores25['density_score']);
 });
 
 it('interpolates density score between breakpoints', function () {
