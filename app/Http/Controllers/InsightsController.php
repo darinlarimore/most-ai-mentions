@@ -20,7 +20,7 @@ class InsightsController extends Controller
             'termFrequency' => Inertia::defer(fn () => $this->getTermFrequency(), 'charts'),
             'techStackDistribution' => Inertia::defer(fn () => $this->getTechStackDistribution(), 'charts'),
             'scoreDistribution' => Inertia::defer(fn () => $this->getScoreDistribution(), 'charts'),
-            'mentionsVsScore' => Inertia::defer(fn () => $this->getMentionsVsScore(), 'charts'),
+            'densityVsScore' => Inertia::defer(fn () => $this->getDensityVsScore(), 'charts'),
             'crawlerSpeed' => Inertia::defer(fn () => $this->getCrawlerSpeed(), 'charts'),
             'crawlErrors' => Inertia::defer(fn () => $this->getCrawlErrors(), 'charts'),
         ]);
@@ -40,7 +40,7 @@ class InsightsController extends Controller
             'termFrequency' => $this->getTermFrequency(),
             'techStackDistribution' => $this->getTechStackDistribution(),
             'scoreDistribution' => $this->getScoreDistribution(),
-            'mentionsVsScore' => $this->getMentionsVsScore(),
+            'densityVsScore' => $this->getDensityVsScore(),
             'crawlErrors' => $this->getCrawlErrors(),
         ]);
     }
@@ -251,22 +251,22 @@ class InsightsController extends Controller
     }
 
     /**
-     * Scatter data: mentions vs hype score per site.
+     * Scatter data: AI density vs hype score per site.
      *
-     * @return list<array{domain: string, mentions: int, score: int}>
+     * @return list<array{domain: string, slug: string, density: float, score: int}>
      */
-    private function getMentionsVsScore(): array
+    private function getDensityVsScore(): array
     {
         return Site::active()
             ->whereNotNull('last_crawled_at')
-            ->with(['latestCrawlResult' => fn ($q) => $q->select('crawl_results.id', 'crawl_results.site_id', 'crawl_results.ai_mention_count')])
+            ->with(['latestCrawlResult' => fn ($q) => $q->select('crawl_results.id', 'crawl_results.site_id', 'crawl_results.ai_density_percent')])
             ->select(['id', 'domain', 'slug', 'hype_score'])
             ->get()
-            ->filter(fn (Site $site) => $site->latestCrawlResult !== null)
+            ->filter(fn (Site $site) => $site->latestCrawlResult?->ai_density_percent !== null)
             ->map(fn (Site $site) => [
                 'domain' => $site->domain,
                 'slug' => $site->slug,
-                'mentions' => $site->latestCrawlResult->ai_mention_count ?? 0,
+                'density' => round($site->latestCrawlResult->ai_density_percent, 2),
                 'score' => $site->hype_score,
             ])
             ->values()

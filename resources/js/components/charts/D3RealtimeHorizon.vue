@@ -23,6 +23,11 @@ const containerRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const tooltip = ref({ visible: false, x: 0, y: 0, timestamp: '', duration: '', hasError: false });
 
+const totalCount = ref(0);
+const errorCount = ref(0);
+
+defineExpose({ totalCount, errorCount });
+
 // Ring buffer
 const values = new Float64Array(CAPACITY);
 const timestamps: (Date | null)[] = new Array(CAPACITY).fill(null);
@@ -35,11 +40,19 @@ let mutationObs: MutationObserver | null = null;
 let echoChannel: ReturnType<typeof window.Echo.channel> | null = null;
 
 function pushDatum(ts: Date, durationMs: number, hasError = false) {
+    // If buffer is full, the oldest datum is being overwritten — adjust counts
+    if (count === CAPACITY && errors[head]) {
+        errorCount.value--;
+    }
     values[head] = durationMs;
     timestamps[head] = ts;
     errors[head] = hasError;
     head = (head + 1) % CAPACITY;
-    if (count < CAPACITY) count++;
+    if (count < CAPACITY) {
+        count++;
+        totalCount.value++;
+    }
+    if (hasError) errorCount.value++;
 }
 
 function getDatum(index: number): { ts: Date | null; value: number; hasError: boolean } {
@@ -181,6 +194,8 @@ function handleMouseLeave() {
 function initFromProps() {
     head = 0;
     count = 0;
+    totalCount.value = 0;
+    errorCount.value = 0;
     for (const d of props.initialData) {
         pushDatum(new Date(d.timestamp), d.duration_ms, d.has_error ?? false);
     }

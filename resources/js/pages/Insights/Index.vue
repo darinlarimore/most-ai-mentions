@@ -49,7 +49,7 @@ interface ScoreDistItem {
 interface ScatterItem {
     domain: string;
     slug: string;
-    mentions: number;
+    density: number;
     score: number;
 }
 
@@ -90,7 +90,7 @@ const props = defineProps<{
     termFrequency?: TermFrequencyItem[];
     techStackDistribution?: TechStackItem[];
     scoreDistribution?: ScoreDistItem[];
-    mentionsVsScore?: ScatterItem[];
+    densityVsScore?: ScatterItem[];
     hostingMap?: HostingMapItem[];
     crawlerSpeed?: CrawlerSpeedItem[];
     crawlErrors?: CrawlErrorsData;
@@ -103,6 +103,7 @@ const scatterView = ref<'scatter' | 'hexbin'>('scatter');
 const errorView = ref<'donut' | 'bar' | 'timeline' | 'domains'>('donut');
 
 const worldMapRef = ref<InstanceType<typeof D3WorldMap> | null>(null);
+const horizonRef = ref<InstanceType<typeof D3RealtimeHorizon> | null>(null);
 const forceGraphRef = ref<InstanceType<typeof D3ForceGraph> | null>(null);
 const networkData = ref<NetworkData | null>(null);
 const networkLoading = ref(true);
@@ -116,14 +117,14 @@ const liveStats = reactive({ ...props.pipelineStats });
 const liveTermFrequency = ref<TermFrequencyItem[]>(props.termFrequency ?? []);
 const liveTechStack = ref<TechStackItem[]>(props.techStackDistribution ?? []);
 const liveScoreDist = ref<ScoreDistItem[]>(props.scoreDistribution ?? []);
-const liveMentionsVsScore = ref<ScatterItem[]>(props.mentionsVsScore ?? []);
+const liveDensityVsScore = ref<ScatterItem[]>(props.densityVsScore ?? []);
 const liveCrawlErrors = ref<CrawlErrorsData | null>(props.crawlErrors ?? null);
 
 // Sync from Deferred's initial lazy load into local refs
 watch(() => props.termFrequency, (v) => { if (v?.length) liveTermFrequency.value = v; });
 watch(() => props.techStackDistribution, (v) => { if (v?.length) liveTechStack.value = v; });
 watch(() => props.scoreDistribution, (v) => { if (v?.length) liveScoreDist.value = v; });
-watch(() => props.mentionsVsScore, (v) => { if (v?.length) liveMentionsVsScore.value = v; });
+watch(() => props.densityVsScore, (v) => { if (v?.length) liveDensityVsScore.value = v; });
 watch(() => props.crawlErrors, (v) => { if (v) liveCrawlErrors.value = v; });
 
 const stats = [
@@ -166,7 +167,7 @@ async function refreshCharts() {
         if (data.termFrequency) liveTermFrequency.value = data.termFrequency;
         if (data.techStackDistribution) liveTechStack.value = data.techStackDistribution;
         if (data.scoreDistribution) liveScoreDist.value = data.scoreDistribution;
-        if (data.mentionsVsScore) liveMentionsVsScore.value = data.mentionsVsScore;
+        if (data.densityVsScore) liveDensityVsScore.value = data.densityVsScore;
         if (data.crawlErrors) liveCrawlErrors.value = data.crawlErrors;
     } catch {
         // silently ignore
@@ -306,8 +307,23 @@ onUnmounted(() => {
                         <template #fallback>
                             <Skeleton class="h-40 w-full" />
                         </template>
-                        <div v-if="crawlerSpeed?.length" class="h-40">
-                            <D3RealtimeHorizon :initial-data="crawlerSpeed ?? []" />
+                        <div v-if="crawlerSpeed?.length">
+                            <div class="h-40">
+                                <D3RealtimeHorizon ref="horizonRef" :initial-data="crawlerSpeed ?? []" />
+                            </div>
+                            <div class="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="size-2.5 rounded-full bg-[hsl(var(--chart-1))]" />
+                                    Success
+                                </span>
+                                <span class="flex items-center gap-1.5">
+                                    <span class="size-2.5 rounded-full bg-destructive" />
+                                    Error
+                                </span>
+                                <span v-if="horizonRef?.errorCount" class="ml-auto tabular-nums">
+                                    {{ horizonRef.errorCount }} error{{ horizonRef.errorCount !== 1 ? 's' : '' }} / {{ horizonRef.totalCount }} crawls
+                                </span>
+                            </div>
                         </div>
                         <div v-else class="flex h-40 items-center justify-center text-muted-foreground">
                             No crawl duration data yet. Data populates after sites are crawled.
@@ -478,12 +494,12 @@ onUnmounted(() => {
                 </CardContent>
             </Card>
 
-            <!-- Mentions vs Score Scatter -->
+            <!-- AI Density vs Score -->
             <Card class="lg:col-span-2">
                 <CardHeader class="flex flex-row items-center justify-between">
                     <div>
-                        <CardTitle>Mentions vs Score</CardTitle>
-                        <CardDescription>Relationship between AI mention count and hype score</CardDescription>
+                        <CardTitle>AI Density vs Score</CardTitle>
+                        <CardDescription>How AI buzzword density relates to hype score</CardDescription>
                     </div>
                     <div class="flex gap-1 rounded-lg border p-0.5">
                         <button
@@ -503,35 +519,35 @@ onUnmounted(() => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Deferred data="mentionsVsScore">
+                    <Deferred data="densityVsScore">
                         <template #fallback>
                             <Skeleton class="h-80 w-full" />
                         </template>
                         <div v-if="scatterView === 'scatter'" class="h-80">
                             <D3ScatterPlot
                                 :data="
-                                    liveMentionsVsScore.map((s) => ({
+                                    liveDensityVsScore.map((s) => ({
                                         label: s.domain,
-                                        x: s.mentions,
+                                        x: s.density,
                                         y: s.score,
                                         slug: s.slug,
                                     }))
                                 "
-                                x-label="AI Mentions"
+                                x-label="AI Density %"
                                 y-label="Hype Score"
                             />
                         </div>
                         <div v-else-if="scatterView === 'hexbin'" class="h-80">
                             <D3Hexbin
                                 :data="
-                                    liveMentionsVsScore.map((s) => ({
+                                    liveDensityVsScore.map((s) => ({
                                         label: s.domain,
-                                        x: s.mentions,
+                                        x: s.density,
                                         y: s.score,
                                         slug: s.slug,
                                     }))
                                 "
-                                x-label="AI Mentions"
+                                x-label="AI Density %"
                                 y-label="Hype Score"
                             />
                         </div>

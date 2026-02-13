@@ -70,18 +70,22 @@ it('loads category and score data via partial reload', function () {
     );
 });
 
-it('loads scatter data via partial reload', function () {
+it('loads density vs score data via partial reload', function () {
     $site = Site::factory()->create(['last_crawled_at' => now()]);
-    CrawlResult::factory()->create(['site_id' => $site->id]);
+    CrawlResult::factory()->create([
+        'site_id' => $site->id,
+        'ai_density_percent' => 2.5,
+    ]);
 
     $response = $this->get('/insights');
 
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
-        ->missing('mentionsVsScore')
-        ->reloadOnly('mentionsVsScore', fn ($reload) => $reload
-            ->has('mentionsVsScore', 1)
-            ->where('mentionsVsScore.0.domain', $site->domain)
+        ->missing('densityVsScore')
+        ->reloadOnly('densityVsScore', fn ($reload) => $reload
+            ->has('densityVsScore', 1)
+            ->where('densityVsScore.0.domain', $site->domain)
+            ->where('densityVsScore.0.density', 2.5)
         )
     );
 });
