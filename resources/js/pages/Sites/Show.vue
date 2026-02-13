@@ -424,6 +424,12 @@ const ogImage = computed(() => {
                                             "{{ mention.text }}"
                                         </p>
                                         <div class="flex shrink-0 items-center gap-2">
+                                            <span v-if="mention.source === 'title'" class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                                Title
+                                            </span>
+                                            <span v-if="mention.source === 'meta_description'" class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                Meta
+                                            </span>
                                             <span v-if="mention.has_animation" class="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
                                                 Animated
                                             </span>

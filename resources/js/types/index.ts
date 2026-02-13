@@ -93,6 +93,7 @@ export interface MentionDetail {
     has_animation: boolean;
     has_glow: boolean;
     context: string;
+    source?: 'body' | 'title' | 'meta_description';
 }
 
 export interface AxeViolation {

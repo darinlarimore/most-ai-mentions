@@ -12,7 +12,7 @@ use Spatie\Crawler\CrawlObservers\CrawlObserver;
 
 class AiMentionCrawlObserver extends CrawlObserver
 {
-    /** @var list<array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string}> */
+    /** @var list<array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string, source: string}> */
     private array $mentionDetails = [];
 
     /** @var array<string, true> Track seen context hashes to deduplicate nav/footer repeats across pages */
@@ -114,7 +114,7 @@ class AiMentionCrawlObserver extends CrawlObserver
     }
 
     /**
-     * @return list<array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string}>
+     * @return list<array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string, source: string}>
      */
     public function getMentionDetails(): array
     {
@@ -188,8 +188,7 @@ class AiMentionCrawlObserver extends CrawlObserver
 
     private function extractMentions(string $html): void
     {
-        // Strip HTML tags to get visible text, but keep tag structure for font-size detection
-        $visibleText = $this->stripToVisibleText($html);
+        $visibleText = $this->extractVisibleBodyText($html);
 
         $this->totalWordCount += str_word_count($visibleText);
 
@@ -224,7 +223,66 @@ class AiMentionCrawlObserver extends CrawlObserver
                     'has_animation' => $hasAnimation,
                     'has_glow' => $hasGlow,
                     'context' => $context,
+                    'source' => 'body',
                 ];
+            }
+        }
+
+        // Extract title/meta mentions only on the first page to avoid duplicates
+        if ($this->pagesCrawled === 1) {
+            $this->extractMetaMentions($html);
+        }
+    }
+
+    /**
+     * Extract AI keyword mentions from the title tag and meta description.
+     */
+    private function extractMetaMentions(string $html): void
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'), LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        $sources = [];
+
+        $titleElements = $dom->getElementsByTagName('title');
+        if ($titleElements->length > 0) {
+            $titleText = trim($titleElements->item(0)->textContent);
+            if ($titleText !== '') {
+                $sources['title'] = $titleText;
+            }
+        }
+
+        $metaTags = $dom->getElementsByTagName('meta');
+        for ($i = 0; $i < $metaTags->length; $i++) {
+            $meta = $metaTags->item($i);
+            if (mb_strtolower($meta->getAttribute('name')) === 'description') {
+                $content = trim($meta->getAttribute('content'));
+                if ($content !== '') {
+                    $sources['meta_description'] = $content;
+                }
+                break;
+            }
+        }
+
+        foreach ($sources as $source => $text) {
+            foreach (HypeScoreCalculator::AI_KEYWORDS as $keyword) {
+                $pattern = '/\b'.preg_quote($keyword, '/').'\b/iu';
+                $matchCount = preg_match_all($pattern, $text, $matches);
+
+                if ($matchCount === false || $matchCount === 0) {
+                    continue;
+                }
+
+                foreach ($matches[0] as $matchText) {
+                    $this->mentionDetails[] = [
+                        'text' => $matchText,
+                        'font_size' => 0,
+                        'has_animation' => false,
+                        'has_glow' => false,
+                        'context' => $text,
+                        'source' => $source,
+                    ];
+                }
             }
         }
     }
@@ -289,22 +347,75 @@ class AiMentionCrawlObserver extends CrawlObserver
     }
 
     /**
-     * Strip HTML to visible text content without loading DOM.
+     * Extract visible body text using DOMDocument.
+     *
+     * Removes non-visible elements: head, script, style, noscript, template,
+     * svg, iframe, and elements with hidden/aria-hidden attributes or
+     * inline display:none/visibility:hidden styles.
      */
-    private function stripToVisibleText(string $html): string
+    private function extractVisibleBodyText(string $html): string
     {
-        // Remove script and style blocks
-        $text = preg_replace('/<script\b[^>]*>.*?<\/script>/is', ' ', $html);
-        $text = preg_replace('/<style\b[^>]*>.*?<\/style>/is', ' ', $text);
+        $dom = new \DOMDocument;
+        @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'), LIBXML_NOERROR | LIBXML_NOWARNING);
 
-        // Remove HTML tags
-        $text = strip_tags($text);
+        $this->removeInvisibleNodes($dom);
 
-        // Decode entities and normalize whitespace
+        $body = $dom->getElementsByTagName('body')->item(0);
+        if (! $body) {
+            return '';
+        }
+
+        $text = $body->textContent;
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = preg_replace('/\s+/', ' ', $text);
 
         return trim($text);
+    }
+
+    /**
+     * Recursively remove invisible DOM nodes.
+     */
+    private function removeInvisibleNodes(\DOMDocument $dom): void
+    {
+        $tagsToRemove = ['head', 'script', 'style', 'noscript', 'template', 'svg', 'iframe'];
+
+        foreach ($tagsToRemove as $tag) {
+            $elements = $dom->getElementsByTagName($tag);
+            $toRemove = [];
+            for ($i = 0; $i < $elements->length; $i++) {
+                $toRemove[] = $elements->item($i);
+            }
+            foreach ($toRemove as $el) {
+                $el->parentNode?->removeChild($el);
+            }
+        }
+
+        $xpath = new \DOMXPath($dom);
+
+        $hiddenNodes = $xpath->query('//*[@hidden]|//*[@aria-hidden="true"]');
+        if ($hiddenNodes) {
+            $toRemove = [];
+            foreach ($hiddenNodes as $node) {
+                $toRemove[] = $node;
+            }
+            foreach ($toRemove as $node) {
+                $node->parentNode?->removeChild($node);
+            }
+        }
+
+        $allElements = $xpath->query('//*[@style]');
+        if ($allElements) {
+            $toRemove = [];
+            foreach ($allElements as $el) {
+                $style = $el->getAttribute('style');
+                if (preg_match('/display\s*:\s*none/i', $style) || preg_match('/visibility\s*:\s*hidden/i', $style)) {
+                    $toRemove[] = $el;
+                }
+            }
+            foreach ($toRemove as $el) {
+                $el->parentNode?->removeChild($el);
+            }
+        }
     }
 
     /**

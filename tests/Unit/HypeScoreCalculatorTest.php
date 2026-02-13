@@ -219,3 +219,40 @@ it('returns zero density for zero word count', function () {
     expect($scores['density_score'])->toBe(0);
     expect($scores['ai_density_percent'])->toBe(0.0);
 });
+
+it('excludes title and meta mentions from density score', function () {
+    $mentions = [
+        ['text' => 'AI', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test', 'source' => 'body'],
+        ['text' => 'AI', 'font_size' => 0, 'has_animation' => false, 'has_glow' => false, 'context' => 'title text', 'source' => 'title'],
+        ['text' => 'machine learning', 'font_size' => 0, 'has_animation' => false, 'has_glow' => false, 'context' => 'meta text', 'source' => 'meta_description'],
+    ];
+
+    // Only 1 body mention of "AI" (1 word) in 100 words = 1% density
+    [$densityScore, $densityPercent] = $this->calculator->calculateDensityScore($mentions, 100);
+
+    expect($densityPercent)->toBe(1.0);
+});
+
+it('counts title and meta mentions toward mention score', function () {
+    $mentions = [
+        ['text' => 'AI', 'font_size' => 0, 'has_animation' => false, 'has_glow' => false, 'context' => 'title', 'source' => 'title'],
+        ['text' => 'GPT', 'font_size' => 0, 'has_animation' => false, 'has_glow' => false, 'context' => 'meta', 'source' => 'meta_description'],
+    ];
+
+    $scores = $this->calculator->calculate($mentions, 0, 0, 0);
+
+    // 2 mentions * 5 base points = 10
+    expect($scores['mention_score'])->toBe(2 * HypeScoreCalculator::MENTION_BASE_POINTS);
+    expect($scores['mention_count'])->toBe(2);
+});
+
+it('handles mentions without source field for backward compatibility', function () {
+    $mentions = [
+        ['text' => 'AI', 'font_size' => 16, 'has_animation' => false, 'has_glow' => false, 'context' => 'test'],
+    ];
+
+    // Without source field, mention should still count toward density (backward compat)
+    [$densityScore, $densityPercent] = $this->calculator->calculateDensityScore($mentions, 100);
+
+    expect($densityPercent)->toBe(1.0);
+});

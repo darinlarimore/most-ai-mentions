@@ -16,7 +16,6 @@ class HypeScoreCalculator
     /** @var int Pages with fewer words than this get density_score = 0. */
     public const MIN_WORD_COUNT = 50;
 
-
     /**
      * Density breakpoints for piecewise linear interpolation.
      *
@@ -91,7 +90,7 @@ class HypeScoreCalculator
     /**
      * Calculate the full hype score breakdown for a crawled site.
      *
-     * @param  array<int, array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string}>  $mentionDetails
+     * @param  array<int, array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string, source?: string}>  $mentionDetails
      * @param  int  $animationCount  Total CSS/JS animations detected on the page.
      * @param  int  $glowCount  Total glow effects detected on the page.
      * @param  int  $rainbowCount  Total rainbow/gradient borders detected on the page.
@@ -145,11 +144,10 @@ class HypeScoreCalculator
     /**
      * Calculate the density score from AI keyword mentions relative to total word count.
      *
-     * Counts the number of words contributed by AI keyword mentions, divides by
-     * total word count to get a density percentage, then interpolates through
-     * the breakpoint table.
+     * Only body-source mentions count toward density; title/meta mentions are excluded
+     * since they don't contribute to visible page word count.
      *
-     * @param  array<int, array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string}>  $mentionDetails
+     * @param  array<int, array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string, source?: string}>  $mentionDetails
      * @param  int  $totalWordCount  Total visible words on the page.
      * @return array{0: int, 1: float} [density_score, density_percent]
      */
@@ -161,6 +159,10 @@ class HypeScoreCalculator
 
         $aiWordCount = 0;
         foreach ($mentionDetails as $mention) {
+            // Only count body mentions for density (title/meta don't contribute to visible word count)
+            if (isset($mention['source']) && $mention['source'] !== 'body') {
+                continue;
+            }
             $aiWordCount += str_word_count($mention['text']);
         }
 
@@ -213,7 +215,7 @@ class HypeScoreCalculator
      * difference. Mentions that are animated or glowing earn inline bonuses
      * on top of the global visual effects tally.
      *
-     * @param  array<int, array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string}>  $mentionDetails
+     * @param  array<int, array{text: string, font_size: int|float, has_animation: bool, has_glow: bool, context: string, source?: string}>  $mentionDetails
      * @return array{0: float, 1: float} [mention_score, font_size_score]
      */
     public function calculateMentionScore(array $mentionDetails): array
