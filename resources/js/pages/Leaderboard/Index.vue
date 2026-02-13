@@ -83,7 +83,8 @@ const selectPeriod = (value: string) => {
     applyFilters({ period: value !== 'all' ? value : undefined });
 };
 
-const selectSort = (value: string) => {
+const selectSort = (value: string | number | bigint | Record<string, unknown> | null) => {
+    if (typeof value !== 'string') return;
     activeSort.value = value;
     applyFilters({ sort: value !== 'hype_score' ? value : undefined });
 };

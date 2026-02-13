@@ -63,7 +63,7 @@ function draw() {
         .outerRadius((d) => d.y1 + 4)
         .cornerRadius(3);
 
-    const leaves = root.leaves();
+    const leaves = root.leaves() as d3.HierarchyRectangularNode<any>[];
 
     const arcs = g
         .selectAll('.arc')

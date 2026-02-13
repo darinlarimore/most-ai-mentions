@@ -271,7 +271,7 @@ onUnmounted(() => {
         <div class="grid gap-6 lg:grid-cols-2">
             <!-- Server Hosting Map -->
             <Card class="lg:col-span-2">
-                <CardHeader class="flex-row items-center justify-between space-y-0">
+                <CardHeader class="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>Server Hosting Map</CardTitle>
                         <CardDescription>Geographic distribution of where crawled sites are hosted</CardDescription>

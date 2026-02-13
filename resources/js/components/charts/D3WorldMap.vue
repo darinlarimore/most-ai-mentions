@@ -55,6 +55,7 @@ let currentTransform = d3.zoomIdentity;
 let liveData: MapDatum[] = [];
 let renderOverlayRef: ((transform: d3.ZoomTransform) => void) | null = null;
 let drawGeneration = 0;
+let hexRenderTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function zoomIn() {
     if (svgSelection && zoomBehavior) {
@@ -83,15 +84,13 @@ async function loadMapData() {
     const [world, us] = await Promise.all([
         worldDataCache
             ? Promise.resolve(worldDataCache)
-            : // @ts-expect-error — world-atlas ships JSON without TS declarations
-              import('world-atlas/countries-50m.json').then((m) => {
+            : import('world-atlas/countries-50m.json').then((m) => {
                   worldDataCache = m.default;
                   return m.default;
               }),
         usDataCache
             ? Promise.resolve(usDataCache)
-            : // @ts-expect-error — us-atlas ships JSON without TS declarations
-              import('us-atlas/states-10m.json').then((m) => {
+            : import('us-atlas/states-10m.json').then((m) => {
                   usDataCache = m.default;
                   return m.default;
               }),
@@ -154,6 +153,10 @@ function projectPoints(data: MapDatum[], projection: d3.GeoProjection): Projecte
 }
 
 async function draw() {
+    if (hexRenderTimeout) {
+        clearTimeout(hexRenderTimeout);
+        hexRenderTimeout = null;
+    }
     const generation = ++drawGeneration;
     if (!containerRef.value) return;
 
@@ -217,7 +220,8 @@ async function draw() {
     const countryAreas = new Map<string, number>();
     for (const f of countries.features) {
         const a = path.area(f as any);
-        if (f.properties?.name) countryAreas.set(f.properties.name, a);
+        const name = (f.properties as any)?.name;
+        if (name) countryAreas.set(name, a);
     }
     const maxArea = d3.max([...countryAreas.values()]) ?? 1;
     function countryFontSize(name: string): number {
@@ -275,9 +279,12 @@ async function draw() {
         .attr('opacity', 0)
         .text((d: any) => d.properties.name);
 
-    // Overlay layer (hexbins or clusters rendered here)
-    const overlayLayer = g.append('g').attr('class', 'overlay');
-    overlayLayerSelection = overlayLayer;
+    // Double-buffered overlay layers for smooth crossfade on zoom
+    const layerA = g.append('g').attr('class', 'overlay');
+    const layerB = g.append('g').attr('class', 'overlay').attr('opacity', 0).attr('pointer-events', 'none');
+    let overlayLayer = layerA;
+    let prevOverlay = layerB;
+    overlayLayerSelection = layerA;
 
     // Ping animation layer (above overlay so pings aren't wiped by re-rendering)
     const pingLayer = g.append('g').attr('class', 'pings');
@@ -309,7 +316,10 @@ async function draw() {
             countryLabels.attr('opacity', (d: any) => (k >= countryMinZoom(d.properties.name) ? 0.8 : 0));
             stateLabels.attr('opacity', k >= 4 ? 0.7 : 0);
 
-            renderOverlay(event.transform);
+            // Debounce overlay re-render so hexes scale with the map during zoom,
+            // then recalculate at finer resolution when zoom settles
+            if (hexRenderTimeout) clearTimeout(hexRenderTimeout);
+            hexRenderTimeout = setTimeout(() => renderOverlay(event.transform), 150);
         });
 
     // ── Shared tooltip helpers ──────────────────────────────────────────
@@ -332,13 +342,24 @@ async function draw() {
 
     function renderHexbins(transform: d3.ZoomTransform) {
         const k = transform.k;
+
+        // Swap to back buffer for smooth crossfade
+        [overlayLayer, prevOverlay] = [prevOverlay, overlayLayer];
+        overlayLayer.interrupt();
+        prevOverlay.interrupt();
         overlayLayer.selectAll('*').remove();
+        overlayLayer.attr('pointer-events', 'all');
 
         const projected = projectPoints(liveData, projection);
-        if (projected.length === 0) return;
+        if (projected.length === 0) {
+            overlayLayer.attr('opacity', 1);
+            prevOverlay.transition().duration(300).attr('opacity', 0).attr('pointer-events', 'none');
+            return;
+        }
 
-        // Grid cell radius stays constant in screen-space
-        const hexRadius = hexBaseRadius / k;
+        // Adaptive hex radius: screen-space size shrinks at higher zoom for finer granularity
+        // k^1.2 instead of k — at 4x zoom hexes are ~25% smaller, revealing more geographic detail
+        const hexRadius = hexBaseRadius / Math.pow(k, 1.2);
 
         const hexLayout = d3Hexbin<ProjectedPoint>()
             .x((d) => d[0])
@@ -346,7 +367,11 @@ async function draw() {
             .radius(hexRadius);
 
         const bins = hexLayout(projected);
-        if (bins.length === 0) return;
+        if (bins.length === 0) {
+            overlayLayer.attr('opacity', 1);
+            prevOverlay.transition().duration(300).attr('opacity', 0).attr('pointer-events', 'none');
+            return;
+        }
 
         const maxCount = d3.max(bins, (b) => b.length) ?? 1;
 
@@ -420,11 +445,15 @@ async function draw() {
                     const nextK = Math.min(16, k * 2.5);
                     const tx = width.value / 2 - b.x * nextK;
                     const ty = height.value / 2 - b.y * nextK;
-                    svg.transition()
+                    svg!.transition()
                         .duration(500)
                         .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(nextK));
                 }
             });
+
+        // Crossfade: fade in new hexes, fade out old
+        overlayLayer.attr('opacity', 0).transition().duration(300).attr('opacity', 1);
+        prevOverlay.transition().duration(300).attr('opacity', 0).attr('pointer-events', 'none');
     }
 
     // ── Circles mode ────────────────────────────────────────────────────
@@ -433,7 +462,12 @@ async function draw() {
         const k = transform.k;
         const clusters = clusterPoints(liveData, projection, transform, clusterRadius);
 
+        // Swap to back buffer for smooth crossfade
+        [overlayLayer, prevOverlay] = [prevOverlay, overlayLayer];
+        overlayLayer.interrupt();
+        prevOverlay.interrupt();
         overlayLayer.selectAll('*').remove();
+        overlayLayer.attr('pointer-events', 'all');
 
         // For high zoom, spread co-located points into a ring
         const spreadThreshold = 6;
@@ -559,7 +593,7 @@ async function draw() {
                     const nextK = Math.min(16, currentTransform.k * 2.5);
                     const tx = width.value / 2 - c.x * nextK;
                     const ty = height.value / 2 - c.y * nextK;
-                    svg.transition()
+                    svg!.transition()
                         .duration(500)
                         .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(nextK));
                 }
@@ -580,6 +614,10 @@ async function draw() {
             .on('click', function (_, d) {
                 router.visit(`/sites/${d.point.slug}`);
             });
+
+        // Crossfade: fade in new circles, fade out old
+        overlayLayer.attr('opacity', 0).transition().duration(300).attr('opacity', 1);
+        prevOverlay.transition().duration(300).attr('opacity', 0).attr('pointer-events', 'none');
     }
 
     // ── Overlay dispatcher ──────────────────────────────────────────────

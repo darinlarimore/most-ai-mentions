@@ -267,8 +267,8 @@ watch(
                                 </InputOTP>
                                 <InputError
                                     :message="
-                                        errors?.confirmTwoFactorAuthentication
-                                            ?.code
+                                        (errors as Record<string, unknown>)
+                                            ?.confirmTwoFactorAuthentication as string | undefined
                                     "
                                 />
                             </div>
