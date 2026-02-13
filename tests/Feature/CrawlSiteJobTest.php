@@ -5,6 +5,7 @@ use App\Events\CrawlStarted;
 use App\Jobs\CrawlSiteJob;
 use App\Jobs\GenerateScreenshotJob;
 use App\Models\Site;
+use App\Services\AxeAuditService;
 use App\Services\HttpMetadataCollector;
 use App\Services\HypeScoreCalculator;
 use App\Services\IpGeolocationService;
@@ -49,6 +50,7 @@ it('dispatches GenerateScreenshotJob asynchronously instead of synchronously', f
         $httpMetadataCollector,
         app(TechStackDetector::class),
         app(IpGeolocationService::class),
+        app(AxeAuditService::class),
     );
 
     Queue::assertPushed(GenerateScreenshotJob::class, function ($job) use ($site) {
@@ -91,6 +93,7 @@ it('includes site_source in CrawlStarted event', function () {
         $httpMetadataCollector,
         app(TechStackDetector::class),
         app(IpGeolocationService::class),
+        app(AxeAuditService::class),
     );
 
     Event::assertDispatched(CrawlStarted::class, function (CrawlStarted $event) {
@@ -138,6 +141,7 @@ it('includes latitude and longitude in CrawlCompleted event on success', functio
         $httpMetadataCollector,
         app(TechStackDetector::class),
         $ipGeolocationService,
+        app(AxeAuditService::class),
     );
 
     Event::assertDispatched(CrawlCompleted::class, function (CrawlCompleted $event) {
@@ -175,6 +179,7 @@ it('sends null latitude and longitude in CrawlCompleted when crawl fails', funct
         $httpMetadataCollector,
         app(TechStackDetector::class),
         app(IpGeolocationService::class),
+        app(AxeAuditService::class),
     );
 
     Event::assertDispatched(CrawlCompleted::class, function (CrawlCompleted $event) {

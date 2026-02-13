@@ -57,7 +57,15 @@ const submitBatch = () => {
 </script>
 
 <template>
-    <Head title="Submit a Site" />
+    <Head title="Submit a Site">
+        <meta name="description" content="Submit any website to get its AI hype score. We crawl the site, count AI mentions, and rank it on the leaderboard." />
+        <meta property="og:title" content="Submit a Site | Most AI Mentions" />
+        <meta property="og:description" content="Submit any website to get its AI hype score. We crawl the site, count AI mentions, and rank it on the leaderboard." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Submit a Site | Most AI Mentions" />
+        <meta name="twitter:description" content="Submit any website to get its AI hype score. We crawl the site, count AI mentions, and rank it on the leaderboard." />
+    </Head>
 
     <GuestLayout>
         <div class="flex flex-1 flex-col items-center justify-center p-4 py-12">

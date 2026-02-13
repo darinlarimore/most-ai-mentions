@@ -33,6 +33,7 @@
         "vue-tsc": "^2.2.4"
     },
     "dependencies": {
+        "@axe-core/puppeteer": "^4.11.1",
         "@inertiajs/vue3": "^2.3.7",
         "@stripe/stripe-js": "^8.7.0",
         "@types/d3-cloud": "^1.2.9",
@@ -45,6 +46,7 @@
         "d3-hexbin": "^0.2.2",
         "laravel-echo": "^2.3.0",
         "laravel-vite-plugin": "^2.0.0",
+        "lighthouse": "^13.0.3",
         "lucide-vue-next": "^0.468.0",
         "puppeteer": "^24.37.2",
         "pusher-js": "^8.4.0",

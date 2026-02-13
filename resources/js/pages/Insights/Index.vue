@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Deferred } from '@inertiajs/vue3';
+import { Deferred, Head } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     BarChart3,
@@ -237,6 +237,16 @@ onUnmounted(() => {
 </script>
 
 <template>
+    <Head title="Insights">
+        <meta name="description" content="Explore AI hype trends across the web. Interactive charts showing mention frequency, tech stacks, score distributions, and hosting patterns." />
+        <meta property="og:title" content="AI Hype Insights | Most AI Mentions" />
+        <meta property="og:description" content="Explore AI hype trends across the web. Interactive charts showing mention frequency, tech stacks, score distributions, and hosting patterns." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="AI Hype Insights | Most AI Mentions" />
+        <meta name="twitter:description" content="Explore AI hype trends across the web. Interactive charts showing mention frequency, tech stacks, score distributions, and hosting patterns." />
+    </Head>
+
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="mb-8">

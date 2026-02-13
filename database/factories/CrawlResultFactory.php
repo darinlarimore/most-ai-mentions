@@ -39,6 +39,13 @@ class CrawlResultFactory extends Factory
             'html_size_bytes' => null,
             'crawl_duration_ms' => fake()->numberBetween(3000, 120000),
             'detected_tech_stack' => null,
+            'axe_violations_count' => fake()->numberBetween(0, 50),
+            'axe_passes_count' => fake()->numberBetween(10, 100),
+            'axe_violations_summary' => $this->generateAxeViolationsSummary(),
+            'lighthouse_performance' => fake()->numberBetween(20, 100),
+            'lighthouse_accessibility' => fake()->numberBetween(40, 100),
+            'lighthouse_best_practices' => fake()->numberBetween(50, 100),
+            'lighthouse_seo' => fake()->numberBetween(60, 100),
         ];
     }
 
@@ -64,6 +71,30 @@ class CrawlResultFactory extends Factory
         }
 
         return $mentions;
+    }
+
+    /**
+     * Generate a sample array of axe-core violation summaries.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function generateAxeViolationsSummary(): array
+    {
+        $violations = [
+            ['id' => 'color-contrast', 'impact' => 'serious', 'description' => 'Elements must have sufficient color contrast'],
+            ['id' => 'image-alt', 'impact' => 'critical', 'description' => 'Images must have alternate text'],
+            ['id' => 'link-name', 'impact' => 'serious', 'description' => 'Links must have discernible text'],
+            ['id' => 'label', 'impact' => 'critical', 'description' => 'Form elements must have labels'],
+            ['id' => 'heading-order', 'impact' => 'moderate', 'description' => 'Heading levels should only increase by one'],
+        ];
+
+        $count = fake()->numberBetween(1, 4);
+        $selected = fake()->randomElements($violations, $count);
+
+        return array_map(fn (array $v) => [
+            ...$v,
+            'nodes_count' => fake()->numberBetween(1, 10),
+        ], $selected);
     }
 
     /**

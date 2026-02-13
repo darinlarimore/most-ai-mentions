@@ -18,6 +18,10 @@ const startRank = computed(() => {
     return (props.sites.current_page - 1) * props.sites.per_page + 1;
 });
 
+const metaDescription = computed(() => {
+    return `AI hype scores for ${props.matchedCount} ${props.list.name} companies. See which ones mention AI the most on their websites.`;
+});
+
 const goToPage = (url: string | null) => {
     if (url) {
         router.visit(url);
@@ -26,7 +30,15 @@ const goToPage = (url: string | null) => {
 </script>
 
 <template>
-    <Head :title="`${list.name} AI Mentions - Most AI Mentions`" />
+    <Head :title="`${list.name} AI Leaderboard`">
+        <meta name="description" :content="metaDescription" />
+        <meta property="og:title" :content="`${list.name} AI Leaderboard | Most AI Mentions`" />
+        <meta property="og:description" :content="metaDescription" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" :content="`${list.name} AI Leaderboard | Most AI Mentions`" />
+        <meta name="twitter:description" :content="metaDescription" />
+    </Head>
 
     <GuestLayout>
         <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">

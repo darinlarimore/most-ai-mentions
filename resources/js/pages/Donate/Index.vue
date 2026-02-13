@@ -67,7 +67,15 @@ const perks = [
 </script>
 
 <template>
-    <Head title="Donate - Most AI Mentions" />
+    <Head title="Support the Project">
+        <meta name="description" content="Help keep the AI hype tracker running. Your donation supports server costs, crawling infrastructure, and ongoing development." />
+        <meta property="og:title" content="Support the Project | Most AI Mentions" />
+        <meta property="og:description" content="Help keep the AI hype tracker running. Your donation supports server costs, crawling infrastructure, and ongoing development." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Support the Project | Most AI Mentions" />
+        <meta name="twitter:description" content="Help keep the AI hype tracker running. Your donation supports server costs, crawling infrastructure, and ongoing development." />
+    </Head>
 
     <GuestLayout>
         <div class="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">

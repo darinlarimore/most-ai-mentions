@@ -4,6 +4,7 @@ use App\Enums\CrawlErrorCategory;
 use App\Jobs\CrawlSiteJob;
 use App\Models\CrawlError;
 use App\Models\Site;
+use App\Services\AxeAuditService;
 use App\Services\HttpMetadataCollector;
 use App\Services\HypeScoreCalculator;
 use App\Services\IpGeolocationService;
@@ -43,6 +44,7 @@ it('blocks crawl when robots.txt disallows root', function () {
         $httpMetadataCollector,
         app(TechStackDetector::class),
         app(IpGeolocationService::class),
+        app(AxeAuditService::class),
     );
 
     $site->refresh();
@@ -91,6 +93,7 @@ it('allows crawl when robots.txt permits root', function () {
         $httpMetadataCollector,
         app(TechStackDetector::class),
         app(IpGeolocationService::class),
+        app(AxeAuditService::class),
     );
 
     $site->refresh();
@@ -137,6 +140,7 @@ it('allows crawl when robots.txt fetch fails', function () {
         $httpMetadataCollector,
         app(TechStackDetector::class),
         app(IpGeolocationService::class),
+        app(AxeAuditService::class),
     );
 
     $site->refresh();
@@ -182,6 +186,7 @@ it('allows crawl when specific user-agent is allowed despite wildcard disallow',
         $httpMetadataCollector,
         app(TechStackDetector::class),
         app(IpGeolocationService::class),
+        app(AxeAuditService::class),
     );
 
     $site->refresh();

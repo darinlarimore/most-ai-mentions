@@ -7,7 +7,9 @@ import GuestLayout from '@/layouts/GuestLayout.vue';
 </script>
 
 <template>
-    <Head title="Thank You! - Most AI Mentions" />
+    <Head title="Thank You!">
+        <meta name="robots" content="noindex" />
+    </Head>
 
     <GuestLayout>
         <div class="mx-auto flex max-w-2xl flex-col items-center px-4 py-24 sm:px-6 lg:px-8">

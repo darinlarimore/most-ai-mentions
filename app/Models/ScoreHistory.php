@@ -16,6 +16,8 @@ class ScoreHistory extends Model
         'crawl_result_id',
         'hype_score',
         'ai_mention_count',
+        'lighthouse_performance',
+        'lighthouse_accessibility',
         'recorded_at',
     ];
 

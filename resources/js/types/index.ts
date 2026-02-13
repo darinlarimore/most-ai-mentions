@@ -77,6 +77,13 @@ export interface CrawlResult {
     response_time_ms: number | null;
     html_size_bytes: number | null;
     detected_tech_stack: string[] | null;
+    axe_violations_count: number | null;
+    axe_passes_count: number | null;
+    axe_violations_summary: AxeViolation[] | null;
+    lighthouse_performance: number | null;
+    lighthouse_accessibility: number | null;
+    lighthouse_best_practices: number | null;
+    lighthouse_seo: number | null;
     created_at: string;
 }
 
@@ -88,10 +95,19 @@ export interface MentionDetail {
     context: string;
 }
 
+export interface AxeViolation {
+    id: string;
+    impact: string;
+    description: string;
+    nodes_count: number;
+}
+
 export interface ScoreHistory {
     id: number;
     hype_score: number;
     ai_mention_count: number;
+    lighthouse_performance: number | null;
+    lighthouse_accessibility: number | null;
     recorded_at: string;
 }
 

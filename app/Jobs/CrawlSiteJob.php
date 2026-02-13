@@ -11,6 +11,7 @@ use App\Jobs\Middleware\CheckQueuePaused;
 use App\Models\CrawlError;
 use App\Models\CrawlResult;
 use App\Models\Site;
+use App\Services\AxeAuditService;
 use App\Services\HttpMetadataCollector;
 use App\Services\HypeScoreCalculator;
 use App\Services\IpGeolocationService;
@@ -66,6 +67,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
         HttpMetadataCollector $httpMetadataCollector,
         TechStackDetector $techStackDetector,
         IpGeolocationService $ipGeolocationService,
+        AxeAuditService $axeAuditService,
     ): void {
         // Guard: skip if this site was already crawled recently (duplicate job protection)
         // Backfill crawls bypass cooldown since they target sites missing data
@@ -341,6 +343,20 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        // Run axe-core accessibility audit inline (fast, ~3s)
+        try {
+            $axeResults = $axeAuditService->audit($this->site->domain);
+            if ($axeResults) {
+                $crawlResult->update([
+                    'axe_violations_count' => $axeResults['violations_count'],
+                    'axe_passes_count' => $axeResults['passes_count'],
+                    'axe_violations_summary' => $axeResults['violations_summary'],
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning("axe-core audit failed for {$this->site->url}: {$e->getMessage()}");
+        }
+
         // Calculate crawl duration before dispatching screenshot (async, not part of crawl time)
         $crawlDurationMs = (int) round((hrtime(true) - $crawlStartedAt) / 1_000_000);
         $crawlResult->update(['crawl_duration_ms' => $crawlDurationMs]);
@@ -367,6 +383,9 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 
         // Dispatch screenshot asynchronously — ScreenshotReady event will notify the frontend
         GenerateScreenshotJob::dispatch($this->site);
+
+        // Dispatch Lighthouse audit asynchronously — LighthouseComplete event will notify the frontend
+        RunLighthouseJob::dispatch($this->site);
 
         $aiTerms = collect($crawlResult->mention_details ?? [])
             ->pluck('text')

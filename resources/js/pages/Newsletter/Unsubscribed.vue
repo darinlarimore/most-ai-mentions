@@ -5,7 +5,9 @@ import GuestLayout from '@/layouts/GuestLayout.vue';
 </script>
 
 <template>
-    <Head title="Unsubscribed" />
+    <Head title="Unsubscribed">
+        <meta name="robots" content="noindex" />
+    </Head>
 
     <GuestLayout>
         <div class="flex flex-1 flex-col items-center justify-center p-4 py-24">

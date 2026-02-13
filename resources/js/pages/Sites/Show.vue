@@ -2,7 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
     Globe, ExternalLink, ArrowLeft, Star, Clock, MessageSquare, User,
-    Server, Shield, Cpu, AlertTriangle,
+    Server, Shield, Cpu, AlertTriangle, Gauge, Accessibility,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
 import HypeOMeter from '@/components/HypeOMeter.vue';
@@ -109,6 +109,50 @@ const jsonLd = computed(() => {
         };
     }
     return data;
+});
+
+function lighthouseColor(score: number | null | undefined): string {
+    if (score == null) return 'text-muted-foreground';
+    if (score >= 90) return 'text-green-600 dark:text-green-400';
+    if (score >= 50) return 'text-amber-600 dark:text-amber-400';
+    return 'text-red-600 dark:text-red-400';
+}
+
+function lighthouseRingColor(score: number | null | undefined): string {
+    if (score == null) return 'stroke-muted';
+    if (score >= 90) return 'stroke-green-500';
+    if (score >= 50) return 'stroke-amber-500';
+    return 'stroke-red-500';
+}
+
+function impactColor(impact: string): string {
+    switch (impact) {
+        case 'critical': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+        case 'serious': return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+        case 'moderate': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+        default: return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+    }
+}
+
+const crawlResult = computed(() => props.site.latest_crawl_result);
+const hasLighthouseData = computed(() => crawlResult.value?.lighthouse_performance != null);
+const hasAxeData = computed(() => crawlResult.value?.axe_violations_count != null);
+
+const lighthouseCategories = computed(() => {
+    const cr = crawlResult.value;
+    if (!cr) return [];
+    return [
+        { label: 'Performance', score: cr.lighthouse_performance },
+        { label: 'Accessibility', score: cr.lighthouse_accessibility },
+        { label: 'Best Practices', score: cr.lighthouse_best_practices },
+        { label: 'SEO', score: cr.lighthouse_seo },
+    ];
+});
+
+const sortedViolations = computed(() => {
+    const violations = crawlResult.value?.axe_violations_summary ?? [];
+    const order: Record<string, number> = { critical: 0, serious: 1, moderate: 2, minor: 3 };
+    return [...violations].sort((a, b) => (order[a.impact] ?? 4) - (order[b.impact] ?? 4));
 });
 
 const metaTitle = computed(() => `${props.site.name || props.site.domain} AI Hype Score`);
@@ -220,6 +264,127 @@ const ogImage = computed(() => {
                         </CardHeader>
                         <CardContent>
                             <ScoreBreakdown :crawl-result="site.latest_crawl_result" :averages="scoreAverages" />
+                        </CardContent>
+                    </Card>
+
+                    <!-- Lighthouse Scores -->
+                    <Card v-if="site.latest_crawl_result">
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2">
+                                <Gauge class="size-5" />
+                                Lighthouse Scores
+                            </CardTitle>
+                            <CardDescription>
+                                Performance and quality metrics from Google Lighthouse
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div v-if="hasLighthouseData" class="grid grid-cols-2 gap-6 sm:grid-cols-4">
+                                <div
+                                    v-for="cat in lighthouseCategories"
+                                    :key="cat.label"
+                                    class="flex flex-col items-center gap-2"
+                                >
+                                    <div class="relative size-20">
+                                        <svg class="size-full -rotate-90" viewBox="0 0 36 36">
+                                            <circle
+                                                cx="18" cy="18" r="15.9155"
+                                                fill="none"
+                                                class="stroke-muted"
+                                                stroke-width="3"
+                                            />
+                                            <circle
+                                                cx="18" cy="18" r="15.9155"
+                                                fill="none"
+                                                :class="lighthouseRingColor(cat.score)"
+                                                stroke-width="3"
+                                                stroke-linecap="round"
+                                                :stroke-dasharray="`${(cat.score ?? 0)} ${100 - (cat.score ?? 0)}`"
+                                            />
+                                        </svg>
+                                        <span
+                                            :class="['absolute inset-0 flex items-center justify-center text-lg font-bold', lighthouseColor(cat.score)]"
+                                        >
+                                            {{ cat.score ?? '—' }}
+                                        </span>
+                                    </div>
+                                    <span class="text-center text-xs font-medium text-muted-foreground">
+                                        {{ cat.label }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div v-else class="flex flex-col items-center gap-3 py-6">
+                                <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                                    <div v-for="i in 4" :key="i" class="flex flex-col items-center gap-2">
+                                        <div class="size-20 animate-pulse rounded-full bg-muted" />
+                                        <div class="h-3 w-16 animate-pulse rounded bg-muted" />
+                                    </div>
+                                </div>
+                                <p class="text-xs text-muted-foreground">Lighthouse audit pending...</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Accessibility Audit -->
+                    <Card v-if="site.latest_crawl_result">
+                        <CardHeader>
+                            <CardTitle class="flex items-center gap-2">
+                                <Accessibility class="size-5" />
+                                Accessibility Audit
+                            </CardTitle>
+                            <CardDescription>
+                                axe-core automated accessibility check results
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div v-if="hasAxeData">
+                                <div class="mb-4 flex gap-4">
+                                    <div class="flex-1 rounded-lg border p-3 text-center">
+                                        <p class="text-2xl font-bold text-red-600 dark:text-red-400">
+                                            {{ crawlResult?.axe_violations_count }}
+                                        </p>
+                                        <p class="text-xs text-muted-foreground">Violations</p>
+                                    </div>
+                                    <div class="flex-1 rounded-lg border p-3 text-center">
+                                        <p class="text-2xl font-bold text-green-600 dark:text-green-400">
+                                            {{ crawlResult?.axe_passes_count }}
+                                        </p>
+                                        <p class="text-xs text-muted-foreground">Passed Rules</p>
+                                    </div>
+                                </div>
+                                <div v-if="sortedViolations.length > 0" class="flex flex-col gap-2">
+                                    <h4 class="text-sm font-medium">Violation Details</h4>
+                                    <div
+                                        v-for="violation in sortedViolations"
+                                        :key="violation.id"
+                                        class="rounded-lg border p-3"
+                                    >
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div class="min-w-0 flex-1">
+                                                <p class="text-sm font-medium">{{ violation.id }}</p>
+                                                <p class="mt-0.5 text-xs text-muted-foreground">
+                                                    {{ violation.description }}
+                                                </p>
+                                            </div>
+                                            <div class="flex shrink-0 items-center gap-2">
+                                                <span :class="['rounded-full px-2 py-0.5 text-xs font-medium', impactColor(violation.impact)]">
+                                                    {{ violation.impact }}
+                                                </span>
+                                                <span class="text-xs text-muted-foreground">
+                                                    {{ violation.nodes_count }} {{ violation.nodes_count === 1 ? 'node' : 'nodes' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="flex flex-col items-center gap-3 py-6">
+                                <div class="flex w-full gap-4">
+                                    <div class="h-20 flex-1 animate-pulse rounded-lg bg-muted" />
+                                    <div class="h-20 flex-1 animate-pulse rounded-lg bg-muted" />
+                                </div>
+                                <p class="text-xs text-muted-foreground">Accessibility audit pending...</p>
+                            </div>
                         </CardContent>
                     </Card>
 

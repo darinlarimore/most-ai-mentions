@@ -175,7 +175,15 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head title="Live Crawl - Most AI Mentions" />
+    <Head title="Live Crawl">
+        <meta name="description" content="Watch websites get crawled for AI mentions in real time. See hype scores calculated live as our crawler scans each site." />
+        <meta property="og:title" content="Live Crawl | Most AI Mentions" />
+        <meta property="og:description" content="Watch websites get crawled for AI mentions in real time. See hype scores calculated live as our crawler scans each site." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Live Crawl | Most AI Mentions" />
+        <meta name="twitter:description" content="Watch websites get crawled for AI mentions in real time. See hype scores calculated live as our crawler scans each site." />
+    </Head>
 
     <GuestLayout>
         <div class="mx-auto max-w-4xl px-4 pb-12 sm:px-6 lg:px-8">

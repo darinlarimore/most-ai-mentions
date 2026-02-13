@@ -25,7 +25,15 @@ const goToPage = (url: string | null) => {
 </script>
 
 <template>
-    <Head title="User Rated Leaderboard - Most AI Mentions" />
+    <Head title="User Rated Leaderboard">
+        <meta name="description" content="Sites ranked by community votes on the Hype-O-Meter. See which websites the crowd thinks have the most AI hype." />
+        <meta property="og:title" content="User Rated Leaderboard | Most AI Mentions" />
+        <meta property="og:description" content="Sites ranked by community votes on the Hype-O-Meter. See which websites the crowd thinks have the most AI hype." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="User Rated Leaderboard | Most AI Mentions" />
+        <meta name="twitter:description" content="Sites ranked by community votes on the Hype-O-Meter. See which websites the crowd thinks have the most AI hype." />
+    </Head>
 
     <GuestLayout>
         <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
