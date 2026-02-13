@@ -48,6 +48,7 @@ export interface Site {
 }
 
 export interface ScoreAverages {
+    density_score: number;
     mention_score: number;
     font_size_score: number;
     animation_score: number;
@@ -65,6 +66,9 @@ export interface CrawlResult {
     font_size_score: number;
     animation_score: number;
     visual_effects_score: number;
+    total_word_count: number | null;
+    ai_density_percent: number | null;
+    density_score: number;
     animation_count: number;
     glow_effect_count: number;
     rainbow_border_count: number;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MessageSquare, Type, Sparkles, Eye } from 'lucide-vue-next';
+import { MessageSquare, Type, Sparkles, Eye, Percent } from 'lucide-vue-next';
 import { computed } from 'vue';
 import type { CrawlResult, ScoreAverages } from '@/types';
 
@@ -17,6 +17,15 @@ interface Factor {
 }
 
 const factors = computed<Factor[]>(() => [
+    {
+        label: 'AI Density',
+        value: props.crawlResult.density_score,
+        avg: props.averages.density_score,
+        icon: Percent,
+        description: props.crawlResult.ai_density_percent != null
+            ? `${props.crawlResult.ai_density_percent.toFixed(1)}% of words are AI buzzwords`
+            : 'No density data yet',
+    },
     {
         label: 'AI Mentions',
         value: props.crawlResult.mention_score,

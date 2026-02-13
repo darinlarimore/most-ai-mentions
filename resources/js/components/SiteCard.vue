@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Globe, Clock, MessageSquare } from 'lucide-vue-next';
+import { Globe, Clock, MessageSquare, Percent } from 'lucide-vue-next';
 import { computed } from 'vue';
 import HypeScoreBadge from '@/components/HypeScoreBadge.vue';
 import type { Site } from '@/types';
@@ -88,7 +88,11 @@ const formattedDate = computed(() => {
             </div>
 
             <div class="flex items-center gap-3 text-xs text-muted-foreground">
-                <span class="flex items-center gap-1">
+                <span v-if="site.latest_crawl_result?.ai_density_percent != null" class="flex items-center gap-1">
+                    <Percent class="size-3" />
+                    {{ site.latest_crawl_result.ai_density_percent.toFixed(1) }}% AI
+                </span>
+                <span v-else class="flex items-center gap-1">
                     <MessageSquare class="size-3" />
                     {{ site.latest_crawl_result?.ai_mention_count ?? 0 }} mentions
                 </span>

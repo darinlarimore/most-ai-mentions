@@ -32,6 +32,7 @@ const periodOptions = [
 
 const sortOptions = [
     { value: 'hype_score', label: 'Hype Score' },
+    { value: 'density', label: 'AI Density' },
     { value: 'mentions', label: 'Most Mentions' },
     { value: 'user_rating', label: 'User Rated' },
     { value: 'newest', label: 'Recently Crawled' },
@@ -93,6 +94,7 @@ const activeSortLabel = computed(() => {
 const leaderboardTitle = computed(() => {
     const titles: Record<string, string> = {
         hype_score: 'Hype Leaderboard',
+        density: 'AI Density',
         mentions: 'Most Mentions',
         user_rating: 'User Rated',
         newest: 'Recently Crawled',
@@ -113,7 +115,15 @@ const goToPage = (url: string | null) => {
 </script>
 
 <template>
-    <Head title="Leaderboard - Most AI Mentions" />
+    <Head title="AI Hype Leaderboard">
+        <meta name="description" content="Which websites mention AI the most? See the live leaderboard ranking thousands of sites by hype score, AI mentions, animations, and visual effects." />
+        <meta property="og:title" content="AI Hype Leaderboard | Most AI Mentions" />
+        <meta property="og:description" content="Which websites mention AI the most? See the live leaderboard ranking thousands of sites by hype score, AI mentions, animations, and visual effects." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="AI Hype Leaderboard | Most AI Mentions" />
+        <meta name="twitter:description" content="Which websites mention AI the most? See the live leaderboard ranking thousands of sites by hype score, AI mentions, animations, and visual effects." />
+    </Head>
 
     <GuestLayout>
         <!-- Hero Section -->

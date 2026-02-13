@@ -190,7 +190,8 @@ class Site extends Model
             ->where(function (Builder $query) {
                 $query->where('category', 'other')
                     ->orWhereNull('screenshot_path')
-                    ->orWhere(fn (Builder $q) => $q->whereNotNull('server_ip')->whereNull('latitude'));
+                    ->orWhere(fn (Builder $q) => $q->whereNotNull('server_ip')->whereNull('latitude'))
+                    ->orWhereHas('latestCrawlResult', fn (Builder $q) => $q->whereNull('total_word_count'));
             })
             ->where(function (Builder $query) use ($attemptExpr) {
                 $query->whereNull('last_attempted_at')

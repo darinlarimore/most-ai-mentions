@@ -29,6 +29,7 @@ class SiteController extends Controller
         return Inertia::render('Sites/Show', [
             'site' => $site,
             'scoreAverages' => CrawlResult::query()->selectRaw('
+                ROUND(AVG(density_score)) as density_score,
                 ROUND(AVG(mention_score)) as mention_score,
                 ROUND(AVG(font_size_score)) as font_size_score,
                 ROUND(AVG(animation_score)) as animation_score,

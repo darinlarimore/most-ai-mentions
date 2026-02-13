@@ -2,7 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowLeft, Cpu, MessageSquare, Type, Sparkles, Eye,
-    Zap, Brain,
+    Zap, Brain, Percent,
 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,6 +13,7 @@ defineProps<{
 }>();
 
 const factorIcons: Record<string, typeof MessageSquare> = {
+    'AI Buzzword Density': Percent,
     'AI Mentions': MessageSquare,
     'Font Size': Type,
     'Animations': Sparkles,
@@ -28,7 +29,15 @@ const getIcon = (name: string) => {
 </script>
 
 <template>
-    <Head title="How the Algorithm Works - Most AI Mentions" />
+    <Head title="How the Algorithm Works">
+        <meta name="description" content="Learn how we calculate AI hype scores. Our algorithm analyzes mentions, font sizes, animations, and visual effects to rank websites." />
+        <meta property="og:title" content="How the Algorithm Works | Most AI Mentions" />
+        <meta property="og:description" content="Learn how we calculate AI hype scores. Our algorithm analyzes mentions, font sizes, animations, and visual effects to rank websites." />
+        <meta property="og:type" content="article" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="How the Algorithm Works | Most AI Mentions" />
+        <meta name="twitter:description" content="Learn how we calculate AI hype scores. Our algorithm analyzes mentions, font sizes, animations, and visual effects to rank websites." />
+    </Head>
 
     <GuestLayout>
         <div class="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
@@ -124,12 +133,13 @@ const getIcon = (name: string) => {
                 <CardContent>
                     <div class="overflow-x-auto rounded-lg bg-muted p-6 font-mono text-sm">
                         <code>
-                            Hype Score = Mention Score + Font Size Bonus + Animation Score + Visual Effects Score
+                            Hype Score = Density Score + Mention Score + Font Size Bonus + Animation Score + Visual Effects Score
                         </code>
                     </div>
                     <p class="mt-3 text-xs text-muted-foreground">
-                        Each factor contributes to the overall hype level. More mentions, bigger text,
-                        flashier animations, and glowing effects all push the score higher.
+                        AI Buzzword Density is the primary factor (up to 1,000 pts), measuring what percentage
+                        of a page's words are AI buzzwords. This normalizes for page size so small and large
+                        sites compete fairly. Mentions, font sizes, animations, and visual effects add bonus points.
                     </p>
                 </CardContent>
             </Card>

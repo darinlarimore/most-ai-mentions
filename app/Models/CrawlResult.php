@@ -26,6 +26,7 @@ class CrawlResult extends Model
             'computed_styles' => 'array',
             'redirect_chain' => 'array',
             'detected_tech_stack' => 'array',
+            'ai_density_percent' => 'float',
         ];
     }
 

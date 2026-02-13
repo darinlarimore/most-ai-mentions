@@ -26,6 +26,8 @@ class AiMentionCrawlObserver extends CrawlObserver
 
     private int $rainbowBorderCount = 0;
 
+    private int $totalWordCount = 0;
+
     private ?string $crawledHtml = null;
 
     /** @var array<string, int> */
@@ -179,10 +181,17 @@ class AiMentionCrawlObserver extends CrawlObserver
      * Uses regex-based matching against HypeScoreCalculator::AI_KEYWORDS
      * to avoid loading a full DOM tree into memory.
      */
+    public function getTotalWordCount(): int
+    {
+        return $this->totalWordCount;
+    }
+
     private function extractMentions(string $html): void
     {
         // Strip HTML tags to get visible text, but keep tag structure for font-size detection
         $visibleText = $this->stripToVisibleText($html);
+
+        $this->totalWordCount += str_word_count($visibleText);
 
         foreach (HypeScoreCalculator::AI_KEYWORDS as $keyword) {
             $pattern = '/\b'.preg_quote($keyword, '/').'\b/iu';

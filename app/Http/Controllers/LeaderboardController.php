@@ -53,6 +53,12 @@ class LeaderboardController extends Controller
                     ->latest()
                     ->limit(1)
             ),
+            'density' => $query->orderByDesc(
+                CrawlResult::select('ai_density_percent')
+                    ->whereColumn('crawl_results.site_id', 'sites.id')
+                    ->latest()
+                    ->limit(1)
+            ),
             'user_rating' => $query->orderByDesc('user_rating_avg'),
             'newest' => $query->orderByDesc('last_crawled_at'),
             'recently_added' => $query->orderByDesc('created_at'),

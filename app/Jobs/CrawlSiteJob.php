@@ -228,6 +228,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'site_id' => $this->site->id,
             'mention_details' => $observer->getMentionDetails(),
             'ai_mention_count' => $observer->getAiMentionCount(),
+            'total_word_count' => $observer->getTotalWordCount(),
             'pages_crawled' => $observer->getPagesCrawled(),
             'computed_styles' => $observer->getComputedStyles(),
             'animation_count' => $observer->getAnimationCount(),
@@ -271,10 +272,13 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             $crawlResult->animation_count ?? 0,
             $crawlResult->glow_effect_count ?? 0,
             $crawlResult->rainbow_border_count ?? 0,
+            $crawlResult->total_word_count ?? 0,
         );
 
         $crawlResult->update([
             'total_score' => $scores['total_score'],
+            'density_score' => $scores['density_score'],
+            'ai_density_percent' => $scores['ai_density_percent'],
             'mention_score' => $scores['mention_score'],
             'font_size_score' => $scores['font_size_score'],
             'animation_score' => $scores['animation_score'],
