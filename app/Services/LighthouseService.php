@@ -84,7 +84,14 @@ class LighthouseService
         ]);
         $process->setWorkingDirectory(base_path());
         $process->setTimeout(10);
-        $process->run();
+
+        if (! $this->runWithHardTimeout($process, 15)) {
+            Log::warning('Failed to resolve puppeteer Chrome path (timeout or error)', [
+                'stderr' => $process->getErrorOutput(),
+            ]);
+
+            return null;
+        }
 
         $path = trim($process->getOutput());
 
@@ -123,7 +130,7 @@ class LighthouseService
 
         $process = new Process($command);
         $process->setWorkingDirectory(base_path());
-        $process->setTimeout(120);
+        $process->setTimeout(90);
 
         // Set CHROME_PATH env var so Lighthouse's ChromeLauncher uses puppeteer's
         // Chrome instead of finding the snap-confined system chromium
@@ -131,8 +138,38 @@ class LighthouseService
             $process->setEnv(['CHROME_PATH' => $chromePath]);
         }
 
-        $process->run();
+        if (! $this->runWithHardTimeout($process, 100)) {
+            return [false, '', 'Process killed after hard timeout'];
+        }
 
         return [$process->isSuccessful(), $process->getOutput(), $process->getErrorOutput()];
+    }
+
+    /**
+     * Start a process and poll for completion with a hard wall-clock kill.
+     *
+     * Uses start() + usleep polling instead of run() so that a hung
+     * proc_get_status() call inside Process::wait() cannot block the
+     * PHP worker indefinitely.
+     */
+    private function runWithHardTimeout(Process $process, int $timeoutSeconds): bool
+    {
+        $process->start();
+        $deadline = microtime(true) + $timeoutSeconds;
+
+        while ($process->isRunning()) {
+            if (microtime(true) >= $deadline) {
+                $process->stop(0);
+                Log::warning('Process killed after hard timeout', [
+                    'command' => $process->getCommandLine(),
+                    'timeout' => $timeoutSeconds,
+                ]);
+
+                return false;
+            }
+            usleep(250_000); // 250ms poll interval
+        }
+
+        return true;
     }
 }
