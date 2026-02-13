@@ -12,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class GenerateScreenshotJob implements ShouldQueue
 {
@@ -38,11 +39,17 @@ class GenerateScreenshotJob implements ShouldQueue
         Log::info("Generating screenshot for site: {$this->site->url}");
 
         try {
+            $oldScreenshotPath = $this->site->getRawOriginal('screenshot_path');
+
             $screenshotPath = $screenshotService->capture($this->site->url);
 
             $this->site->update([
                 'screenshot_path' => $screenshotPath,
             ]);
+
+            if ($oldScreenshotPath && Storage::disk('public')->exists($oldScreenshotPath)) {
+                Storage::disk('public')->delete($oldScreenshotPath);
+            }
 
             ScreenshotReady::dispatch(
                 $this->site->id,

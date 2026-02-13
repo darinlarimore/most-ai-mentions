@@ -10,10 +10,10 @@ use Symfony\Component\Process\Process;
 class ScreenshotService
 {
     /** @var int Default viewport width in pixels. */
-    private const VIEWPORT_WIDTH = 1280;
+    private const VIEWPORT_WIDTH = 1000;
 
     /** @var int Default viewport height in pixels. */
-    private const VIEWPORT_HEIGHT = 800;
+    private const VIEWPORT_HEIGHT = 625;
 
     /** @var int Max viewport height for annotated screenshots (captures most content without timeout). */
     private const MAX_SCREENSHOT_HEIGHT = 4000;
@@ -123,7 +123,7 @@ class ScreenshotService
      *
      * Uses Spatie Browsershot (Puppeteer under the hood) to render the page
      * in a headless Chromium instance and save a full-page screenshot as a
-     * JPEG. The image is stored in the configured filesystem under the
+     * WebP image. The image is stored in the configured filesystem under the
      * "screenshots" directory.
      *
      * @param  string  $url  The fully-qualified URL to screenshot.
@@ -133,7 +133,7 @@ class ScreenshotService
      */
     public function capture(string $url): string
     {
-        $filename = 'screenshots/'.Str::slug(parse_url($url, PHP_URL_HOST)).'-'.now()->timestamp.'.jpg';
+        $filename = 'screenshots/'.Str::slug(parse_url($url, PHP_URL_HOST)).'-'.now()->timestamp.'.webp';
 
         return $this->renderAndStore($filename, function () use ($url) {
             return Browsershot::url($url)
@@ -157,7 +157,7 @@ class ScreenshotService
      */
     public function captureHtml(string $html, string $slug): string
     {
-        $filename = 'screenshots/annotated-'.Str::slug($slug).'-'.now()->timestamp.'.jpg';
+        $filename = 'screenshots/annotated-'.Str::slug($slug).'-'.now()->timestamp.'.webp';
 
         return $this->renderAndStore($filename, function () use ($html) {
             return Browsershot::html($html)
@@ -185,7 +185,7 @@ class ScreenshotService
         $factory()
             ->windowSize(self::VIEWPORT_WIDTH, $height)
             ->timeout(self::TIMEOUT)
-            ->setScreenshotType('jpeg', 80)
+            ->setScreenshotType('webp', 80)
             ->noSandbox()
             ->addChromiumArguments([
                 'disable-dev-shm-usage',
