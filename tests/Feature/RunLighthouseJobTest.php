@@ -8,16 +8,13 @@ use App\Models\Site;
 use App\Services\LighthouseService;
 use Illuminate\Support\Facades\Event;
 
-it('updates crawl result and score history with lighthouse scores', function () {
+it('updates crawl result and score history with lighthouse performance score', function () {
     Event::fake([LighthouseComplete::class]);
 
     $site = Site::factory()->create();
     $crawlResult = CrawlResult::factory()->create([
         'site_id' => $site->id,
         'lighthouse_performance' => null,
-        'lighthouse_accessibility' => null,
-        'lighthouse_best_practices' => null,
-        'lighthouse_seo' => null,
     ]);
 
     $scoreHistory = ScoreHistory::create([
@@ -34,9 +31,6 @@ it('updates crawl result and score history with lighthouse scores', function () 
         ->with($site->domain)
         ->andReturn([
             'performance' => 85,
-            'accessibility' => 92,
-            'best_practices' => 100,
-            'seo' => 78,
         ]);
 
     app()->instance(LighthouseService::class, $lighthouseService);
@@ -44,14 +38,10 @@ it('updates crawl result and score history with lighthouse scores', function () 
     (new RunLighthouseJob($site))->handle($lighthouseService);
 
     $crawlResult->refresh();
-    expect($crawlResult->lighthouse_performance)->toBe(85)
-        ->and($crawlResult->lighthouse_accessibility)->toBe(92)
-        ->and($crawlResult->lighthouse_best_practices)->toBe(100)
-        ->and($crawlResult->lighthouse_seo)->toBe(78);
+    expect($crawlResult->lighthouse_performance)->toBe(85);
 
     $scoreHistory->refresh();
-    expect($scoreHistory->lighthouse_performance)->toBe(85)
-        ->and($scoreHistory->lighthouse_accessibility)->toBe(92);
+    expect($scoreHistory->lighthouse_performance)->toBe(85);
 });
 
 it('broadcasts LighthouseComplete event on success', function () {
@@ -65,9 +55,6 @@ it('broadcasts LighthouseComplete event on success', function () {
         ->once()
         ->andReturn([
             'performance' => 70,
-            'accessibility' => 80,
-            'best_practices' => 90,
-            'seo' => 95,
         ]);
 
     (new RunLighthouseJob($site))->handle($lighthouseService);
@@ -75,10 +62,7 @@ it('broadcasts LighthouseComplete event on success', function () {
     Event::assertDispatched(LighthouseComplete::class, function (LighthouseComplete $event) use ($site) {
         return $event->site_id === $site->id
             && $event->slug === $site->slug
-            && $event->performance === 70
-            && $event->accessibility === 80
-            && $event->best_practices === 90
-            && $event->seo === 95;
+            && $event->performance === 70;
     });
 });
 

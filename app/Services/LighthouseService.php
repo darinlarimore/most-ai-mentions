@@ -10,7 +10,7 @@ class LighthouseService
     /**
      * Run a Lighthouse audit on the given domain.
      *
-     * @return array{performance: int, accessibility: int, best_practices: int, seo: int}|null
+     * @return array{performance: int}|null
      */
     public function audit(string $domain): ?array
     {
@@ -42,7 +42,7 @@ class LighthouseService
     /**
      * Parse the JSON output from Lighthouse.
      *
-     * @return array{performance: int, accessibility: int, best_practices: int, seo: int}|null
+     * @return array{performance: int}|null
      */
     public function parseOutput(string $output): ?array
     {
@@ -56,9 +56,6 @@ class LighthouseService
 
         return [
             'performance' => $this->extractScore($categories, 'performance'),
-            'accessibility' => $this->extractScore($categories, 'accessibility'),
-            'best_practices' => $this->extractScore($categories, 'best-practices'),
-            'seo' => $this->extractScore($categories, 'seo'),
         ];
     }
 
@@ -120,7 +117,7 @@ class LighthouseService
             "https://{$domain}",
             '--output=json',
             '--chrome-flags=--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu',
-            '--only-categories=performance,accessibility,best-practices,seo',
+            '--only-categories=performance',
         ];
 
         $chromePath = $this->resolveChromePath();

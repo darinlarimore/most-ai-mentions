@@ -16,9 +16,6 @@ class LighthouseComplete implements ShouldBroadcastNow
         public readonly int $site_id,
         public readonly string $slug,
         public readonly int $performance,
-        public readonly int $accessibility,
-        public readonly int $best_practices,
-        public readonly int $seo,
     ) {}
 
     public function broadcastAs(): string
@@ -45,9 +42,6 @@ class LighthouseComplete implements ShouldBroadcastNow
             'site_id' => $this->site_id,
             'slug' => $this->slug,
             'performance' => $this->performance,
-            'accessibility' => $this->accessibility,
-            'best_practices' => $this->best_practices,
-            'seo' => $this->seo,
         ];
     }
 }

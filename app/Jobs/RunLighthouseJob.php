@@ -62,16 +62,12 @@ class RunLighthouseJob implements ShouldBeUnique, ShouldQueue
             if ($crawlResult) {
                 $crawlResult->update([
                     'lighthouse_performance' => $scores['performance'],
-                    'lighthouse_accessibility' => $scores['accessibility'],
-                    'lighthouse_best_practices' => $scores['best_practices'],
-                    'lighthouse_seo' => $scores['seo'],
                 ]);
 
                 ScoreHistory::query()
                     ->where('crawl_result_id', $crawlResult->id)
                     ->update([
                         'lighthouse_performance' => $scores['performance'],
-                        'lighthouse_accessibility' => $scores['accessibility'],
                     ]);
             }
 
@@ -79,9 +75,6 @@ class RunLighthouseJob implements ShouldBeUnique, ShouldQueue
                 $this->site->id,
                 $this->site->slug,
                 $scores['performance'],
-                $scores['accessibility'],
-                $scores['best_practices'],
-                $scores['seo'],
             );
 
             Log::info("Lighthouse audit completed for site: {$this->site->url}", $scores);

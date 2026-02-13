@@ -474,8 +474,7 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'hype_score' => $hypeScore,
         ]);
 
-        // Lighthouse disabled — Chrome processes overwhelm the 2GB server
-        // RunLighthouseJob::dispatch($this->site);
+        RunLighthouseJob::dispatch($this->site);
 
         $aiTerms = collect($crawlResult->mention_details ?? [])
             ->pluck('text')
