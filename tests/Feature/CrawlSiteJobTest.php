@@ -3,7 +3,6 @@
 use App\Events\CrawlCompleted;
 use App\Events\CrawlStarted;
 use App\Jobs\CrawlSiteJob;
-use App\Jobs\GenerateScreenshotJob;
 use App\Models\Site;
 use App\Services\AxeAuditService;
 use App\Services\HttpMetadataCollector;
@@ -16,7 +15,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Symfony\Component\Process\Process;
 
-it('dispatches GenerateScreenshotJob asynchronously instead of synchronously', function () {
+it('generates screenshot inline during crawl', function () {
     Queue::fake();
     Event::fake();
 
@@ -30,6 +29,7 @@ it('dispatches GenerateScreenshotJob asynchronously instead of synchronously', f
     $screenshotService = Mockery::mock(ScreenshotService::class);
     $screenshotService->shouldReceive('startHtmlFetch')->once()->andReturn($mockProcess);
     $screenshotService->shouldReceive('collectHtmlResult')->once()->with($mockProcess)->andReturn($html);
+    $screenshotService->shouldReceive('capture')->once()->andReturn('screenshots/test.png');
 
     $httpMetadataCollector = Mockery::mock(HttpMetadataCollector::class);
     $httpMetadataCollector->shouldReceive('collect')->once()->andReturn([
@@ -53,9 +53,8 @@ it('dispatches GenerateScreenshotJob asynchronously instead of synchronously', f
         app(AxeAuditService::class),
     );
 
-    Queue::assertPushed(GenerateScreenshotJob::class, function ($job) use ($site) {
-        return $job->site->id === $site->id;
-    });
+    $site->refresh();
+    expect($site->getRawOriginal('screenshot_path'))->toBe('screenshots/test.png');
 });
 
 it('includes site_source in CrawlStarted event', function () {
@@ -73,6 +72,7 @@ it('includes site_source in CrawlStarted event', function () {
     $screenshotService = Mockery::mock(ScreenshotService::class);
     $screenshotService->shouldReceive('startHtmlFetch')->once()->andReturn($mockProcess);
     $screenshotService->shouldReceive('collectHtmlResult')->once()->with($mockProcess)->andReturn($html);
+    $screenshotService->shouldReceive('capture')->once()->andReturn('screenshots/test.png');
 
     $httpMetadataCollector = Mockery::mock(HttpMetadataCollector::class);
     $httpMetadataCollector->shouldReceive('collect')->once()->andReturn([
@@ -115,6 +115,7 @@ it('includes latitude and longitude in CrawlCompleted event on success', functio
     $screenshotService = Mockery::mock(ScreenshotService::class);
     $screenshotService->shouldReceive('startHtmlFetch')->once()->andReturn($mockProcess);
     $screenshotService->shouldReceive('collectHtmlResult')->once()->with($mockProcess)->andReturn($html);
+    $screenshotService->shouldReceive('capture')->once()->andReturn('screenshots/test.png');
 
     $httpMetadataCollector = Mockery::mock(HttpMetadataCollector::class);
     $httpMetadataCollector->shouldReceive('collect')->once()->andReturn([
@@ -245,6 +246,7 @@ it('continues crawl when HTTP metadata fails with non-fatal error', function () 
     // Chrome SHOULD still be called for non-fatal errors (e.g. HTTP 403)
     $screenshotService->shouldReceive('startHtmlFetch')->once()->andReturn($mockProcess);
     $screenshotService->shouldReceive('collectHtmlResult')->once()->with($mockProcess)->andReturn($html);
+    $screenshotService->shouldReceive('capture')->once()->andReturn('screenshots/test.png');
 
     $httpMetadataCollector = Mockery::mock(HttpMetadataCollector::class);
     $httpMetadataCollector->shouldReceive('collect')->once()

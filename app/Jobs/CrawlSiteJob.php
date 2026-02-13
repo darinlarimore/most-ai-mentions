@@ -26,6 +26,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
 {
@@ -438,12 +439,25 @@ class CrawlSiteJob implements ShouldBeUnique, ShouldQueue
             'longitude' => $coordinates['longitude'] ?? null,
         ]);
 
+        // Generate screenshot inline — runs on the same queue so no parallelism benefit from async
+        CrawlProgress::dispatch($this->site->id, 'generating_screenshot', 'Generating screenshot...');
+
+        $screenshotPath = null;
+        try {
+            $oldScreenshotPath = $this->site->getRawOriginal('screenshot_path');
+            $screenshotPath = $screenshotService->capture($this->site->url);
+            $this->site->update(['screenshot_path' => $screenshotPath]);
+
+            if ($oldScreenshotPath && Storage::disk('public')->exists($oldScreenshotPath)) {
+                Storage::disk('public')->delete($oldScreenshotPath);
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Screenshot failed for {$this->site->url}: {$e->getMessage()}");
+        }
+
         CrawlProgress::dispatch($this->site->id, 'finishing', 'Running final checks...', [
             'hype_score' => $hypeScore,
         ]);
-
-        // Dispatch screenshot asynchronously — ScreenshotReady event will notify the frontend
-        GenerateScreenshotJob::dispatch($this->site);
 
         // Dispatch Lighthouse audit asynchronously — LighthouseComplete event will notify the frontend
         RunLighthouseJob::dispatch($this->site);
