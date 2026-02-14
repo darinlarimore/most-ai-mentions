@@ -48,4 +48,4 @@ Route::post('/sites/{site}/rate', [RatingController::class, 'store'])
 // Stripe webhook (no CSRF)
 Route::post('/stripe/webhook', [DonationController::class, 'webhook'])->name('stripe.webhook');
 
-require __DIR__.'/settings.php';
+// Auth/settings routes disabled — public-only site
