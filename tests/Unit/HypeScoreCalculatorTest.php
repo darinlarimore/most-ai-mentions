@@ -96,6 +96,17 @@ it('awards font size bonus for large text', function () {
     expect($scores['font_size_score'])->toBe(48);
 });
 
+it('caps font size score at maximum', function () {
+    // 20 mentions at 100px each: (100 - 16) * 1.5 * 20 = 2520, but capped at 200
+    $mentions = array_fill(0, 20, [
+        'text' => 'AI', 'font_size' => 100, 'has_animation' => false, 'has_glow' => false, 'context' => 'test',
+    ]);
+
+    $scores = $this->calculator->calculate($mentions, 0, 0, 0);
+
+    expect($scores['font_size_score'])->toBe(200);
+});
+
 it('caps mention score at maximum', function () {
     // 50 mentions * 5 = 250, but capped at 200
     $mentions = array_fill(0, 50, [

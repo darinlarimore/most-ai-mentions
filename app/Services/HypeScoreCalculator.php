@@ -33,6 +33,9 @@ class HypeScoreCalculator
     /** @var float Additional points per pixel of font size above the 16px baseline. */
     public const FONT_SIZE_MULTIPLIER = 1.5;
 
+    /** @var int Maximum total score from font size bonuses. */
+    public const FONT_SIZE_MAX_SCORE = 200;
+
     /** @var int Points awarded for each CSS/JS animation detected (after cap). */
     public const ANIMATION_POINTS = 15;
 
@@ -122,6 +125,7 @@ class HypeScoreCalculator
         [$densityScore, $densityPercent] = $this->calculateDensityScore($mentionDetails, $totalWordCount);
 
         $mentionScore = min($mentionScore, self::MENTION_MAX_SCORE);
+        $fontSizeScore = min($fontSizeScore, self::FONT_SIZE_MAX_SCORE);
 
         $totalScore = $densityScore + $mentionScore + $fontSizeScore + $animationScore + $visualEffectsScore;
 
@@ -296,8 +300,8 @@ class HypeScoreCalculator
             ],
             [
                 'name' => 'Font Size Bonus',
-                'description' => 'Mentions displayed in fonts larger than 16px earn extra points, rewarding oversized AI buzzwords.',
-                'weight' => self::FONT_SIZE_MULTIPLIER.' points per pixel above 16px baseline',
+                'description' => 'Mentions displayed in fonts larger than 16px earn extra points, rewarding oversized AI buzzwords. Capped at '.self::FONT_SIZE_MAX_SCORE.' points.',
+                'weight' => self::FONT_SIZE_MULTIPLIER.' points per pixel above 16px baseline (max '.self::FONT_SIZE_MAX_SCORE.')',
                 'example' => 'A 48px heading saying "AI-POWERED" earns 16 bonus points',
             ],
             [
